@@ -39,7 +39,7 @@ class Paper:
 def fetch_arxiv(categories: list[str], max_per_category: int = 50) -> list[Paper]:
     """Pull the latest preprints from each arxiv category."""
     out: list[Paper] = []
-    client = arxiv.Client(page_size=max_per_category, delay_seconds=3, num_retries=3)
+    client = arxiv.Client(page_size=max_per_category, delay_seconds=10, num_retries=2)
     for cat in categories:
         search = arxiv.Search(
             query=f"cat:{cat}",
@@ -177,7 +177,7 @@ def enrich_arxiv_metadata(papers: list[Paper]) -> None:
     if not missing:
         return
     ids = [p.arxiv_id for p in missing]
-    client = arxiv.Client(page_size=min(50, len(ids)), delay_seconds=3, num_retries=2)
+    client = arxiv.Client(page_size=min(50, len(ids)), delay_seconds=10, num_retries=2)
     search = arxiv.Search(id_list=ids)
     by_id: dict[str, arxiv.Result] = {}
     try:
