@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 from pathlib import Path
 
 from annotate import Annotation
@@ -48,15 +49,16 @@ def render_day(
     lines.append("")
     for i, (ps, a) in enumerate(kept, 1):
         p: Paper = ps.paper
-        lines.append('<div class="paper-card" markdown="1">')
+        lines.append(f'<div class="paper-card" markdown="1" data-score="{a.score}">')
         lines.append("")
         zh = a.title_zh.strip()
+        badge = f'<span class="score-badge" data-score="{a.score}">{a.score}/10</span>'
         if zh:
-            lines.append(f"## {i}. {zh}  ·  **{a.score}/10**")
+            lines.append(f"## {i}. {zh} {badge}")
             lines.append("")
             lines.append(f'<p class="title-en">{p.title}</p>')
         else:
-            lines.append(f"## {i}. {p.title}  ·  **{a.score}/10**")
+            lines.append(f"## {i}. {p.title} {badge}")
         lines.append("")
         lines.append(f"**作者:** {_fmt_authors(p.authors)}  ")
         meta = [f"来源: `{p.source}`"]
@@ -82,18 +84,47 @@ def render_day(
     return fp
 
 
+_STATS_RE = re.compile(r"推送\s*(\d+)\s*篇\s*/\s*共审阅\s*(\d+)\s*篇")
+
+
+def _read_stats(fp: Path) -> str:
+    """Pull '今日推送 N 篇 / 共审阅 M 篇' from a post file; fallback to em-dash."""
+    try:
+        with fp.open("r", encoding="utf-8") as f:
+            for _ in range(8):
+                line = f.readline()
+                if not line:
+                    break
+                m = _STATS_RE.search(line)
+                if m:
+                    return f"推送 {m.group(1)} / 共审 {m.group(2)}"
+    except OSError:
+        pass
+    return "—"
+
+
 def update_index(docs_dir: Path) -> None:
-    """Regenerate docs/index.md listing the most recent posts."""
+    """Regenerate docs/index.md listing the most recent posts as an HTML card grid."""
     posts_dir = docs_dir / "posts"
     posts = sorted(posts_dir.glob("*.md"), reverse=True) if posts_dir.exists() else []
 
-    lines: list[str] = ["# 论文速递", "", "_每日个性化 arxiv 论文筛选与推送。_", ""]
+    lines: list[str] = []
+    # Hero is injected by overrides/main.html (homepage-conditional); leave a
+    # minimal anchor here so the page isn't empty for non-overridden builds.
+    lines.append("")
     if not posts:
         lines.append("_暂无内容 — 首次抓取尚未完成。_")
     else:
-        lines.append("## 近期")
-        lines.append("")
+        lines.append('<div class="post-grid" markdown="0">')
         for fp in posts[:30]:
             date = fp.stem
-            lines.append(f"- [{date}](posts/{fp.name})")
+            stats = _read_stats(fp)
+            lines.append(
+                f'<a class="post-card" href="posts/{fp.name[:-3]}/">'
+                f'<time>{date}</time>'
+                f'<span class="post-stats">{stats}</span>'
+                f'<span class="post-arrow">▶</span>'
+                f'</a>'
+            )
+        lines.append('</div>')
     (docs_dir / "index.md").write_text("\n".join(lines), encoding="utf-8")

@@ -1,8 +1,7 @@
-/* 论文速递 — cosmic interactions
-   1. cursor spotlight (CSS custom props driven by mouse)
-   2. starfield canvas (low-density twinkling stars)
-   3. meteor trail (particles spawn at cursor, fade)
-   4. respect prefers-reduced-motion
+/* 论文速递 — interactions
+   1. cursor → CSS vars (spotlight 跟随)
+   2. DOM meteors (setInterval spawn into #cyber-fx)
+   3. respect prefers-reduced-motion + visibilitychange
 */
 
 (function () {
@@ -10,7 +9,7 @@
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ---------- 1. cursor spotlight ----------
+  // ---------- 1. cursor → CSS vars ----------
   let lastMove = 0;
   document.addEventListener("mousemove", (e) => {
     const now = performance.now();
@@ -20,131 +19,49 @@
     document.documentElement.style.setProperty("--mouse-y", e.clientY + "px");
   }, { passive: true });
 
-  if (reduceMotion) return; // skip canvas effects if user opts out
+  if (reduceMotion) return;
 
-  // ---------- 2 + 3. canvas: starfield + meteor trail ----------
-  const canvas = document.createElement("canvas");
-  canvas.id = "starfield";
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext("2d");
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // ---------- 2. DOM meteors ----------
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  if (isMobile) return;
 
-  let w = 0, h = 0;
-  function resize() {
-    w = window.innerWidth;
-    h = window.innerHeight;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function spawnMeteor() {
+    if (document.hidden) return;
+    const host = document.getElementById("cyber-fx");
+    if (!host) return;
+    const m = document.createElement("span");
+    m.className = "fx-meteor";
+    m.style.left = (Math.random() * 100) + "vw";
+    const dur = 3 + Math.random() * 4; // 3-7s
+    m.style.animationDuration = dur + "s";
+    m.style.animationDelay = "0s";
+    // subtle hue jitter
+    const hue = 180 + Math.random() * 160; // cyan → pink range
+    m.style.filter = `hue-rotate(${hue - 200}deg)`;
+    host.appendChild(m);
+    setTimeout(() => m.remove(), (dur + 0.5) * 1000);
   }
-  resize();
-  window.addEventListener("resize", resize, { passive: true });
 
-  // starfield
-  const STAR_COUNT = Math.min(110, Math.floor((w * h) / 14000));
-  const stars = Array.from({ length: STAR_COUNT }, () => ({
-    x: Math.random() * w,
-    y: Math.random() * h,
-    r: Math.random() * 1.1 + 0.2,
-    a: Math.random() * 0.5 + 0.25,
-    phase: Math.random() * Math.PI * 2,
-    speed: Math.random() * 0.015 + 0.005,
-    drift: Math.random() * 0.05 + 0.02,
-  }));
+  // initial burst then steady cadence
+  for (let i = 0; i < 3; i++) {
+    setTimeout(spawnMeteor, i * 600);
+  }
+  const meteorInterval = setInterval(spawnMeteor, 900);
 
-  // meteor trail particles
-  const trail = [];
-  const MAX_TRAIL = 180;
-  document.addEventListener("mousemove", (e) => {
-    if (trail.length >= MAX_TRAIL) return;
-    const count = 2;
-    for (let i = 0; i < count; i++) {
-      trail.push({
-        x: e.clientX + (Math.random() - 0.5) * 8,
-        y: e.clientY + (Math.random() - 0.5) * 8,
-        vx: (Math.random() - 0.5) * 1.4,
-        vy: (Math.random() - 0.5) * 1.4 + 0.4,
-        life: 1.0,
-        size: Math.random() * 2.2 + 0.8,
-        hue: 250 + Math.random() * 80, // purple → pink range
-      });
-    }
-  }, { passive: true });
-
-  // pause when tab hidden (saves cycles)
-  let running = true;
   document.addEventListener("visibilitychange", () => {
-    running = !document.hidden;
-    if (running) requestAnimationFrame(frame);
+    // setInterval keeps ticking but spawnMeteor early-returns when hidden
+    // — nothing else to do
   });
 
-  function frame() {
-    if (!running) return;
-    ctx.clearRect(0, 0, w, h);
-
-    // stars
-    for (const s of stars) {
-      s.phase += s.speed;
-      s.y += s.drift * 0.1; // very slow drift
-      if (s.y > h) { s.y = -2; s.x = Math.random() * w; }
-      const alpha = s.a * (0.55 + 0.45 * Math.sin(s.phase));
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(220, 220, 255, ${alpha})`;
-      ctx.fill();
-
-      // occasional bright star with cross sparkle
-      if (s.r > 1.0) {
-        ctx.strokeStyle = `rgba(220, 220, 255, ${alpha * 0.4})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(s.x - s.r * 2.5, s.y);
-        ctx.lineTo(s.x + s.r * 2.5, s.y);
-        ctx.moveTo(s.x, s.y - s.r * 2.5);
-        ctx.lineTo(s.x, s.y + s.r * 2.5);
-        ctx.stroke();
-      }
-    }
-
-    // meteor trail
-    for (let i = trail.length - 1; i >= 0; i--) {
-      const p = trail[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 0.028;
-      if (p.life <= 0) {
-        trail.splice(i, 1);
-        continue;
-      }
-      const size = p.size * p.life;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-      ctx.fillStyle = `hsla(${p.hue}, 100%, 70%, ${p.life})`;
-      ctx.shadowBlur = 14;
-      ctx.shadowColor = `hsla(${p.hue}, 100%, 70%, ${p.life * 0.8})`;
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-
-    requestAnimationFrame(frame);
+  // ---------- 3. ensure #cyber-fx exists (fallback for non-overridden pages) ----------
+  if (!document.getElementById("cyber-fx")) {
+    const fx = document.createElement("div");
+    fx.id = "cyber-fx";
+    fx.setAttribute("aria-hidden", "true");
+    fx.innerHTML =
+      '<div class="fx-aurora"></div>' +
+      '<div class="fx-scanlines"></div>' +
+      '<div class="fx-noise"></div>';
+    document.body.prepend(fx);
   }
-  requestAnimationFrame(frame);
-
-  // ---------- 4. card tilt on mouse position ----------
-  document.addEventListener("DOMContentLoaded", () => {
-    const cards = document.querySelectorAll(".paper-card");
-    cards.forEach((card) => {
-      card.addEventListener("mousemove", (e) => {
-        const rect = card.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width - 0.5;
-        const y = (e.clientY - rect.top) / rect.height - 0.5;
-        card.style.transform = `translateY(-3px) perspective(900px) rotateX(${-y * 2.2}deg) rotateY(${x * 2.2}deg)`;
-      });
-      card.addEventListener("mouseleave", () => {
-        card.style.transform = "";
-      });
-    });
-  });
 })();
