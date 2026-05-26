@@ -84,7 +84,11 @@ def annotate_papers(
     if not papers:
         return {}
 
-    client = anthropic.Anthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
+    base_url = os.environ.get("ANTHROPIC_BASE_URL")
+    client = anthropic.Anthropic(
+        api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"),
+        base_url=base_url if base_url else None,
+    )
 
     system_blocks = [
         {
