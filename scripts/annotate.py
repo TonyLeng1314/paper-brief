@@ -1,7 +1,7 @@
 """LLM annotation: per-paper TLDR + personalized 'why relevant' + score.
 
-Uses Anthropic prompt caching: the research profile is stable across days, so we
-cache it in the system prompt and only the paper batch varies per request.
+Uses an OpenAI-compatible API (DeepSeek by default, routable through any proxy
+that speaks the OpenAI chat-completions format).
 """
 from __future__ import annotations
 
@@ -12,14 +12,14 @@ import os
 import re
 from typing import Any
 
-import anthropic
+import openai
 
 from sources import Paper
 
 log = logging.getLogger(__name__)
 
 ANNOTATION_INSTRUCTIONS = """You are scoring and annotating papers for the researcher whose profile is in the
-cached system context above.
+system message above.
 
 You will receive a JSON array of papers. For EACH paper, output an object with:
 - "key": the paper's dedup key (echo back exactly what was given)
@@ -73,38 +73,37 @@ def _extract_json_array(text: str) -> list[dict]:
 def annotate_papers(
     papers: list[Paper],
     research_profile: str,
-    model: str = "claude-sonnet-4-6",
+    model: str = "deepseek-chat",
     api_key: str | None = None,
     batch_size: int = 5,
 ) -> dict[str, Annotation]:
     """Annotate papers in small batches; returns mapping {paper.key() -> Annotation}.
 
-    Research profile is cached via cache_control so daily reruns hit the cache.
+    Reads OPENAI_API_KEY and (optionally) OPENAI_BASE_URL from the environment.
+    DeepSeek auto-caches stable system-prompt prefixes, so daily reruns benefit
+    automatically without any cache_control field.
     """
     if not papers:
         return {}
 
-    base_url = os.environ.get("ANTHROPIC_BASE_URL")
-    client = anthropic.Anthropic(
-        api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"),
-        base_url=base_url if base_url else None,
+    base_url = os.environ.get("OPENAI_BASE_URL") or "https://api.deepseek.com/v1"
+    client = openai.OpenAI(
+        api_key=api_key or os.environ.get("OPENAI_API_KEY"),
+        base_url=base_url,
+        timeout=120.0,
+        max_retries=2,
     )
 
-    system_blocks = [
-        {
-            "type": "text",
-            "text": "You are an expert research assistant who helps a VLA researcher "
-            "triage their daily paper firehose. Below is their long-form research profile. "
-            "It will not change between requests in this session — use it as the ground "
-            "truth for what 'relevant' means.\n\n"
-            "===== RESEARCHER PROFILE =====\n" + research_profile.strip(),
-            "cache_control": {"type": "ephemeral"},
-        },
-        {
-            "type": "text",
-            "text": ANNOTATION_INSTRUCTIONS,
-        },
-    ]
+    system_prompt = (
+        "You are an expert research assistant who helps a VLA researcher triage "
+        "their daily paper firehose. Below is their long-form research profile. "
+        "It will not change between requests in this session — use it as the "
+        "ground truth for what 'relevant' means.\n\n"
+        "===== RESEARCHER PROFILE =====\n"
+        + research_profile.strip()
+        + "\n\n"
+        + ANNOTATION_INSTRUCTIONS
+    )
 
     out: dict[str, Annotation] = {}
     by_key = {p.key(): p for p in papers}
@@ -114,15 +113,16 @@ def annotate_papers(
         batch_payload = json.dumps([_paper_to_dict(p) for p in batch], ensure_ascii=False)
 
         try:
-            resp = client.messages.create(
+            resp = client.chat.completions.create(
                 model=model,
                 max_tokens=4000,
-                system=system_blocks,
+                temperature=0.2,
                 messages=[
+                    {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
                         "content": f"Annotate the following {len(batch)} papers:\n\n{batch_payload}",
-                    }
+                    },
                 ],
             )
         except Exception as e:
@@ -132,15 +132,14 @@ def annotate_papers(
         usage = getattr(resp, "usage", None)
         if usage:
             log.info(
-                "batch %d: input=%d cache_read=%d cache_write=%d output=%d",
+                "batch %d: prompt=%d completion=%d total=%d",
                 i // batch_size,
-                getattr(usage, "input_tokens", 0),
-                getattr(usage, "cache_read_input_tokens", 0),
-                getattr(usage, "cache_creation_input_tokens", 0),
-                getattr(usage, "output_tokens", 0),
+                getattr(usage, "prompt_tokens", 0),
+                getattr(usage, "completion_tokens", 0),
+                getattr(usage, "total_tokens", 0),
             )
 
-        text = "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
+        text = resp.choices[0].message.content or ""
         try:
             items = _extract_json_array(text)
         except (ValueError, json.JSONDecodeError) as e:
