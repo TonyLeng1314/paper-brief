@@ -75,7 +75,7 @@ def annotate_papers(
     research_profile: str,
     model: str = "claude-sonnet-4-6",
     api_key: str | None = None,
-    batch_size: int = 12,
+    batch_size: int = 5,
 ) -> dict[str, Annotation]:
     """Annotate papers in small batches; returns mapping {paper.key() -> Annotation}.
 
