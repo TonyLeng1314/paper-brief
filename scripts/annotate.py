@@ -23,19 +23,21 @@ system message above.
 
 You will receive a JSON array of papers. For EACH paper, output an object with:
 - "key": the paper's dedup key (echo back exactly what was given)
+- "title_zh": Chinese translation of the paper title. Keep technical English
+  acronyms (JEPA / VLA / SE(3) / LoRA / VLM / DINOv2 / VICReg / SIGReg 等) as English.
+  Method names with colons stay: e.g. "UWM-JEPA:在信念空间中想象的预测世界模型".
 - "tldr": ONE sentence in CHINESE summarizing what the paper actually does.
 - "why": ONE sentence in CHINESE naming the SPECIFIC open question from the
   researcher's profile that this paper could inform. If the connection is weak,
   start with "弱信号:". Be concrete. Bad: "和你的 SSL 工作相关"。
   Good: "在 I-JEPA 式 setup 里 ablate 了 predictor depth,正是你 V3 还没扫过的变量"。
-  Technical terms (JEPA / VLA / predictor / SIGReg / VICReg / DINOv2 等) keep in English.
+  Technical terms keep English.
 - "score": integer 0-10, following the relevance tiers in the profile.
 
-IMPORTANT: tldr and why MUST be in Chinese (中文). Technical jargon stays English.
-Paper titles and author names are NOT in your output — they come from the source.
+IMPORTANT: title_zh, tldr, why MUST be in Chinese (中文). Technical jargon stays English.
 
 Output ONLY a JSON array, no preamble, no markdown fences. Schema:
-[{"key": "...", "tldr": "...", "why": "...", "score": 7}, ...]
+[{"key": "...", "title_zh": "...", "tldr": "...", "why": "...", "score": 7}, ...]
 """
 
 
@@ -45,6 +47,7 @@ class Annotation:
     tldr: str
     why: str
     score: int
+    title_zh: str = ""
 
 
 def _paper_to_dict(p: Paper) -> dict[str, Any]:
@@ -163,6 +166,7 @@ def annotate_papers(
                 tldr=str(it.get("tldr", "")).strip(),
                 why=str(it.get("why", "")).strip(),
                 score=max(0, min(10, score)),
+                title_zh=str(it.get("title_zh", "")).strip(),
             )
 
     return out

@@ -50,7 +50,13 @@ def render_day(
         p: Paper = ps.paper
         lines.append('<div class="paper-card" markdown="1">')
         lines.append("")
-        lines.append(f"## {i}. {p.title}  ·  **{a.score}/10**")
+        zh = a.title_zh.strip()
+        if zh:
+            lines.append(f"## {i}. {zh}  ·  **{a.score}/10**")
+            lines.append("")
+            lines.append(f'<p class="title-en">{p.title}</p>')
+        else:
+            lines.append(f"## {i}. {p.title}  ·  **{a.score}/10**")
         lines.append("")
         lines.append(f"**作者:** {_fmt_authors(p.authors)}  ")
         meta = [f"来源: `{p.source}`"]
