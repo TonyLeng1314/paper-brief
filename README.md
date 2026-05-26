@@ -4,7 +4,7 @@
 
 ## What you get
 
-- 一个 `https://<YOUR_USERNAME>.github.io/paper-brief/` 站点。
+- 一个 `https://TonyLeng1314.github.io/paper-brief/` 站点。
 - 每天一个 `posts/YYYY-MM-DD.md`,按相关性分数倒序。
 - 全部 self-hosted、零运维(GitHub Actions cron + GitHub Pages)。
 
