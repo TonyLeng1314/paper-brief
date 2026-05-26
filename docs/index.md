@@ -2,4 +2,6 @@
 
 _Daily personalized arxiv triage._
 
-_No briefs yet — first run is pending._
+## Recent
+
+- [2026-05-26](posts/2026-05-26.md)
