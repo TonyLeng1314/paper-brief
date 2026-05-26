@@ -1,7 +1,7 @@
-# Paper Brief
+# 论文速递
 
-_Daily personalized arxiv triage._
+_每日个性化 arxiv 论文筛选与推送。_
 
-## Recent
+## 近期
 
 - [2026-05-26](posts/2026-05-26.md)

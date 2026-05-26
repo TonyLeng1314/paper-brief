@@ -23,12 +23,16 @@ system message above.
 
 You will receive a JSON array of papers. For EACH paper, output an object with:
 - "key": the paper's dedup key (echo back exactly what was given)
-- "tldr": one sentence, what the paper actually does
-- "why": one sentence naming the SPECIFIC open question from the researcher's profile
-  that this paper could inform. If the connection is weak, start with "weak signal:".
-  Be concrete. Bad: "relevant to your SSL work". Good: "ablates predictor depth in
-  I-JEPA-style setups, exactly the variable you have not swept in V3 yet."
+- "tldr": ONE sentence in CHINESE summarizing what the paper actually does.
+- "why": ONE sentence in CHINESE naming the SPECIFIC open question from the
+  researcher's profile that this paper could inform. If the connection is weak,
+  start with "弱信号:". Be concrete. Bad: "和你的 SSL 工作相关"。
+  Good: "在 I-JEPA 式 setup 里 ablate 了 predictor depth,正是你 V3 还没扫过的变量"。
+  Technical terms (JEPA / VLA / predictor / SIGReg / VICReg / DINOv2 等) keep in English.
 - "score": integer 0-10, following the relevance tiers in the profile.
+
+IMPORTANT: tldr and why MUST be in Chinese (中文). Technical jargon stays English.
+Paper titles and author names are NOT in your output — they come from the source.
 
 Output ONLY a JSON array, no preamble, no markdown fences. Schema:
 [{"key": "...", "tldr": "...", "why": "...", "score": 7}, ...]
