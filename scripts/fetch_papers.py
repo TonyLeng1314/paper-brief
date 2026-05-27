@@ -63,7 +63,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="config.yaml")
     ap.add_argument("--profile", default=None, help="Override research_profile_path.")
-    ap.add_argument("--docs-dir", default="docs")
+    ap.add_argument(
+        "--data-dir",
+        default="src/data/posts",
+        help="Where to write the daily JSON. The Astro Content Collection points here.",
+    )
     ap.add_argument("--date", default=None, help="YYYY-MM-DD; defaults to today UTC.")
     ap.add_argument(
         "--skip-llm",
@@ -122,16 +126,14 @@ def main() -> int:
 
     items = [(c, annotations[c.paper.key()]) for c in candidates if c.paper.key() in annotations]
 
-    docs_dir = Path(args.docs_dir)
-    posts_dir = docs_dir / "posts"
+    data_dir = Path(args.data_dir)
     fp = render_day(
         today,
         items,
-        posts_dir,
+        data_dir,
         min_score=cfg.get("filter", {}).get("min_score", 5),
         max_papers=cfg.get("filter", {}).get("max_papers_per_day", 10),
     )
-    update_index(docs_dir)
     log.info("Wrote %s", fp)
     return 0
 
