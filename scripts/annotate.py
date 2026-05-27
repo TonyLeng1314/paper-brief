@@ -82,7 +82,7 @@ def annotate_papers(
     research_profile: str,
     model: str = "deepseek-chat",
     api_key: str | None = None,
-    batch_size: int = 5,
+    batch_size: int = 10,
 ) -> dict[str, Annotation]:
     """Annotate papers in small batches; returns mapping {paper.key() -> Annotation}.
 
@@ -122,7 +122,7 @@ def annotate_papers(
         try:
             resp = client.chat.completions.create(
                 model=model,
-                max_tokens=4000,
+                max_tokens=8000,
                 temperature=0.2,
                 messages=[
                     {"role": "system", "content": system_prompt},

@@ -109,8 +109,9 @@ def main() -> int:
             return 2
         profile = profile_path.read_text()
         model = cfg.get("llm", {}).get("model", "claude-sonnet-4-6")
+        batch_size = cfg.get("llm", {}).get("batch_size", 10)
         annotations = annotate_papers(
-            [c.paper for c in candidates], profile, model=model
+            [c.paper for c in candidates], profile, model=model, batch_size=batch_size
         )
         log.info("Annotated %d papers", len(annotations))
     else:
