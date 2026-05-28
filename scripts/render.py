@@ -6,42 +6,53 @@ import json
 from pathlib import Path
 
 from annotate import Annotation
+from deep_annotate import DeepAnnotation
 from filter import PreScore
 
 
 def render_day(
     date: dt.date,
-    items: list[tuple[PreScore, Annotation]],
+    kept: list[tuple[PreScore, Annotation]],
+    deep_annotations: dict[str, DeepAnnotation],
     out_dir: Path,
-    min_score: int = 5,
-    max_papers: int = 10,
+    reviewed: int,
+    min_score: int,
 ) -> Path:
-    """Write src/data/posts/YYYY-MM-DD.json and return its path."""
-    items = sorted(items, key=lambda x: (-x[1].score, -x[0].score))
-    kept = [(ps, a) for ps, a in items if a.score >= min_score][:max_papers]
+    """Write src/data/posts/YYYY-MM-DD.json and return its path.
+
+    `kept` must already be filtered (score >= min_score) and sorted.
+    `deep_annotations` is keyed by paper.key(); missing entries → no `deep`
+    field on that paper.
+    """
+    papers: list[dict] = []
+    for i, (ps, a) in enumerate(kept, 1):
+        entry: dict = {
+            "rank": i,
+            "title": ps.paper.title,
+            "title_zh": a.title_zh,
+            "score": a.score,
+            "authors": ps.paper.authors,
+            "source": ps.paper.source,
+            "arxiv_id": ps.paper.arxiv_id,
+            "url": ps.paper.url,
+            "published": ps.paper.published.isoformat() if ps.paper.published else None,
+            "tldr": a.tldr,
+            "why": a.why,
+            "hits": ps.hits,
+        }
+        deep = deep_annotations.get(ps.paper.key())
+        if deep:
+            d = deep.to_dict()
+            d.pop("key", None)
+            entry["deep"] = d
+        papers.append(entry)
 
     payload = {
         "date": date.isoformat(),
         "kept": len(kept),
-        "reviewed": len(items),
+        "reviewed": reviewed,
         "min_score": min_score,
-        "papers": [
-            {
-                "rank": i,
-                "title": ps.paper.title,
-                "title_zh": a.title_zh,
-                "score": a.score,
-                "authors": ps.paper.authors,
-                "source": ps.paper.source,
-                "arxiv_id": ps.paper.arxiv_id,
-                "url": ps.paper.url,
-                "published": ps.paper.published.isoformat() if ps.paper.published else None,
-                "tldr": a.tldr,
-                "why": a.why,
-                "hits": ps.hits,
-            }
-            for i, (ps, a) in enumerate(kept, 1)
-        ],
+        "papers": papers,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)

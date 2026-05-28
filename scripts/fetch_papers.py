@@ -1,4 +1,4 @@
-"""Top-level orchestrator: fetch → prescore → filter → annotate → render."""
+"""Top-level orchestrator: fetch → prescore → filter → annotate → deep-read → render."""
 from __future__ import annotations
 
 import argparse
@@ -10,6 +10,7 @@ from pathlib import Path
 import yaml
 
 from annotate import annotate_papers
+from deep_annotate import deep_annotate_papers
 from filter import prescore, select_for_llm
 from render import render_day, update_index
 from sources import (
@@ -72,7 +73,17 @@ def main() -> int:
     ap.add_argument(
         "--skip-llm",
         action="store_true",
-        help="Dry run: render using prescore only, no LLM call.",
+        help="Dry run: render using prescore only, no LLM call. Implies --skip-deep.",
+    )
+    ap.add_argument(
+        "--skip-deep",
+        action="store_true",
+        help="Skip stage-2 PDF deep-read; render only stage-1 annotations.",
+    )
+    ap.add_argument(
+        "--cache-dir",
+        default="cache",
+        help="Directory for pdf_text/ and deep/ caches.",
     )
     args = ap.parse_args()
 
@@ -117,6 +128,8 @@ def main() -> int:
     else:
         from annotate import Annotation
 
+        profile = ""
+        model = cfg.get("llm", {}).get("model", "deepseek-chat")
         for c in candidates:
             annotations[c.paper.key()] = Annotation(
                 key=c.paper.key(),
@@ -125,15 +138,43 @@ def main() -> int:
                 score=min(10, int(c.score)),
             )
 
-    items = [(c, annotations[c.paper.key()]) for c in candidates if c.paper.key() in annotations]
+    items = [
+        (c, annotations[c.paper.key()])
+        for c in candidates
+        if c.paper.key() in annotations
+    ]
 
-    data_dir = Path(args.data_dir)
+    min_score = cfg.get("filter", {}).get("min_score", 5)
+    max_papers = cfg.get("filter", {}).get("max_papers_per_day", 10)
+
+    items.sort(key=lambda x: (-x[1].score, -x[0].score))
+    kept = [(ps, a) for ps, a in items if a.score >= min_score][:max_papers]
+    log.info("Kept after min_score=%d / cap=%d: %d papers",
+             min_score, max_papers, len(kept))
+
+    deep_annotations = {}
+    if (
+        cfg.get("llm", {}).get("enabled", True)
+        and not args.skip_llm
+        and not args.skip_deep
+        and kept
+    ):
+        log.info("Deep-reading %d papers (PDF + LLM)…", len(kept))
+        deep_annotations = deep_annotate_papers(
+            [ps.paper for ps, _ in kept],
+            profile,
+            model=model,
+            cache_dir=Path(args.cache_dir),
+        )
+        log.info("Deep-annotated %d/%d papers", len(deep_annotations), len(kept))
+
     fp = render_day(
         today,
-        items,
-        data_dir,
-        min_score=cfg.get("filter", {}).get("min_score", 5),
-        max_papers=cfg.get("filter", {}).get("max_papers_per_day", 10),
+        kept,
+        deep_annotations,
+        Path(args.data_dir),
+        reviewed=len(items),
+        min_score=min_score,
     )
     log.info("Wrote %s", fp)
     return 0

@@ -22,6 +22,23 @@ const posts = defineCollection({
         tldr: z.string(),
         why: z.string(),
         hits: z.array(z.string()),
+        deep: z
+          .object({
+            problem: z.string().default(''),
+            method: z.string().default(''),
+            key_contributions: z.array(z.string()).default([]),
+            sim_benchmarks: z.array(z.string()).default([]),
+            real_robot: z.string().default(''),
+            datasets: z.string().default(''),
+            compute: z.string().default(''),
+            results_headline: z.string().default(''),
+            baselines: z.array(z.string()).default([]),
+            limitations: z.string().default(''),
+            code_release: z.string().default(''),
+            relevance_detail: z.string().default(''),
+            followup: z.string().default(''),
+          })
+          .optional(),
       }),
     ),
   }),
