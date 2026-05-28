@@ -1,52 +1,277 @@
 {
   "date": "2026-05-28",
-  "kept": 4,
-  "reviewed": 29,
+  "kept": 11,
+  "reviewed": 61,
   "min_score": 3,
   "papers": [
     {
       "rank": 1,
-      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
-      "title_zh": "基于稀疏流形变换的极简无监督表征学习",
-      "score": 5,
+      "title": "Interpretability-Guided Layer Selection over Subspace Projection: SAEs as Stethoscopes, Not Scalpels, for Raw Task Vector Model Editing",
+      "title_zh": "可解释性引导的层选择在子空间投影上：SAEs 作为听诊器而非手术刀用于原始任务向量模型编辑",
+      "score": 8,
       "authors": [
-        "Yubei Chen",
-        "Zeyu Yun",
-        "Yi Ma",
-        "B. Olshausen",
-        "Yann LeCun"
+        "Li Lei",
+        "Madalina Ciobanu",
+        "Qingqing Mao",
+        "Ritankar Das"
       ],
-      "source": "semantic_scholar",
-      "arxiv_id": null,
-      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
-      "published": null,
-      "tldr": "利用稀疏流形变换进行极简的无监督表征学习，可能避免表征坍缩。",
-      "why": "弱信号：可能涉及非对比 SSL 的坍塌防御，但摘要缺失，无法确定能否为 V3 的 SIGReg 替代方案提供线索。",
+      "source": "arxiv",
+      "arxiv_id": "2605.28649",
+      "url": "http://arxiv.org/abs/2605.28649v1",
+      "published": "2026-05-27",
+      "tldr": "用 SAE 诊断关键层，仅向这些层注入未过滤的原始任务向量，在不增加推理开销下显著提升数学推理准确率。",
+      "why": "SAE 引导的层选择范式可迁移至你的 VLA 动作头插入问题，帮助判断 Qwen backbone 中哪层最适合注入 action 信息，与 DiHAL 风格的层选择直接相关。",
       "hits": [
-        "A:Yann LeCun"
-      ]
+        "M:layer selection"
+      ],
+      "deep": {
+        "problem": "大规模语言模型的领域能力增强需要外科手术式的模型编辑以避免灾难性遗忘和全量微调的高计算成本。直觉上，可使用 SAE 识别目标特征并干预，但现有 SAE 引导的编辑流水线存在根本性失效模式。",
+        "method": "提出 SAE 作为听诊器而非手术刀：仅将 SAE 用作层级诊断工具，计算每个 SAE 特征的领域特异性得分，再取每层最大特异性（SP）以选取领域相关层（SP≥4.0 选上 14/34 层）；在这些层注入未经任何投影过滤的原始任务向量 ∆W（LoRA 微调前后权重差），并优化全局缩放因子 α。对比基线为全层合并、SAE 特征子空间投影注入等。",
+        "key_contributions": [
+          "发现将任务向量投影到 SAE 特征子空间会丢弃 ~97% 的修改能量，导致在所有 7 个数学子域上均无统计显著提升（即使 SAE 宽度增至 16× 仍如此）——作为核心负面结果，揭示了激活空间 SAE 方向与权重空间任务向量的几何错位。",
+          "提出 SAE 仅用于导诊层选（SAE as Stethoscope, Not Scalpel），在 Gemma-3-4B-IT 的 Minerva Math 基准上，数论准确率从 29.6% 提升至 39.4%（z=+3.41, p=0.0007），5/7 子域显著提升且无退化。",
+          "发现层数与 α 的尺度守恒关系 n_layers × α_opt ≈ 11.2，SP 阈值起到分类分离器而非平滑旋钮的作用。"
+        ],
+        "sim_benchmarks": [
+          "Minerva Math（7 个子域：Number Theory, Counting & Probability, Algebra, Geometry, Intermediate Algebra, PreAlgebra, PreCalculus）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "MATH 训练集（Number Theory 3865 题用于 LoRA，另有 6155 题和 20000 混合域变体）；评估用 Minerva Math。",
+        "compute": "3× H100 80GB，总计约 290 GPU 小时（含主实验和消融），额外约 60 小时用于 CMA-ES 探索。基模型为 Gemma-3-4B-IT（4B 参数，34 层）。",
+        "results_headline": "SAE 引导的层选择 + 原始任务向量注入（SP4 14L, α=0.80）在数论 z=+3.41（p=0.0007），5/7 子域显著优于基模型；而全层合并和 SAE 投影注入方法均无任何子域显著提升。",
+        "baselines": [
+          "Base 模型（Gemma-3-4B-IT 不作修改）",
+          "Full LoRA merge（在所有 34 层加 ∆W）",
+          "SAE Projection（将 ∆W 投影到 SAE 特征子空间后注入 SP 选择的相同层）"
+        ],
+        "limitations": "仅验证于单模型（Gemma-3-4B-IT）、单主领域（数学推理）；未在非数学领域测试；绝对准确率受限于基模型容量（数论 39.4%）；方法依赖预训练 SAE 和一次 LoRA 微调；多任务向量相加存在破坏性干扰。",
+        "code_release": "论文未提开源代码，仅给出复现命令但不释出实现。",
+        "relevance_detail": "弱信号。该工作专注于 LLM 的可解释性引导模型编辑，与你的 VLA / 世界模型研究直接关联小。但以下几处可能有交叉借鉴：(i) 层选择策略（SP 阈值、最大特异性）与你在 VLM backbone 中为 action head 做层位置搜索（DiHAL 式 layer selection）思路相似，其图 2 和表 2 提供的阈值依赖性分析（SP4 vs SP4.5 的突变）可参考如何定义“关键层”的判别准则；(ii) 明确指出激活空间 SAE 基与权重空间任务向量不可混淆，这一几何错位提醒你在 VLA 中从视觉 token 预测潜空间动作时需注意模态几何一致性问题，尤其是若你考虑加入类似 SAE 的解纠缠策略；(iii) 层数与缩放因子的守恒关系可能启发你在多尺度预测头设计时对每层干预强度进行归一化。整体看，你的核心 SSL/JEPA 框架与本文的模型编辑方法差异很大，本文不涉及非对比式表征学习或世界模型，也非 VLA，故评为低相关度。",
+        "followup": "若想了解层选择方法论，重点看 Section 5.3（Table 2、Figure 8）的层选择策略消融，以及 Figure 2 的特异性分布图，其阈值陡峭性可与 DiHAL 中的层筛选作类比。"
+      }
     },
     {
       "rank": 2,
-      "title": "Gamma-World: Generative Multi-Agent World Modeling Beyond Two Players",
-      "title_zh": "Gamma-World: 超越两人的生成式多智能体世界模型",
-      "score": 4,
+      "title": "Joint Training of Multi-Token Prediction in Reinforcement Learning via Optimal Coefficient Calibration",
+      "title_zh": "在强化学习中通过最优系数校准联合训练多 Token 预测",
+      "score": 7,
       "authors": [],
       "source": "hf_papers",
-      "arxiv_id": "2605.28816",
-      "url": "https://arxiv.org/abs/2605.28816",
+      "arxiv_id": "2605.28184",
+      "url": "https://arxiv.org/abs/2605.28184",
       "published": null,
-      "tldr": "提出一种面向多智能体的生成式世界模型，支持超过两个玩家。",
-      "why": "弱信号：生成式世界模型可能牵涉 latent 预测，但与 V3 的单视角视觉-动作预测场景差异较大。",
+      "tldr": "在 RL 中同时预测未来多个 token 并自动校准各步预测损失的加权系数。",
+      "why": "多 token 未来预测和你 V3 的 latent predictor 设计直接相关，系数校准可能对应你不同前瞻步数损失的权重调优问题。",
       "hits": [
-        "H:world model",
         "S:hf_curated"
-      ]
+      ],
+      "deep": {
+        "problem": "联合训练多令牌预测（MTP）与强化学习（RL）时，MTP 梯度回传会严重损害主模型性能；现有做法只能通过 detach 牺牲 MTP 的监督信号。本文从优化角度解释这一失败，并给出可工作的自适应联合训练方案。",
+        "method": "基于 L-光滑性假设，将 MTP 对 RL 目标的影响分解为一阶相关性项（gradient alignment）与二阶惩罚项。分析三种训练范式（Detach、CE Loss、Policy Loss）的成败，指出 Policy Loss 因相关性衰减与持久惩罚导致先升后降的相变。提出最优系数校准（OCC）：用 log-probability 代理 (ĉ, v̂²) 在线估计梯度相关性与 MTP 梯度范数，按 λ_t = λ⁺·ĉ/(v̂²+ε) 动态调节每步 MTP 系数，几乎无额外计算开销。",
+        "key_contributions": [
+          "给出统一三种 MTP 训练范式的优化分解，解释 Detach/CE/Policy Loss 的成败机制",
+          "提出 OCC，通过廉价 log-probability 代理自适应校准 MTP 系数，使联合训练稳定超越 detach 基线",
+          "在多个竞赛级数学推理 benchmark 上，跨模型（7B 密集到 106B MoE）和 RL 算法（DAPO、GSPO）均实现稳定增益"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "DAPO-Math-17k（17k 数学推理 prompts）",
+        "compute": "128 块 NVIDIA H20 GPU；基础模型 MiMo-7B-RL 和 GLM-4.5-Air（106B-A12B MoE）；RL 训练 200 steps，batch 128，lr 1e-6",
+        "results_headline": "MiMo-7B + DAPO 上，OCC 平均准确率 61.7%，比 Detach 高 2.8 个百分点，比 Policy Loss 高 4.3 个百分点；AIME25 上领先 Detach 10 个百分点；跨模型/算法一致最优。",
+        "baselines": [
+          "Detach（MTP 梯度隔离）",
+          "CE Loss（交叉熵 MTP）",
+          "Policy Loss（固定系数的 RL 目标 MTP）"
+        ],
+        "limitations": "L-光滑性假设在非凸场景仅定性指导，log-probability 代理在大学习率下可能失准，实验仅限数学推理类 RLVR，未在其他 RL 后训练范式验证。",
+        "code_release": "已开源：https://github.com/MarkXCloud/RL-MTP",
+        "relevance_detail": "弱连接。论文针对 LLM RL 后训练的 MTP 联合优化，非 VLA/JEPA 场景。但其将多任务损失梯度分解为一阶相关/二阶惩罚的分析，以及在线自适应校准系数的思路（Sec 3.4），可为 V3/LWv2 中世界模型损失与动作损失存在梯度冲突时的动态权重调节提供方法论参照——尤其当模型进入平坦区导致损失间相关性衰减时，类似 Phase transition 的现象可能出现。",
+        "followup": "可重点阅读第 3 节优化分解、Figure 2 的相变现象，以及第 3.4 节 OCC 推导（公式 10–13），思考如何将 log-probability 代理迁移至 VLM 多目标训练中的权重校准。"
+      }
     },
     {
       "rank": 3,
+      "title": "Bayesian Gated Non-Negative Contrastive Learning",
+      "title_zh": "贝叶斯门控非负对比学习",
+      "score": 5,
+      "authors": [
+        "Peng Cui",
+        "Jiahao Zhang",
+        "Lijie Hu"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2605.28441",
+      "url": "http://arxiv.org/abs/2605.28441v1",
+      "published": "2026-05-27",
+      "tldr": "提出 BayesNCL，用概率门控机制过滤任务无关特征，解决对比学习中的优化冲突并提升语义解耦。",
+      "why": "弱信号：通过门控机制处理表征纠缠与梯度冲突的思路，可能启发你在 JEPA-style collapse 防御中思考特征选择，但方法是 contrastive 而非 non-contrastive。",
+      "hits": [
+        "H:self-supervised representation"
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "GE-Sim 2.0: A Roadmap Towards Comprehensive Closed-loop Video World Simulators for Robotic Manipulation",
+      "title_zh": "GE-Sim 2.0：面向机器人操纵的全面闭环视频世界模拟器路线图",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2605.27491",
+      "url": "https://arxiv.org/abs/2605.27491",
+      "published": null,
+      "tldr": "提出一个用于机器人操纵的闭环视频世界模拟器设计与构建路线。",
+      "why": "可能为你的世界模型预训练提供仿真环境，但该工作本身是模拟器路线图，不贡献 JEPA 或 predictor/target 设计上的具体分析。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "构建一个闭环的机器人操作视频世界模拟器，解决现有模拟器无法提供本体状态预测、自动化评估和训练速度慢的问题，实现可扩展的策略评估和闭环学习。",
+        "method": "基于GE-Sim的动作条件多视图视频扩散模型，在数千小时真实机器人数据上重新训练；引入三个闭环模块：(1) Proprioceptive State Expert——轻量 Transformer 通过交叉注意力融合视觉模型多层特征，预测双机械臂 16D 关节角和夹爪状态；(2) World Judge——基于 VLM 的逐帧成功分类器，用类别平衡交叉熵训练，输出机器可验证的奖励信号；(3) 加速框架——利用 DMD2 分布匹配将多步扩散蒸馏至少量步，并结合随机步长训练实现推理时帧跳过，单卡 H100 生成 25 帧仅需 2.3 秒。",
+        "key_contributions": [
+          "提出首个集成状态预测、自动奖励和加速推理的闭环视频世界模拟器 GE-Sim 2.0",
+          "Proprioceptive State Expert 利用冻结视觉模型的加权融合特征预测本体状态，显著提升闭环 sim-to-real 一致性",
+          "World Judge 实现与人工标注高度一致的逐帧成功判定，替代人工检查",
+          "仅 2B 参数的模型在 WorldArena 公开榜单上超越专用世界模型（Ctrl-World、DreamDojo 等）及闭源生成器（Sora、Veo），获最高总分",
+          "过滤后的世界模型合成数据用于行为克隆，在三个真实机器人任务上平均成功率从 0.417 提升至 0.567"
+        ],
+        "sim_benchmarks": [
+          "WorldArena",
+          "6 custom dual-arm tasks (Pour water, Fold towels, Pull out plug, Borrow flame, Command grasp & release, Clean mirror stains)"
+        ],
+        "real_robot": "未明确机器人型号，双机械臂系统，在六项长时程任务上用 π0.5 策略评估，训练数据来自数千小时真实遥操作、策略部署及物体交互轨迹。",
+        "datasets": "自建数据集：数千小时真实世界双机械臂操纵数据，含遥操作、策略部署和丰富接触交互场景，未使用公开数据集。",
+        "compute": "视频世界模型 2B 参数（基于 Cosmos-Predict2-2B-Video2World DiT）；推理在单张 H100 上生成 25 帧需 2.3 秒；训练算力未说明。",
+        "results_headline": "2B 模型在 WorldArena leaderboard 总分第一；视觉指标大幅领先 Ctrl-World（PSNR +3.96 dB, FID 减半）；闭环策略一致性一致性误差 0.058 最优；世界裁判准确率 79% vs Qwen3.5-122B 的 60%；过滤 BC 使真实机器人平均成功率达 0.567（+0.150）。",
+        "baselines": [
+          "Ctrl-World",
+          "DreamDojo",
+          "GigaWorld",
+          "ABot (text & action)",
+          "MotuBrain",
+          "Sora",
+          "Veo",
+          "Qwen3.5-122B"
+        ],
+        "limitations": "世界裁判在离散抓取任务（Command grasp & release）上弱于通用 VLM；对液面、火焰转移等细微视觉信号检测仍有困难；接触丰富任务的闭环一致性仍存在假阳和假阴。",
+        "code_release": "论文未明确说明代码开源，但在项目主页（https://ge-sim-v2.github.io/）可能提供模型权重或代码。",
+        "relevance_detail": "本文是闭环视频世界模拟器，与你正在研究的 JEPA / 潜世界预测路线不直接相关。但两个模块可参考：(1) World Judge（Section 3.4）通过 VLM 逐帧判定成功，提供无需人工的奖励信号，可用于类似“policy filtering”的奖励驱动学习；(2) Proprioceptive State Expert（Section 3.3）从冻结视觉模型的多层特征融合回归本体状态，暗示在 VLA 骨干中插入动作头时可考虑类似的多层视觉特征聚合方式。整体属于弱信号，更多是闭环系统工程实践。",
+        "followup": "重点看 Section 3.4 的 World Judge 设计（奖励建模细节）和 Section 4.5 的消融实验，了解状态专家对闭环 sim-to-real 一致性的提升幅度。"
+      }
+    },
+    {
+      "rank": 5,
+      "title": "PEAM: Parametric Embodied Agent Memory through Contrastive Internalization of Experience in Minecraft",
+      "title_zh": "PEAM: 通过 Minecraft 中对比内化经验实现参数化具身 Agent 记忆",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2605.27762",
+      "url": "https://arxiv.org/abs/2605.27762",
+      "published": null,
+      "tldr": "用有监督对比学习将 Minecraft 中积累的经验内化为具身 agent 的参数化记忆。",
+      "why": "弱信号: 对比内化经验类似于 world model 预训练，可问“能否用 SIGReg 替代对比损失来训练该记忆模块”，但未对 predictor/target 架构做消融，也未涉及非对比 collapse 防御。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "将体现代理（如 Minecraft 代理）的记忆路径从推理时检索（非参数记忆）迁移为参数化技能，使得经验被内化到模型自身的参数中，从而降低推理延迟与 token 消耗，同时避免次生遗忘。核心挑战是“内化哪些经验、何时内化、如何内化”。",
+        "method": "PEAM 采用双层架构：慢速 LLM（GPT-4o）负责推理、规划和验证；快速参数模块基于 Qwen3-VL-8B-Instruct 骨干，叠加按技能类别（craft/gather/combat）物理隔离的 MoE-LoRA 适配器。训练数据为已验证的成功轨迹与失败-纠正轨迹对，损失函数为联合行为克隆（BC）与 DPO（适配器条件化的轨迹级对比损失）。选择内化候选时，用参数化价值评分（PV）综合成本、稳定性、冗余度和干扰风险；触发整合时，用自触发整合（STC）基于失败率的统计检验（Z 检验）自适应决定更新时机，无需任务特定阈值。",
+        "key_contributions": [
+          "提出参数化体现代理记忆框架 PEAM：将经验从外部检索库内化到隔离的 MoE-LoRA 适配器，实现快速执行与抗遗忘。",
+          "将失败视为训练信号，通过失败-纠正轨迹对联合 BC+DPO 训练，使模型不仅能模仿成功，还能对比学习纠正行为与失败动作的差异。",
+          "设计参数化价值评分（PV）和自触发整合（STC），使代理自主决定 what 和 when 内化，避免依赖手工阈值或固定调度。",
+          "在 Minecraft 长程任务中证明：参数化记忆在成功率、遗忘、推理延迟和 token 效率上全面优于检索式记忆基线。"
+        ],
+        "sim_benchmarks": [
+          "Minecraft"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "Minecraft 环境中自行采集的轨迹（成功轨迹与失败-纠正对），未使用外部预训练数据集。",
+        "compute": "主干 Qwen3-VL-8B-Instruct，每类别 LoRA 适配器约 83M 参数，训练与推理均在单张 A100 80GB (bf16) 上完成。慢速 LLM 调用 Azure GPT-4o。训练步数、总 GPU·天未明确说明。",
+        "results_headline": "在 11 长程任务上，PEAM 成功率 69.7% vs. VOYAGER (54.5%)，提升 15.2 个百分点（McNemar p=0.018）；中位推理延迟从 5.5s 降至 3.2s，每任务 token 从 ~31.2K 降至 ~4.6K；顺序整合 craft→gather→combat 后保留率 100%，零遗忘。",
+        "baselines": [
+          "VOYAGER",
+          "Optimus-1-rep.",
+          "Reflexion",
+          "ReAct (无记忆)",
+          "Naive full-FT",
+          "Single shared LoRA",
+          "EWC",
+          "MrSteve"
+        ],
+        "limitations": "仅 Minecraft 单一环境验证，未泛化至机器人操控；参数层仅覆盖 3 个技能类别，适配器数随类别线性增长；PV 权重由网格搜索固定，未学习自适应；BC 项依赖特定 JS 动作语法；部署在 4-bit 量化设备时存在合并权重归零及延迟激增问题。",
+        "code_release": "论文未提",
+        "relevance_detail": "弱信号：PEAM 提供了一种利用失败-纠正对比学习（DPO）与参数隔离的持续学习方案。与 V3/LWv2 核心关注（JEPA 预测器、SIGReg 防坍缩、DiHAL 层选择）无直接交叉。可能的间接启发：(1) 若未来在 VLA 动作头上引入偏好学习（对比正确与错误动作轨迹），PEAM 的联合 BC+DPO 损失可作为模板；(2) 自触发整合的统计准则可能启发在线更新世界模型的触发机制。但整体无世界模型、无视觉预测、无 SSL 表示学习，相关度低。",
+        "followup": "若探索对比偏好学习与动作纠正，可参考 3.2 节 DPO 损失设计与 4.3 节消融（尤其是纯 DPO 导致生成器部署失败的发现）；其余部分与 V3 主线无关，不建议深读。"
+      }
+    },
+    {
+      "rank": 6,
+      "title": "GEM: Generative Supervision Helps Embodied Intelligence",
+      "title_zh": "GEM：生成式监督助力具身智能",
+      "score": 4,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2605.28548",
+      "url": "https://arxiv.org/abs/2605.28548",
+      "published": null,
+      "tldr": "利用生成式监督信号提升具身智能体学习。",
+      "why": "弱信号：若采用生成式目标学习环境动态，可能为你的潜在世界预测提供另一种监督范式，但文章很可能偏向生成而非JEPA式的非重构预测，难以直接回答V3中的坍塌防御或预测器深度选择。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 VLM 预训练主要聚焦于高级语义理解，缺乏低级空间结构和物理知识，导致在 embodied 推理与 VLA 任务中表现受限。本文旨在通过在 VLM 预训练阶段引入深度图生成作为监督信号，使视觉特征同时编码语义和几何信息，从而弥补这一鸿沟。",
+        "method": "GEM 在 Qwen3-VL 骨干的最后一层视觉 token 后接入一个轻量 MLP 连接器和基于 DiT 的深度生成头，使用 flow matching 损失从视觉特征中重建深度图。训练分三阶段：连接器初始化、生成头初始化、端到端联合训练（文本交叉熵损失 + 深度流匹配损失）。扩展到 VLA（GEM-VLA）时，引入 DiT 动作专家，动作生成同样采用 flow matching，并与深度生成头联合优化。",
+        "key_contributions": [
+          "提出以深度图生成作为生成式监督，在 VLM 预训练中显式注入空间结构先验，提升 embodied 理解与操作能力。",
+          "设计三阶段渐进训练策略，有效缝合 VLM 语义空间与扩散生成头的条件空间，避免模态干扰。",
+          "构建大规模 embodied 数据集 GEM-4M，涵盖 grounding、时空推理与规划 QA 对，并为训练提供伪深度标注。",
+          "将 GEM 扩展为 GEM-VLA，在 LIBERO 及真实机器人长时序与可变形物体操作上达到 SOTA。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "CV-Bench",
+          "VSI-Bench",
+          "MMSI-Bench",
+          "EmbSpatial",
+          "RefSpatial",
+          "Where2Place",
+          "RoboSpatial"
+        ],
+        "real_robot": "真机设置: UR5 机械臂，任务包括叠衣服（可变形物体）、拉开背包拉链、长时序餐桌整理（摆放餐具）。微调数据规模未明确说明，每种任务少量 demonstrations。",
+        "datasets": "GEM-4M 数据集，包含约 2M+ QA 对：1M embodied grounding 数据（点、框标注，含自标注机器人数据），1M+ 空间推理数据（源自 MindCube、SPAR、VSI-590K 等），约 50K 时空规划数据。深度伪标签由 DepthAnythingv3 生成。",
+        "compute": "训练 Stage1-3 用 32× NVIDIA A800；VLA 微调用 8× A800。模型规模：基于 Qwen3-VL-2B 和 8B 的 GEM-2B/8B。",
+        "results_headline": "GEM-8B 在空间推理基准上超过 Gemini-3-Pro 约 10%（VSI-Bench 57.9→70.6），GEM-VLA 在 LIBERO 平均 SR 96.1%（超过 π0 94.2%），真实机器人平均 SR 43%，大幅优于 π0-FAST 的 28.7%。",
+        "baselines": [
+          "GPT-4o",
+          "Gemini-3-Pro",
+          "Qwen3-VL",
+          "InternVL3.5",
+          "LLaVA-OneVision",
+          "SpaceR",
+          "VLM-3R",
+          "CambrainS",
+          "Diffusion Policy",
+          "Octo-Base",
+          "OpenVLA",
+          "π0",
+          "TraceVLA",
+          "SpatialVLA",
+          "MolmoACT",
+          "DreamVLA",
+          "DepthVLA"
+        ],
+        "limitations": "依赖 DepthAnythingv3 生成的伪深度标签，其精度可能制约生成质量；渐进式训练增加工程复杂度；未探索其他几何监督信号（如表面法线）及更大规模下的扩展性。",
+        "code_release": "已开源：https://zhaorw02.github.io/GEM/（包含代码、模型和数据集）",
+        "relevance_detail": "该论文证明在 VLM 骨干中联合训练深度生成任务，可显著增强下游 VLA 的空间推理性能（Table 3-4, Fig.5）。这为 V3/LWv2 框架考虑在潜在世界预测之外融入显式几何辅助预测（如深度图或法线图）提供了一项实证参考；但目前你的工作聚焦于纯潜在预测的 I-JEPA 范式，该生成式监督偏向重建范式，与 JEPA 核心思路不同，因此属于弱信号启发。",
+        "followup": "若需参考几何监督对特征结构化影响，建议详读 Sec.5.3（可视化）与 Table 4 的消融对比。"
+      }
+    },
+    {
+      "rank": 7,
       "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
-      "title_zh": "Grounded Decoding：用 grounded 模型引导文本生成以实现机器人控制",
+      "title_zh": "Grounded Decoding: 用grounded模型引导文本生成进行机器人控制",
       "score": 4,
       "authors": [
         "Wenlong Huang",
@@ -65,25 +290,167 @@
       "arxiv_id": null,
       "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
       "published": null,
-      "tldr": "利用 grounded 模型（如结合视觉或环境的模型）指导 LLM 文本生成来控制机器人的方法。",
-      "why": "弱信号：若 grounded model 的注入方式涉及类似 VLA 中 action head 与 VLM 的交融，或可瞥见插入策略，但大概率只是简单后处理；无 predictor/target 设计相关内容。",
+      "tldr": "提出一种将语言模型与物理grounding模型相结合的解码策略，用于生成机器人动作指令。",
+      "why": "弱信号: 若其grounding机制涉及将action head插入VLM的特定层，或许能inform DiHAL-style层选择，但摘要缺失无从判断具体架构。",
       "hits": []
     },
     {
-      "rank": 4,
-      "title": "From Pixels to Words -- Towards Native One-Vision Models at Scale",
-      "title_zh": "从像素到文字——迈向大规模原生单视觉模型",
+      "rank": 8,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "基于稀疏流形变换的极简无监督表示学习",
+      "score": 3,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种基于稀疏流形变换的无监督表示学习方法，但摘要缺失，无法了解细节。",
+      "why": "弱信号：可能涉及无监督表示学习的 collapse 防御或 predictor 设计，但缺少摘要无法判断具体连接。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 9,
+      "title": "How VLAs Fail Differently: Black-Box Action Monitoring Reveals Architecture-Specific Failure Signatures",
+      "title_zh": "VLA 如何以不同方式失败：黑箱动作监控揭示架构特有的失败签名",
+      "score": 3,
+      "authors": [
+        "Krishnam Gupta"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2605.28726",
+      "url": "http://arxiv.org/abs/2605.28726v1",
+      "published": "2026-05-27",
+      "tldr": "发现离散与连续 VLA 架构在动作级失败模式上存在本质差异，速度监控对连续架构无效，需架构匹配监控。",
+      "why": "弱信号：揭示了不同 VLA 架构的动作爆发特征差异，但未涉及动作头插入位置或 latent 预测，对 V3/LWv2 设计帮助有限。",
+      "hits": [
+        "H:VLA"
+      ],
+      "deep": {
+        "problem": "VLA 模型在动作输出层面的失效模式缺乏系统量化，不同架构（离散/连续）的动作级故障特征未被对比，导致部署中普遍使用的速度监控等安全机制可能完全不匹配。",
+        "method": "提出 SafeContract：一个无需训练、黑盒的动作监控工具包，基于 conformal calibration 设定每关节动作边界与速度限值，结合 CUSUM 漂移检测；计算 per-episode 健康指标（方向反转率、jerk RMS、动量一致性、频谱能量比、停滞检测），并用 AUROC 衡量各指标对任务失败（成功/失败）的预测力。",
+        "key_contributions": [
+          "方向反转率是跨架构的通用失败预测器：VQ-BeT AUROC=0.93, Diffusion 0.79, ACT 0.91（p<0.001）",
+          "jerk 的预测力呈离散→连续梯度：VQ-BeT 0.88, ACT 0.69, Diffusion 0.41，反映动作生成机制差异",
+          "速度违规对所有架构均无失败预测力（AUROC 0.41-0.69），对于连续模型（ACT 0.52, Diffusion 0.41）几乎等于随机，证伪了最常见的速度安全策略",
+          "确立了 VLA 的离散/连续双族模式，不同族需要不同的监控指标（离散：jerk+反转率；连续：反转率+动量一致性），并提供了架构匹配的监控推荐"
+        ],
+        "sim_benchmarks": [
+          "PushT",
+          "ALOHA 14-DOF"
+        ],
+        "real_robot": "未做真机实验，所有评估均在仿真中完成",
+        "datasets": "PushT 演示数据（LeRobot 提供的预训练 checkpoint 所用）；ALOHA cube transfer 演示数据（ACT 论文提供）",
+        "compute": "评估在 NVIDIA A40 GPU 上完成，模型均使用预训练权重，未进行额外训练",
+        "results_headline": "在 PushT 上，VQ-BeT 和 Diffusion Policy 的 reversal rate AUROC 分别为 0.93 和 0.79；ACT 在 ALOHA 14-DOF 上 reversal AUROC 0.91；速度违规在所有架构上 AUROC ≤0.69，对连续模型无预测信号。",
+        "baselines": [
+          "无安全合同的原始模型（基线成功率）",
+          "速度违规计数（默认安全机制）"
+        ],
+        "limitations": "（1）所有实验均在仿真中，真机模式未验证；（2）仅测试了三种架构，未覆盖 autoregressive（OpenVLA）和 flow-matching（π0）等主流 VLA；（3）对需要语义正确性监控的混合架构无效，动作质量监控本身不是安全保证。",
+        "code_release": "https://github.com/krishnam94/vla-edge",
+        "relevance_detail": "论文聚焦于部署期黑盒动作监控与失效检测，不涉及表示学习、世界模型、JEPA 或 VLA 架构设计。与你当前 V3/LWv2 中的预测头深度、目标编码器设计、坍塌防御、动作头插入方式等核心设计问题无直接联系。唯一的弱信号是：若未来需将 VLA 部署到真机，架构匹配的动作监控策略（离散 vs 连续）可作为运行时安全层，但整体相关度很低。",
+        "followup": "对 V3 研究方向无直接启发，若关注部署安全，可读 Section IV-C 的 failure prediction 分析及 Table I。"
+      }
+    },
+    {
+      "rank": 10,
+      "title": "PEFT-Arena: Understanding Parameter-Efficient Finetuning from a Stability-Plasticity Perspective",
+      "title_zh": "PEFT-Arena：从稳定性-可塑性角度理解参数高效微调",
       "score": 3,
       "authors": [],
       "source": "hf_papers",
-      "arxiv_id": "2605.28820",
-      "url": "https://arxiv.org/abs/2605.28820",
+      "arxiv_id": "2605.28819",
+      "url": "https://arxiv.org/abs/2605.28819",
       "published": null,
-      "tldr": "致力于扩展原生单视觉模型，使其能从像素直接理解语言。",
-      "why": "弱信号：可能涉及 VLM 架构，但无 action head 插入或 JEPA 等与 V3 直接相关的设计信息。",
+      "tldr": "系统对比PEFT方法在稳定性与可塑性权衡上的表现。",
+      "why": "弱信号：稳定-可塑性分析框架可能启发你评估在Qwen backbone不同深度插入action head时对预训练表征的破坏程度，但该工作侧重微调方法比较而非骨干内部结构介入。",
       "hits": [
         "S:hf_curated"
-      ]
+      ],
+      "deep": {
+        "problem": "当前 PEFT 方法评估仅关注下游任务精度，忽略了预训练能力的遗忘问题。本文提出应从稳定性（保留通用能力）与可塑性（适应新任务）的权衡视角来评价 PEFT。",
+        "method": "构建 PEFT-Arena 基准，在数学和医学两个领域对多种 PEFT 方法（LoRA 系列、OFT、IA3 等）进行 SFT 和 RLVR，联合测量下游准确率和通用能力（IFEval、NQ、BBH）。通过权重空间谱分析（对角投影偏差、更新能量分布）和激活空间几何度量（Procrustes 残差、Gram 失真、CKA）解释遗忘来源。使用插值作为路径诊断工具，发现 SFT 过冲现象，并提出参数化感知的插值路径（如 OFT 的 Cayley 生成器缩放）和分层倒带策略。",
+        "key_contributions": [
+          "提出 PEFT-Arena 基准，从稳定性–可塑性权衡角度评估 PEFT，揭示不同方法迥异的权衡曲线",
+          "发现正交微调 (OFT) 在同等参数量下形成最优前沿，而 SVD 初始化方法 (PiSSA) 遗忘严重",
+          "从权重空间和激活空间内部几何分析遗忘机制，证明通用能力遗忘与通用数据表示的非等距失真高度相关",
+          "利用插值诊断 SFT 过冲现象，并演示 OFT 的 Cayley 路径和分层倒带作为后处理改善权衡"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "数学：Math500、AMC23、AIME24；医学：MedMCQA、MedQA、PubMedQA、MMLU-Pro、GPQA(Medical) 等；通用能力：IFEval、NQ、BBH；SFT 数据：OpenR1-Math-330k (数学)、m23k (医学)",
+        "compute": "Qwen2.5-7B 和 Llama3.2-3B-Instruct 微调，参数量 1.44M–80M+；未明确说明 GPU·days",
+        "results_headline": "Qwen2.5-7B 数学 SFT 下 OFT-b32 目标提升 11.63% 仅降通用 2.60%，而 LoRA-r8 提升 7.17% 降通用 7.75%，PiSSA-r8 提升 9.23% 降通用 22.19%。",
+        "baselines": [
+          "Full FT",
+          "LoRA",
+          "AdaLoRA",
+          "DoRA",
+          "MiSS",
+          "VeRA",
+          "PiSSA",
+          "MiLoRA",
+          "KeepLoRA",
+          "OFT",
+          "IA3"
+        ],
+        "limitations": "仅覆盖数学和医学两个推理领域，评估以英文通用套件为主；方法覆盖以权重参数化 PEFT 为主，缺少 prompt/adapter 类；内部分析为经验诊断，非完整因果理论。",
+        "code_release": "论文提到 SphereLab.ai/PEFT-Arena，未明确说明代码是否已开源",
+        "relevance_detail": "本文与你 V3/LWv2（JEPA 风格 latent world model）直接联系较弱，但提供的表示稳定性分析工具可借鉴：激活空间 Procrustes 残差和 CKA 被用于量化微调后表示几何失真与遗忘的关系（§3.2 + 附录 E），这与你在 JEPA 中监控目标网络表示是否崩溃的思路类似。权重空间的谱偏离轮廓和条件漂移 (CSD) 也许能启发设计预测器-目标网络间表示保持的正则项。此外，分层倒带分析体现了不同层更新强度不平衡（§4.3），与 DiHAL 风格按层选择动作头插入位置有间接的‘按层分配适应容量’的联系。",
+        "followup": "若想借鉴表示几何监控手段，建议精读 §3.2 激活空间几何及附录 E 的度量定义，评估能否改编到你的 JEPA visual token 表示上。"
+      }
+    },
+    {
+      "rank": 11,
+      "title": "AgentFugue: Agent Scaling for Long-Horizon Tasks through Collective Reasoning",
+      "title_zh": "AgentFugue: 通过集体推理实现长时程任务的 Agent 扩展",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2605.24486",
+      "url": "https://arxiv.org/abs/2605.24486",
+      "published": null,
+      "tldr": "利用多 agent 集体推理扩展单一 agent 处理长时程任务的能力。",
+      "why": "弱信号: 长时程任务可能需要潜在世界预测，但本文聚焦多 agent 协作推理，非表示学习或 JEPA 式目标设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "长时程任务中，扩大单个agent能力（scaling up）已取得进展，但通过让多个peer agent并行探索同一任务并共享中间推理来扩展能力（scaling out）是否可行尚不明确。现有方法多依赖角色分工或集中编排，未能利用peer间自由交换中间发现来提升整体效能。",
+        "method": "提出AgentFugue：一个基于共享推理中心（shared reasoning hub）的集体推理框架。Hub作为外部通信层，记录每个agent完成片段（episode）的压缩note（Mwrite），并支持agent通过意图驱动读取（Mread）按需查询队友的原始交互内容以获取专项指导。Hub与任务agent完全解耦，使用Qwen3.5-9B骨干，经监督微调（SFT）和组相对策略优化（GRPO）训练写/读功能，使agent可在不放弃个体探索独立性的前提下选择性复用中间推理。",
+        "key_contributions": [
+          "识别出peer-agent scaling作为一个独立的推理能力扩展维度，增益来自跨轨迹信息复用而非角色特殊化。",
+          "提出AgentFugue框架，通过笔记写作与意图驱动读取将并行轨迹转变为有选择共享的推理生态，无需中心化规划。",
+          "在同构和异构agent团队中验证该框架，分析了何时提升单agent效率、何时带来更大团队增益，并揭示通信机制的设计关键。"
+        ],
+        "sim_benchmarks": [
+          "BrowseComp",
+          "WideSearch",
+          "HLE"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明",
+        "compute": "未说明",
+        "results_headline": "在DeepSeek-v4-Flash backbone下，AgentFugue三个benchmarks平均65.0分，超出Swarm-Multi-Agent +7.4、Naive-Multi-Agent +7.7；Qwen3.5-35B-A3B下平均54.4，提升+5.4/+5.9。同构团队在BrowseComp上从N=1的36%提升至N=5的57.6%。",
+        "baselines": [
+          "LLM ReAct (Claude-Opus-4.5, Qwen3.5-35B-A3B, GLM-4.7, DeepSeek-v4-Flash, Kimi-K2.5)",
+          "单agent DeepResearch (WebThinker, WebSailor, AgentFold, IterResearch, Tongyi-DeepResearch, OpenAI DeepResearch)",
+          "Naive-Multi-Agent",
+          "Swarm-Multi-Agent"
+        ],
+        "limitations": "选择性通信的可靠性不足，可能让误导性中间假设在团队中扩散；hub上下文预算对性能呈倒U形影响，当前默认配置（64K触发）非最优，最优为32K。",
+        "code_release": "开源：https://github.com/qhjqhj00/cabeza",
+        "relevance_detail": "弱关联：本文专注于纯语言Agent的长时程推理与多智能体扩展，不涉及视觉、动作或世界模型。您当前V3/LWv2研究的JEPA架构、预测头设计、SIGReg防坍缩等核心问题与本文无交集。唯一微弱联系在于共享记忆模块可能为将来世界模型中的跨时间步信息整合提供架构参考，但论文未建模任何连续状态或视觉token。",
+        "followup": "若对LLM Agent多体推理的通信效率感兴趣，可读§3.4-3.6的scaling与ablation，但与您当前研究路线无直接价值，不建议深读。"
+      }
     }
   ]
 }
