@@ -1,0 +1,123 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const indexUrl = `${base}/search-index.json`;
+---
+<form class="searchbox" role="search" onsubmit="event.preventDefault()">
+  <input
+    id="q"
+    type="search"
+    placeholder="搜索论文 — 标题 / 摘要 / 作者 / 关键词"
+    autocomplete="off"
+    spellcheck="false"
+  />
+  <span class="search-hint" id="search-hint"></span>
+</form>
+<div id="search-results" class="search-results" hidden></div>
+
+<script is:inline define:vars={{ base, indexUrl }}>
+  (() => {
+    const input = document.getElementById('q');
+    const results = document.getElementById('search-results');
+    const hint = document.getElementById('search-hint');
+    if (!input || !results) return;
+
+    let DATA = null;
+    let loading = false;
+    let timer = null;
+
+    function archiveEls() {
+      return {
+        grid: document.querySelector('.post-grid'),
+        title: document.querySelector('.section-title'),
+        empty: document.querySelector('.empty-note'),
+      };
+    }
+
+    async function ensureData() {
+      if (DATA || loading) return DATA;
+      loading = true;
+      try {
+        const res = await fetch(indexUrl);
+        DATA = await res.json();
+      } catch (e) {
+        DATA = [];
+      } finally {
+        loading = false;
+      }
+      return DATA;
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function render(matches, q) {
+      if (!matches.length) {
+        results.innerHTML = `<p class="search-empty">未找到包含 "${esc(q)}" 的论文。</p>`;
+        return;
+      }
+      const html = matches.slice(0, 60).map((p) => {
+        const title = p.title_zh && p.title_zh.trim() ? p.title_zh : p.title;
+        const authors = (p.authors || []).slice(0, 3).join(', ') +
+          ((p.authors || []).length > 3 ? ' 等' : '');
+        return `<a class="search-hit" href="${base}/posts/${p.date}/">
+          <div class="search-hit-meta">
+            <time>${esc(p.date)}</time>
+            <span class="search-hit-score">score ${p.score}/10</span>
+          </div>
+          <h3>${esc(title)}</h3>
+          <p class="search-hit-authors">${esc(authors)}</p>
+          <p class="search-hit-tldr">${esc(p.tldr || '')}</p>
+        </a>`;
+      }).join('');
+      results.innerHTML = html;
+      hint.textContent = matches.length > 60
+        ? `命中 ${matches.length} 篇 · 显示前 60`
+        : `命中 ${matches.length} 篇`;
+    }
+
+    function showArchive(show) {
+      const { grid, title, empty } = archiveEls();
+      const disp = show ? '' : 'none';
+      if (grid) grid.style.display = disp;
+      if (title) title.style.display = disp;
+      if (empty) empty.style.display = disp;
+    }
+
+    async function run() {
+      const q = input.value.trim().toLowerCase();
+      if (!q) {
+        results.hidden = true;
+        results.innerHTML = '';
+        hint.textContent = '';
+        showArchive(true);
+        return;
+      }
+      hint.textContent = '搜索中…';
+      const data = await ensureData();
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const matches = (data || []).filter((p) => {
+        const hay = [
+          p.title, p.title_zh, p.tldr, p.why,
+          (p.authors || []).join(' '),
+          (p.hits || []).join(' '),
+          p.arxiv_id || '',
+        ].join(' ').toLowerCase();
+        return tokens.every((t) => hay.includes(t));
+      }).sort((a, b) => b.score - a.score || b.date.localeCompare(a.date));
+      render(matches, q);
+      results.hidden = false;
+      showArchive(false);
+    }
+
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(run, 90);
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { input.value = ''; run(); input.blur(); }
+    });
+  })();
+</script>
