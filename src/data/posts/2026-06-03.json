@@ -1,0 +1,1034 @@
+{
+  "date": "2026-06-03",
+  "kept": 19,
+  "reviewed": 44,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "Exact equivariance, kept through training, buys zero-shot generalisation across the symmetry group",
+      "title_zh": "精确等变性在训练中保持，使模型在对称群上实现零样本泛化",
+      "score": 9,
+      "authors": [
+        "Hongbo Wang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03003",
+      "url": "http://arxiv.org/abs/2606.03003v1",
+      "published": "2026-06-02",
+      "tldr": "构建等变编码器与等变预测器的潜在世界模型，经 VICReg 训练后，一步预测误差在 SO(2)/SE(3) 群上精确不变，实现零样本泛化。",
+      "why": "在 JEPA 式潜在世界模型中使用等变 predictor，并分析了 VICReg 和 EMA 下等变性的保持，直接关联你 V3 的 predictor 设计和 collapse 防御。",
+      "hits": [
+        "H:world model",
+        "H:latent world",
+        "H:VICReg"
+      ],
+      "deep": {
+        "problem": "证明一个由等变编码器 E 和等变预测器 f 组成的潜在世界模型能够获得跨对称群的精确零样本泛化，且等变性在梯度训练后依然保留；同时指出非等变模型在分布外方向剧烈退化。",
+        "method": "核心架构采用 Vector Neuron (VN) / e3nn 等变层，编码器与预测器均满足群等变性 E(g·x)=ρ(g)E(x) 和 f(ρ(g)z, g·a)=ρ(g)f(z,a)，其中 ρ(g) 为正交表示。训练目标为一步预测 MSE，结合 VICReg 协方差正则化与 EMA 目标编码器，使用 Muon/AdamW 优化器。在 SO(2) 和 SE(3) 群上开展实验，通过限制方向楔形训练数据，测试跨群误差平坦性。",
+        "key_contributions": [
+          "定理1：一步预测 relMSE 在群上精确不变，所以 OOD 比率为 1.00 不是经验趋势，而是由架构保证的数学结果",
+          "训练后等变性保留至浮点精度（∼10⁻⁶），且对任何优化器都成立（因为 VN/e3nn 参数化内在地限制了等变子空间）",
+          "非等变 baseline 在训练楔形内学得较好，但 OOD 恶化（2D 潜伏 relMSE ×13.8，3D ×17.2，全 SE(3) ×157），而等变模型同等能力保持平坦",
+          "闭环推论：当规划器也等变时，闭环控制轨迹严格群不变（2D 浮点精确为 0°，3D 统计平坦），显式展示了对称性从预测到控制的传递"
+        ],
+        "sim_benchmarks": [
+          "PushT",
+          "自定义 3D 点云动力学（合成 teacher）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "均基于实时模拟器或合成动力学：PushT 环境数据、合成 SO(2)/SO(3) 点云 teacher 生成的转移样本",
+        "compute": "论文未明确说明 GPU·days；实验在 laptop CPU/MPS 上运行，模型参数量很小（VN 3k–37k，baseline 19k–245k）",
+        "results_headline": "等变模型 OOD/seen 误差比恒为 1.00（平坦到五位数字）；非等变 baseline 在 2D latent 上退化至 ×13.8，3D ×17.2，全 SE(3) 平移外推 ×157；闭环控制中 VN 在 2D 实现 0° 漂移，3D 下 OOD/seen 姿态误差比 0.996（95% CI [0.993, 1.000]） vs MLP 1.064（CI [1.038, 1.090]），且 VN 参数量为 4.5–7.4 倍更少。",
+        "baselines": [
+          "非等变 MLP（相同假设类、更高容量）",
+          "数据增强（全方向旋转增强）",
+          "软等变插值（soft-equivariant）",
+          "暴力规模扩展（brute-force scale）"
+        ],
+        "limitations": "作者明确未覆盖二值任务成功率扫描、无规划器的闭环不变性以及规模化实验。表达力上，纯标量权重的 VN 缺失 SO(2) 的 90° 生成元，在 3D 双线性耦合上受限于 1 阶齐次性；3D 等变仅达 e3nn 库的 ∼10⁻⁶ 浮点底噪，非真正的零；编码器池化导致的容量瓶颈未解决。",
+        "code_release": "论文未提",
+        "relevance_detail": "直接对应 V3/LWv2 的核心结构：本文构建了基于等变编码器-预测器的 latent JEPA 世界模型，使用 VICReg 正则化（类似你的 SIGReg），且保留了 EMA 目标编码器。关键可迁移点是第 2.2 节的定理（若编码器/预测器等变且群作用正交，则一步预测误差跨群平坦）和 2.3 节的训练后等变性保持证明，这可以指引你在 Qwen3-VL 基础上引入 SE(3)/SO(3) 等变性，从而获得跨物体姿态的零样本泛化。第 3.2 节分解了 baseline 在旋转通道上崩溃的机制，正与你关心的 “动作头插入位置” 与群结构关联一致；第 3.3 节闭环规划器等变的要求，暗示 VLA 中若使用基于模型的控制，动作空间也需与视觉变换协调。此外，第 3.6 节 “无分布内优势” 的观察与你在 V3 中测试的预测器-目标平衡有关。",
+        "followup": "重点阅读第 2.2 节（定理及证明）、第 3.2 节（按状态分量分解的 OOD 退化）、第 3.4 节（场景级别的组合等变性实验）和第 5 节（Bitter Lesson 的压力测试与编码器池化瓶颈定位）。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "GeoAlign: Beyond Semantics with State-Guided Spatial Alignment in VLA Models",
+      "title_zh": "GeoAlign:超越语义的 VLA 模型状态引导空间对齐",
+      "score": 9,
+      "authors": [
+        "Yizhi Chen",
+        "Zhanxiang Cao",
+        "Xinyi Peng",
+        "Yixiao Zheng",
+        "Xiaxi Si",
+        "Yiheng Li",
+        "Liyun Yan",
+        "Keqi Zhu",
+        "Xueyun Chen",
+        "Shengcheng Fu",
+        "Tianyue Zhan",
+        "Yufei Jia",
+        "Jinming Yao",
+        "Yan Xie",
+        "Kun Wang",
+        "Cewu Lu",
+        "Yue Gao"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03240",
+      "url": "http://arxiv.org/abs/2606.03240v1",
+      "published": "2026-06-02",
+      "tldr": "在 VLA 中后训练 RGB 几何分支，用机器人本体感受查询几何特征网格，生成相位相关的几何 token 用于动作预测，显著提升操作性能。",
+      "why": "明确探讨了如何将几何空间信息作为额外模态插入 VLA 的动作预测流，类似 DiHAL 的层选择思路，直接可启发 V3 中 action head 的位置和跨模态对齐设计。",
+      "hits": [
+        "H:VLA",
+        "M:LIBERO"
+      ],
+      "deep": {
+        "problem": "现有 VLA 模型主要优化语义对齐,但细粒度操作需要几何感知的空间对齐与相位相关几何线索。本文提出 GeoAlign,通过 RGB 派生几何特征与本体状态引导查询,为动作解码器提供紧凑的、依赖机器人状态的几何 token,提升空间执行能力。",
+        "method": "两阶段框架: (1) 离线几何后训练:用机器人域 RGB-D 监督微调 Depth Anything V2-Small,丢弃深度头,保留编码器侧 GEP 特征。 (2) 策略训练:冻结几何编码器,从多视图 RGB 提取 GEP 特征网格;本体状态经 MLP 生成 8 个查询槽,交叉注意力到几何网格产生 8 个紧凑几何 token;将其与 VLM 语义 token 拼接送入 GR00T flow-matching DiT 动作头,用动作掩码归一化 MSE 训练。",
+        "key_contributions": [
+          "提出状态引导空间对齐:本体状态主动查询图像空间几何特征网格,输出相位相关的几何 token 指导动作生成。",
+          "提出几何增强后训练特征 (GEP):通过机器人域 RGB-D 后训练得到 RGB 派生的几何特征,策略部署时不使用原始深度图。",
+          "在 LIBERO、SimplerEnv-Fractal 和真实 ALOHA 上验证,可控消融证实后训练与状态查询的贡献。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "SimplerEnv-Fractal"
+        ],
+        "real_robot": "AgileX ALOHA 双臂平台;8 项面向几何关键的任务:取透明胶带、透明瓶放置冰立方、大小胶带卷对齐/插入、盘子相对摆放(前/后/左/右/上);前 3 个任务各 40 条演示,盘子任务各 10 条;每项运行 20 次评估。",
+        "datasets": "几何后训练:LingBot-Depth 的 RobbyVLA 子集(约58万对 Franka/UR7e 机器人 RGB-D, RealSense D405 相机);策略训练:自采演示数据(每任务40或10条)。",
+        "compute": "策略模型:Isaac-GR00T N1.6-3B(含 Eagle-Block2A-2B VLM) + 32 层 DiT 动作头;几何分支:Depth Anything V2-Small(24.8M);训练:2×H200 GPU, ~16 小时。",
+        "results_headline": "LIBERO 平均成功率 99.0%(RGB-only 97.0%), SimplerEnv-Fractal 85.3%(RGB-only 79.6%), 真实 ALOHA 78.8%(RGB-only 65.0%, π0.5 67.5%); 消融显示机器人域后训练与状态引导查询分别贡献约 +3.1% 与 +2.8%。",
+        "baselines": [
+          "RGB-only backbone (Isaac-GR00T N1.6-3B)",
+          "w/o post-training (未适配 DA-V2 特征)",
+          "w/o spatial querying (全局池化)",
+          "w/o state queries (学习查询槽)",
+          "w/ unfrozen encoder (微调几何编码器)",
+          "π0.5 (仅真实世界对比)"
+        ],
+        "limitations": "不显式建模碰撞/可达性/接触约束;几何 token 依赖视觉覆盖与后训练相机设置;无长时程空间记忆;视觉几何不足以处理需力觉反馈的任务。",
+        "code_release": "论文未提",
+        "relevance_detail": "弱信号:论文核心是 VLA 几何先验融合,对你 V3/LWv2 的直接启示有三:(1) 本体状态生成查询槽从冻结特征网格提取任务相关 token 的机制,可用于 JEPA 预测器中以动作/状态查询未来视觉 token(影响 predictor head 设计);(2) 消融中冻结后训练编码器优于微调(Table 5 w/ unfrozen encoder),类比目标编码器 EMA 冻结/微调策略;(3) 将几何 token 拼接到 DiT 解码器上下文而非注入 VLM 骨干,为 DiHAL 式层选择提供顶层融合参考。",
+        "followup": "重点阅读第 3.3 节状态引导查询机制、Table 5 消融表及 Appendix B 注意力可视化;状态查询与冻结编码器策略可迁移至 JEPA 预测器/目标编码器设计。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "GeoSem-WAM: Geometry- and Semantic-Aware World Action Models",
+      "title_zh": "GeoSem-WAM: 几何与语义感知的世界动作模型",
+      "score": 9,
+      "authors": [
+        "Fulong Ma",
+        "Daojie Peng",
+        "Wenjun Yue",
+        "Jiahang Cao",
+        "Bintao Wang",
+        "Qiang Zhang",
+        "Jun Ma"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03188",
+      "url": "http://arxiv.org/abs/2606.03188v1",
+      "published": "2026-06-02",
+      "tldr": "针对世界动作模型的实效来源争议，通过增加未来几何与语义辅助预测分支增强潜在表示，避免测试时显式生成，显著提升动作预测和场景理解。",
+      "why": "在WAM中ablate未来预测vs表示学习，并加入结构化辅助loss，正是你考虑V3预测头输出设计（是否增加语义/几何目标）时的直接参考。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "现有世界动作模型(WAM)主要依赖RGB未来预测,缺乏对场景空间几何与物体级语义的结构化理解,且WAM有效性来源是训练期表征学习还是测试期显式未来想象一直未厘清。本文旨在通过附加几何与语义辅助预测分支,在训练期注入结构化世界监督,提升潜在表征质量,同时保持推理高效。",
+        "method": "基于Wan2.2-5B视频DiT构建GeoSem-WAM,采用Mixture-of-Transformer(MoT)架构,视频分支与动作分支共享注意力。训练时,除未来RGB预测外,引入DPT风格的稠密预测头,在视频潜变量上同时预测未来深度(L1损失)与语义分割(交叉熵),整体损失为λ_rgb·L_rgb+λ_geo·L_geo+λ_sem·L_sem+λ_act·L_act。推理时仅用当前观测潜变量直接预测动作,丢弃DPT头与未来生成。",
+        "key_contributions": [
+          "明确WAM的核心价值来自训练阶段的预测性监督诱导的动力学感知表征学习,而非测试时的显式未来想象,厘清了机理并指导高效设计。",
+          "提出GeoSem-WAM框架,将未来RGB预测与几何、语义多模态预测统一到单一WAM训练中,增强潜在空间对空间结构和对象语义的编码。",
+          "在LIBERO、RoboTwin仿真与Franka真机多重任务中验证结构化监督提升动作预测准确率与鲁棒性,消融实验证明几何与语义分支独立及联合增益。",
+          "可视化分析表明GeoSem-WAM的中间层token具有更清晰的语义聚类和更准确的深度预测,为结构化世界建模提供质性证据。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO(Spatial/Object/Goal/Long四个套件)",
+          "RoboTwin 2.0(Clean/Random设置)"
+        ],
+        "real_robot": "Franka Emika Panda; 四个任务(Easy-Pick, Multi-Pick, Multi-Goal, Pick-Pour)及背景、高度泛化测试; 每个任务采集50条遥操轨迹,每任务50次评估。",
+        "datasets": "仿真:LIBERO每套件500条专家演示,RoboTwin 2.0提供10万+轨迹(含Clean/Random协议); 真机:每个任务50条人类遥操作数据。未使用大规模预训练数据如OXE。",
+        "compute": "骨干Wan2.2-5B约5B参数,训练使用两块NVIDIA H800 GPU,推理部署于RTX 4090。具体GPU·天未说明。",
+        "results_headline": "LIBERO平均成功率98.55%(相对Fast-WAM 97.60%提升0.95%),RoboTwin平均成功率92.52%(相对Fast-WAM 91.80%提升0.72%),真机平均成功率95.4%(相对Fast-WAM 88.9%提升6.6%)。",
+        "baselines": [
+          "Fast-WAM",
+          "OpenVLA",
+          "OpenVLA-OFT",
+          "π0",
+          "π0.5",
+          "Motus",
+          "LingBot-VA",
+          "WorldVLA",
+          "NORA-Long",
+          "SmolVLA",
+          "CogACT",
+          "UniVLA",
+          "VLA-ADP",
+          "SP-VLA",
+          "FlashVLA",
+          "VLA-Cache",
+          "X-VLA",
+          "UWM",
+          "GigaWorld-Policy",
+          "X-WAM"
+        ],
+        "limitations": "DPT辅助头依赖像素级标注,真实RGB数据稀缺且伪标签噪声大; 联合优化异质损失增加训练复杂度,存在梯度冲突风险。",
+        "code_release": "论文未提开源代码。",
+        "relevance_detail": "该文在WAM训练中引入几何与语义辅助预测分支,本质上是一种结构化自监督信号,与你在V3/LWv2中探索JEPA预测头是否应附带额外目标高度相关。表3消融(仅几何+0.61%,仅语义+0.51%,联合+1.02%)直接验证了多模态未来预测对表征的增益,为你决定V3预测头是否加入深度/语义辅助损失提供实证参考。文中token聚类与深度线性探测(Fig.3)的方法可移植为评估JEPA潜在空间质量的手段。此外,其DPT式多层级特征融合可启发你在Qwen-VL内部选取多层token设计预测头。",
+        "followup": "精读Section 4.3消融表3与Fig.3的token可视化/depth probing,以及Method中DPT辅助头具体结构(Fig.2,Section 3.2)以借鉴多模态预测头设计;若考虑梯度冲突,可关注其提及的梯度手术方向。"
+      }
+    },
+    {
+      "rank": 4,
+      "title": "Beyond Compression: Quantifying Spectral Accessibility in Vision Representations",
+      "title_zh": "Beyond Compression: Quantifying Spectral Accessibility in Vision Representations: 超越压缩——量化视觉表示中的频谱可及性",
+      "score": 9,
+      "authors": [
+        "Akayou A. Kitessa",
+        "Yijun Zhao"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03795",
+      "url": "http://arxiv.org/abs/2606.03795v1",
+      "published": "2026-06-02",
+      "tldr": "通过线性恢复带限傅里叶能量，度量视觉表示在不同深度的频谱可及性，发现CLIP/DINOv2中间层可及性最高，最终投影或[CLS]池化改变频谱结构。",
+      "why": "量化了不同深度层的表示丰富度，为在Qwen backbone中选择插入动作头的层位（DiHAL风格）提供了直接证据，对应你的“在哪插动作头”问题。",
+      "hits": [
+        "M:DINOv2"
+      ],
+      "deep": {
+        "problem": "量化预训练视觉编码器(CLIP, DINOv2)中空间频率信息的线性可恢复性如何随层深变化,并区分是维度压缩还是学习到的变换导致了频谱结构改变。",
+        "method": "提出残差光谱损失(RSL):对冻结模型提取卷积stem、中间层、预投影层、输出层的表示,使用岭回归线性探针预测径向频带能量(可访问性α),再计算相对于预投影层的频谱衰减率(SDR),并与维度匹配的随机投影基线比较,得到RSL以隔离维度缩减以外的学习效应。用自助法估计RSL的95%置信区间。",
+        "key_contributions": [
+          "提出一种基于线性探针衡量频谱可访问性的框架,用于评估各层对径向频率分量的保留能力。",
+          "引入RSL指标,通过与随机投影基线对比,分离维度压缩与学习变换对频谱信息的影响。",
+          "在CLIP和DINOv2上发现一致的频率依赖性:中间层可访问性达到峰值,输出层进一步下降;CLIP的投影层频谱中性,DINOv2的[CLS]池化导致结构化损失。",
+          "层级分析表明最大的频谱衰减发生在中间层,而非均匀分布,揭示了早期Transformer块整合跨patch信息的作用。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "ImageNet子集 (10k随机图像) 和 COCO子集 (10k随机图像),均转为灰度图。",
+        "compute": "使用预训练ViT模型 (CLIP ViT-L/14, CLIP ViT-B/32, DINOv2 ViT-B),线性探针拟合在NVIDIA V100上运行。预训练成本未说明。",
+        "results_headline": "可访问性̄α: 中间层最高 (0.71–0.76), 输出层稍降 (0.51–0.56); DINOv2输出RSL正显著 (0.10–0.22), CLIP输出RSL接近零; 卷积stem低频偏置, 中间层全频段提升。",
+        "baselines": [
+          "随机投影基线 (Johnson-Lindenstrauss)",
+          "不同模型间的层级对比 (CLIP ViT-L/14, CLIP ViT-B/32, DINOv2)"
+        ],
+        "limitations": "观察性研究,未建立因果;仅使用线性探针,未捕捉非线性结构;分析限于灰度图与径向频带;模型仅限ViT架构与自然图像,泛化性待验证。",
+        "code_release": "开源,匿名GitHub仓库: https://anonymous.4open.science/r/vlm_insight-8106/",
+        "relevance_detail": "对V3/LWv2的直接参考: 层级分析(Sec 5.2 & 5.3)显示中间层保留最丰富的空间频率信息,且DINOv2的[CLS]池化会结构性地抑制低频信息。这提示在选择Qwen-VL中动作头插入位置时,应优先考虑中间层而非输出层,且避免使用类似[CLS]的强聚合操作,以防止丢弃对世界预测有用的低频结构。文中RSL诊断方法可借鉴用于检验latent predictor中不同层对图像信息的保留程度。",
+        "followup": "重点阅读Sec 5.2对DINOv2[CLS]池化损失的量化以及Sec 5.3中RSL揭示的中间层全频段改善模式,为选择插入层和设计目标编码器提供经验依据。"
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "基于稀疏流形变换的极简无监督表示学习",
+      "score": 8,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出基于稀疏流形变换的无监督学习方法，通过稀疏编码和流形约束学习表示，可能避免表示坍塌。",
+      "why": "作者含 LeCun，可能涉及无对比学习的坍塌防御机制（稀疏约束），可为 V3 中除 SIGReg 外的 collapse 控制提供备选思路。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 6,
+      "title": "Revisiting Embodied Chain-of-Thought for Generalizable Robot Manipulation",
+      "title_zh": "重访具身思维链以实现可泛化机器人操作",
+      "score": 8,
+      "authors": [
+        "Nan Sun",
+        "Yuan Zhang",
+        "Yongkun Yang",
+        "Wentao Zhao",
+        "Peiyan Li",
+        "Jun Guo",
+        "Wenxuan Song",
+        "Pengxiang Ding",
+        "Runze Suo",
+        "Yifei Su",
+        "Xin Xiao",
+        "Xinghang Li",
+        "Huaping Liu"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03784",
+      "url": "http://arxiv.org/abs/2606.03784v1",
+      "published": "2026-06-02",
+      "tldr": "在 VLA 模型中，有效的具身思维链应给出具体动作引导（如末端轨迹），而非仅高层推理；提出 ERVLA，用思维链作表征塑造监督，推理时丢弃 CoT，实现 SOTA。",
+      "why": "探索了 VLA 中动作相关推理如何注入模型，以及推理与动作的解耦训练，可为你在 Qwen 骨干中插入 action head 的机制设计提供参考。",
+      "hits": [
+        "H:VLA",
+        "M:LIBERO"
+      ],
+      "deep": {
+        "problem": "具身链式思维（Embodied CoT）应如何真正促进机器人动作生成？当前 ECoT 方法缺乏对有效推理形式的系统理解，且自回归式 CoT+动作解码存在推理噪声累积和难以随数据扩展的问题。",
+        "method": "提出 ERVLA：一个基于 Qwen3-VL-4B 与扩散 Transformer（DiT）的 VLA 模型，使用结构化 ECoT 监督、选择策略（choice policy）分支和知识截断（knowledge truncation）让 DiT 仅读取 VLM 语义前缀的 KV 缓存。训练时引入推理 dropout（以 /cot 或 /no_cot 随机切换），使模型在训练中吸收推理迹，推断时可直接预测动作而无需生成 CoT；同时用辅助动作查询 token 和流匹配损失对 VLM 进行端到端训练，将推理监督内化为动作感知的表征。",
+        "key_contributions": [
+          "构建了迄今最大规模的具身 CoT 语料（978,743 条轨迹，226.3M 样本，2592.5 小时），并定义了层次化的 CoT 格式（任务理解、规划、空间基底、动作描述）。",
+          "通过统一消融揭示：仅高级语义推理对动作增益有限，而接地于末端移动、图像轨迹等动作相关 CoT 信号（如 Movement、Point trajectory）才显著提升控制性能。",
+          "发现 CoT 标注噪声导致的“CoT contamination”现象及自回归解码的脆弱性，并证明推理 dropout 能缓解噪声并促进推理内化为表征。",
+          "提出知识截断（DiT 仅条件于语义前缀缓存）与选择策略，使 ERVLA 在 LIBERO-Plus（86.9%）和 VLABench（53.2%）达到 SOTA，且真机实验在语义歧义与长程任务上显著优于 π0.5 等基线。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "LIBERO-Plus",
+          "VLABench"
+        ],
+        "real_robot": "真机实验：单臂平台（未公开型号），配一第三视角和一腕部相机，两类任务（物品放入抽屉、桌面清理），分 Basic、Distractors、Semantic、Long-horizon 四档共 20 个任务，每任务 5 次试验。对比方法包括 ECoT、WorldVLA、UniVLA、π0.5 等；ERVLA 在 Semantic 和 Long-horizon 档显著领先，平均成功率与进度得分均最高。微调所用真机数据规模未公开。",
+        "datasets": "构建 CoT 语料所用开源数据集：Bridge、Fractal、Droid、MolmoAct、AgiBot 等。仿真主训练用 LIBERO；VLABench 为评估基准。真机实验数据规模未明确说明。",
+        "compute": "论文未明确说明训练算力与具体 GPU·天数。",
+        "results_headline": "ERVLA 在 LIBERO-Plus 平均成功率 86.9%（超 π0.5 的 85.5%），VLABench 平均成功率 53.2%（超 π0.5 的 48.1%）；真机实验中在语义歧义和长程任务上均显著优于 π0.5。",
+        "baselines": [
+          "ECoT",
+          "Emma-X",
+          "OpenVLA-OFT",
+          "UniVLA",
+          "WorldVLA",
+          "π0",
+          "π0-FAST",
+          "Spatial Forcing",
+          "PokeVLA",
+          "π0.5",
+          "X-VLA",
+          "ACoT-VLA"
+        ],
+        "limitations": "自动 CoT 标注仍残留噪声（dropout 仅部分缓解）；真机评估仅限于两类任务且未跨不同机械臂验证；长程推理链的扩展性尚未在更复杂环境下实验；论文未给出大规模 CoT 预训练的计算成本。",
+        "code_release": "将开源，GitHub: https://taoshuaiz.github.io/ERVLA/",
+        "relevance_detail": "论文中的知识截断设计（DiT 仅读取 VLM 语义前缀的 KV 缓存）直接对应 VLA 中“动作头从 VLM 的哪一层/哪些 token 获取表征”这一 DiHAL 风格问题。Sec 2.2 及 Table 3/4 的消融表明，向 DiT 暴露控制查询 token 会导致捷径学习，而仅保留语义前缀缓存能清洁动作条件——这对你在 Qwen3-VL 中为 LWv2 动作头选择 KV 位置有直接指导。此外，推理 dropout 作为一种训练 scaffolding，将语言推理信号内化为骨干表征而不依赖推理时生成，与你打算把 latent world prediction 作为训练 shaping 信号但仍允许推理时丢弃的思路高度相似。",
+        "followup": "重点阅读 Sec 2.2 的知识截断机制与 Table 3/4 的消融，以及 Sec 2.3 中推理 dropout 与选择策略的共同设计。"
+      }
+    },
+    {
+      "rank": 7,
+      "title": "World Models Meet Language Models: On the Complementarity of Concrete and Abstract Reasoning",
+      "title_zh": "World Models Meet Language Models: 世界模型遇见语言模型——论具象与抽象推理的互补性",
+      "score": 7,
+      "authors": [
+        "Yucheng Zhou",
+        "Wei Tao",
+        "Yiwen Guo",
+        "Jianbing Shen"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03603",
+      "url": "http://arxiv.org/abs/2606.03603v1",
+      "published": "2026-06-02",
+      "tldr": "形式化受控具象推理任务，学习何时调用、验证和集成世界模型的视觉推演与语言推理，提出PF-OPSD训练方法并提升鲁棒性。",
+      "why": "探讨世界模型模拟与语言推理的结合时机与集成方式，可能启发V3中潜在世界预测与动作推理的跨模态对齐设计。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "论文要解决的核心问题是：在给定静态初始图像时，多模态大语言模型如何可靠地调用、验证并整合生成式世界模型提供的“具体未来视觉rollout”进行推理，而非单纯附加世界模型或盲目信任生成的rollout。",
+        "method": "提出Privileged-Future On-Policy Self-Distillation (PF-OPSD)框架。训练时引入一个能看到ground-truth未来视频和答案的特权评估器，对MLLM产生的on-policy具体推理轨迹（包括仿真决策dsim、仿真提示psim、rollout验证zver、rollout依赖zrel、最终答案y）进行评分，再用优势加权蒸馏校准各决策节点。世界模型W提供候选rollout（实验用Helios），学生策略在测试时不接触真实未来。训练分两阶段：阶段1使用特权教师（Gemini-3.1-Pro+Agent）做协议SFT；阶段2用PF-OPSD蒸馏。",
+        "key_contributions": [
+          "将未来预测形式化为“受控具体推理”，MLLM需学习何时调用世界模型rollout、如何验证及依赖其输出。",
+          "识别了朴素集成世界模型的两个失败模式：仿真惰性（有帮手不用）和强制仿真悖论（被迫使用可能有害）。",
+          "构建了两个人工验证的基准：VRQABench（迷宫/推箱子可控空间前瞻）和OpenWorldQA（真实视频开放域物理预测）。",
+          "提出PF-OPSD，利用训练时的特权未来信息蒸馏具体推理决策，在两个基准上分别比SFT提升10.6和10.9个百分点。"
+        ],
+        "sim_benchmarks": [
+          "VRQABench"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "VRQABench（4,636个人工验证问题，来自VR-Bench迷宫/不规则迷宫/推箱子）和OpenWorldQA（4,404个人工验证问题，来自真实视频锚帧）；未使用OXE等机器人数据。",
+        "compute": "学生模型Qwen3.5-9B，仅LoRA微调（r=64），阶段1 SFT一epoch，阶段2 PF-OPSD 100步；具体GPU·days未明确说明。",
+        "results_headline": "PF-OPSD在VRQABench上达72.4%（SFT 61.8%），OpenWorldQA上达70.5%（SFT 59.6%），分别提升10.6和10.9百分点；优于GRPO（63.5%/61.2%）。",
+        "baselines": [
+          "Zero-shot MLLMs (Gemini-3-Flash, GPT-5.4, HY3, Qwen3.6-27B, Qwen3.5-9B等)",
+          "Workflow Agent (prompt访问Helios)",
+          "SFT (结构化轨迹监督)",
+          "SFT+GRPO"
+        ],
+        "limitations": "依赖世界模型能生成与场景相关的rollout；未覆盖所有物理推理形式和世界模型设计；训练需有标注的未来视频作为特权信息，推广到弱监督是挑战。",
+        "code_release": "https://github.com/yczhou001/PF-OPSD",
+        "relevance_detail": "论文聚焦MLLM如何动态决策调用、验证、依赖外部生成式世界模型rollout，与你在V3中考虑策略是否/如何利用latent未来预测有类比之处。但其“世界模型”是外部视频生成器而非自监督latent predictor；方法基于特权未来监督的on-policy distillation，不涉及JEPA、SIGReg、predictor/target架构或表示崩塌分析。弱信号：Section 4/5的仿真控制决策（何时模拟、拒绝、依赖）可为V3引入world-model rollback trustworthiness gate提供高层设计参考，但本文不提供latent predictor设计或collapse防御的新见解。",
+        "followup": "若想汲取仿真控制思路，可看 Section 4 的轨迹定义与行动空间，以及 Section 5.5-5.7 的仿真决策/验证/依赖分析（表5-7、图5-9）。"
+      }
+    },
+    {
+      "rank": 8,
+      "title": "AirDreamer: Generalist Drone Navigation with World Models",
+      "title_zh": "AirDreamer: 基于世界模型的通用式无人机导航",
+      "score": 6,
+      "authors": [
+        "Zian Liu",
+        "Andong Yang",
+        "Chunkai Yang",
+        "Ruidong An",
+        "Chao Gao",
+        "Guyue Zhou"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03252",
+      "url": "http://arxiv.org/abs/2606.03252v1",
+      "published": "2026-06-02",
+      "tldr": "设计基于世界模型环境理解的无人机导航框架，使用RL策略和稀疏奖励，在仿真和真实无人机上实现泛化和局部逃逸能力。",
+      "why": "弱信号: 使用世界模型驱动导航，可能启发潜在预测用于机器人控制，但未深入JEPA-style的预测器/目标设计。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "无人机在未知、杂乱环境中自主导航面临泛化难题：传统模块化方法依赖手工规则与先验地图，环境依赖性强；学习型方法易陷入局部最优，且 sim-to-real 迁移困难。",
+        "method": "提出 AirDreamer 框架，将环境理解与动作生成解耦。环境理解基于 Dreamer V3 的 RSSM 世界模型，将深度图像和状态编码为潜变量，并预测未来潜状态、奖励和继续概率；策略部分为 Actor-Critic 强化学习，在潜空间上利用想象轨迹训练。奖励设计以稀疏终端奖励为主（到达目标 +100，碰撞 -5），仅保留极小辅助项，不设置方向或偏航的引导奖励。sim-to-real 采用动力学域随机化（质量、惯量、推重比、电机响应等参数在训练中随机采样）。",
+        "key_contributions": [
+          "提出端到端无人机导航框架，仅依赖机载深度图像与目标位置，无需全局地图或规则。",
+          "设计稀疏奖励函数，消除手工稠密方向引导，使策略自主学习偏航扫描等逃生行为。",
+          "在仿真与真机上验证，成功率比最强基线高 5.3%，并能逃逸训练未见过的 C 形障碍，实现无需调参的 sim-to-real 迁移。"
+        ],
+        "sim_benchmarks": [
+          "OmniDrones (Isaac Sim)",
+          "XTDrone"
+        ],
+        "real_robot": "真机：280 mm 轴距四旋翼，搭载 RealSense D455 深度相机、Pixhawk 6X Pro (PX4) 飞控、Jetson Orin NX Super (16GB) 机载计算，使用 FAST-LIO2 状态估计。任务包含 6 种挑战场景：森林、1m 窄通道、5m 高墙、U 形障碍、C 形障碍及森林反向，飞行速度最高 1.8 m/s。",
+        "datasets": "训练在仿真中随机生成障碍环境（墙壁、立方体、U 形障碍），未使用外部数据集。",
+        "compute": "训练：2× NVIDIA RTX 4090 D (24 GB)；模型参数 101.7 M（训练）、57.9 M（部署）；总环境步数 2.5 M，训练时长 38.7 小时。",
+        "results_headline": "在 XTDrone 仿真中，成功率 59.3%，比最强基线 DepthNav（54.0%）高 5.3%，比 EgoPlanner（6.7%）大幅提升；真机成功完成全部 6 种挑战场景，包括未见过的 C 形障碍。",
+        "baselines": [
+          "DepthNav",
+          "NavRL",
+          "EgoPlanner"
+        ],
+        "limitations": "未在动态障碍或多机场景下测试；域随机化使仿真成功率下降约 10%，关闭则无法 sim-to-real；方法为离线训练，未展示在线学习能力。",
+        "code_release": "论文称代码将公开，暂未提供链接。",
+        "relevance_detail": "本工作仅将 Dreamer V3 作为现成世界模型组件用于无人机导航，未对 world model 内部结构（predictor/target encoder 设计、collapse 防御）做任何 ablation 或创新。与研究者当前 V3/LWv2 关心的 JEPA、SIGReg、预测器深度等设计无直接交集。唯一微弱关联是“解耦环境理解与动作生成”的架构思想，但无具体模块可借鉴。",
+        "followup": "若关注 world model 在机器人导航中的工程实现，可浏览 Section IV-A 的 RSSM 配置与 Fig. 4，以及 Table I 的域随机化参数；但无直接促进 V3/LWv2 设计的 insights。"
+      }
+    },
+    {
+      "rank": 9,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding：用接地模型引导文本生成进行机器人控制",
+      "score": 6,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出将视觉接地信息融入语言模型文本生成过程，以提升机器人控制指令的准确性。",
+      "why": "弱信号：在VLM输出端引入接地（grounding）机制，可启发你思考LWv2中跨模态对齐（latent世界预测与action预测）的具体设计，但无predictor/target/collapse消融，属VLA架构参考。",
+      "hits": []
+    },
+    {
+      "rank": 10,
+      "title": "NVIDIA OmniDreams: Real-Time Generative World Model for Closed-Loop Autonomous Vehicle Simulation",
+      "title_zh": "NVIDIA OmniDreams:用于自动驾驶闭环仿真的实时生成式世界模型",
+      "score": 5,
+      "authors": [
+        "NVIDIA",
+        ":",
+        "Aarti Basant",
+        "Amlan Kar",
+        "Despoina Paschalidou",
+        "Fangyin Wei",
+        "Francesco Ferroni",
+        "Guillermo Garcia Cobo",
+        "Haithem Turki",
+        "Huan Ling",
+        "Jaewoo Seo",
+        "James Lucas",
+        "Jay Zhangjie Wu",
+        "Jialiang Wang",
+        "Jonathan Lorraine",
+        "Jun Gao",
+        "Kai He",
+        "Katarina Tothova",
+        "Kevin Xie",
+        "Michał Tyszkiewicz",
+        "Qi Wu",
+        "Riccardo de Lutio",
+        "Ruilong Li",
+        "Sanja Fidler",
+        "Seung Wook Kim",
+        "Tianchang Shen",
+        "Tianshi Cao",
+        "Tobias Pfaff",
+        "William Lew",
+        "Xindi Wu",
+        "Xuanchi Ren",
+        "Yifan Lu",
+        "Yuxuan Zhang",
+        "Zan Gojcic",
+        "Zian Wang"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.03159",
+      "url": "https://arxiv.org/abs/2606.03159",
+      "published": "2026-06-02",
+      "tldr": "基于 Cosmos diffusion 后训练生成式世界模型，自回归生成动作条件视频，闭环部署于 AV 策略评估，并初步展示从世界模型后训练策略 (WAM) 可超越 VLA 策略。",
+      "why": "弱信号: 展示了从生成式世界模型后训练出策略的路径，但与你的 JEPA 式潜在世界模型不同，更多是仿真工具，可跟踪 world-model-as-pretraining 的思路。",
+      "hits": [
+        "H:VLA",
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "自动驾驶闭环仿真中，传统重建式神经模拟器难以泛化到训练数据外的动态场景和长尾条件下；本工作旨在构建一个实时、可交互的生成式世界模型，根据策略动作自回归地合成逼真传感器观测，以支持安全关键场景的策略训练与评估。",
+        "method": "以 Cosmos 扩散模型为基础，经过中训练和后训练，实现动作条件的自回归视频生成（OmniDreams）。核心架构为因果 DiT，包含轻量世界场景控制分支（将地图与动态智能体抽象状态编码为控制 token 注入），以及为多视图一致性设计的分解注意力（时序注意力 + 跨视图注意力）。训练流程依次包括：多视图适配、使用 Diffusion Forcing 的自回归中训练、Self Forcing 蒸馏（结合自回归 rollout 与 DMD 分布匹配）、以及渐进式长上下文教师策略以消除长程伪影。推理端通过流式静态形状 KV 缓存、局部窗口注意力、CUDA 图编译、LightVAE/LightTAE 编解码及多 GPU 上下文并行实现实时性。另外，将自回归 backbone 后训练为世界-行动模型（WAM），引入 DINOv2 特征和历史 token，通过流匹配联合优化视频与轨迹，仅推断一次 DiT 后经轻量 MLP 采样未来轨迹。",
+        "key_contributions": [
+          "提出首个基于扩散的实时自回归生成式世界模型 OmniDreams，支持单视图和多视图闭环仿真，并达到 105 FPS/相机的实时性能。",
+          "引入轻量世界场景控制分支，高效注入结构化仿真状态（地图与 3D 框等）而不显著增加开销。",
+          "设计多阶段训练策略（多视图适配、Diffusion Forcing、Self Forcing 蒸馏、渐进式长上下文教师），有效消除曝光偏差与长程偏移伪影。",
+          "构建训练无关推理优化系统 FlashDreams，通过静态 KV 缓存、CUDA 图、轻量编解码及上下文并行，在 GB300 上实现实时闭环渲染。",
+          "将 OmniDreams 后训练为世界-行动模型（WAM），在 NuRec 数据集上碰撞率显著低于 VLA 基线 Alpamayo 1.5（6.9% → 4.2%），仅用约 1/5 参数，验证世界模型作为驾驶策略的潜力。"
+        ],
+        "sim_benchmarks": [
+          "Physical AI Autonomous Vehicles NuRec dataset"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练数据集为 RDS（16,600 小时，约 300 万段 20s clip）和 RDS-HQ-1M（4,944 小时，约 114 万段 10s/20s clip），覆盖 15 个国家 7 摄像头视角，并使用 VLM 生成文字提示。基础模型 Cosmos-Predict 2.5 预训练数据未详细说明。",
+        "compute": "模型参数量 2B（OmniDreams-SV/MV），训练 GPU·天未明确；推理在 NVIDIA GB300 上，4 相机版本用 16 GPU 达 105 FPS，单相机单 GPU 达 68 FPS。",
+        "results_headline": "WAM 碰撞率 4.2% vs Alpamayo 1.5 的 6.9%，参数仅约 1/5；闭环生成逼真度与长程一致性在 60s 场景中保持稳定。",
+        "baselines": [
+          "Alpamayo 1.5（VLA 基础策略模型，约 10B 参数）",
+          "Reconstruction-based NuRec 模拟器（3DGS 重建）"
+        ],
+        "limitations": "生成仍为分块（chunked），需要策略与交通模型预先提供多步轨迹，尚未实现逐帧实时交互；局部窗口注意力可能限制极长程一致性；世界模型与策略的联合训练尚未探索。",
+        "code_release": "论文称 FlashDreams 推理栈已开源，但未提供具体 URL；OmniDreams 模型权重与训练代码未明确说明开源情况。",
+        "relevance_detail": "与你的 V3/LWv2 研究方向连接极弱。论文是扩散生成世界模型 + 闭环球真，不涉及 JEPA、非对比 SSL 表征学习、坍缩预防、VLM 中动作头插入位置等核心问题。唯一弱信号是第 7 节将世界模型后训练为策略（WAM）优于 VLA，这一范式与‘世界模型作为策略’思路有概念层面共通，但论文未对其预测器设计、表征学习机制做消融，且领域为自动驾驶而非机器人操作，不提供你当前正在扫的预测器深度、动作条件方式、编码器动量等线索。全文没有出现任何 VLA 架构选择（如何在冻结 VL backbone 中插入动作头）的讨论。",
+        "followup": "若对世界模型直接输出控制这一方向保持最低程度追踪，可扫一眼 Sec.7 的 WAM 架构（DINOv2 patch 特征注入 + 历史 token 的流匹配轨迹预测）及 Sec.9.4 的闭环比拼表，但不应分配实际深读时间。"
+      }
+    },
+    {
+      "rank": 11,
+      "title": "A 3D Isovist World Model -- Revealing a City's Unseen Geometry and Its Emergent Cross-City Signature",
+      "title_zh": "3D 视域世界模型：揭示城市不可见几何及其涌现的跨城市签名",
+      "score": 5,
+      "authors": [
+        "Xuhui Lin",
+        "Stephen Law",
+        "Nanjiang Chen",
+        "Kunyao Li",
+        "Tao Yang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03609",
+      "url": "http://arxiv.org/abs/2606.03609v1",
+      "published": "2026-06-02",
+      "tldr": "提出预测 3D 视域深度图的世界模型，以几何而非外观为预测目标，训练后的时序潜在表征可线性解码城市身份。",
+      "why": "弱信号: 以几何深度图为预测目标的世界模型，提供了 predictor target 设计的一种思路，但非 JEPA 式潜在预测，且面向导航而非操作。",
+      "hits": [
+        "H:world model",
+        "M:spatial reasoning"
+      ],
+      "deep": {
+        "problem": "如何构建一个面向具身导航的世界模型，以纯几何方式预测智能体在移动中可感知的可导航空间变化，避免外观预测中的光度纠缠和鸟瞰占位网格的维度坍塌，并探究这种负空间建模是否会自发涌现跨城市形态特征。",
+        "method": "将智能体当前位置的可视体积编码为球形深度等视域（64×128）。动作条件自回归预测器由深度CNN+锚点MLP编码历史帧，弧长索引的PathTransformer（4层，8头）聚合时序信息并融入Fourier编码的5-DoF动作；残差深度解码器（ConvTranspose）预测相对于上一帧的深度变化。附加一个持久化的BEV潜在空间地图（5 m网格，双线性读写与EMA更新）实现跨路径几何一致性。训练使用边缘加权的对数深度损失+ Sobel梯度损失，并通过自回滚调度采样（用模型自身预测混合真实值）来闭合自回归误差。",
+        "key_contributions": [
+          "提出负空间世界建模：将3D等视域作为预测状态，避免光度纠缠并保留三维结构，揭示可导航几何。",
+          "设计了动作条件自回归等视域预测器，包括残差预测、弧长位置编码、BEV空间地图与自回滚调度采样训练。",
+          "发现城市盲世界模型的时序潜在变量中存在涌现的跨城市空间特征：线性解码城市身份准确率89.3%，远超单帧像素/统计量基线，表明特征来自动力学而非外观。",
+          "发布基于OpenStreetMap的可复现双城（曼哈顿、巴黎）等视域序列数据集与生成管线。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "自建数据集：基于OpenStreetMap的曼哈顿与巴黎步行道路交点锚定路径，射线投射生成64×128等视域序列，共7692训练/946验证/832测试样本（城市盲合并）；高度缺失值由邻域中值估算。",
+        "compute": "模型参数量13.07 M（含BEV地图13.14 M）；未说明GPU数/训练时长。",
+        "results_headline": "单步等视域预测MAE 3.57 m（强拷贝上一帧基线4.36 m），Edge-F1 0.719（基线0.689），SSIM持平（0.852 vs 0.856）；城市盲模型时序潜在变量的线性探测城市身份准确率89.3%（最佳单帧基线78.5%），揭示涌现的城市形态特征。",
+        "baselines": [
+          "拷贝上一帧（Copy-last，零参数）",
+          "单帧等视域全局统计量",
+          "四帧统计量",
+          "单帧原始像素（下采样）",
+          "多数类/随机对照"
+        ],
+        "limitations": "仅两座城市验证，城市分类为二类线性可分；空间地图一致性仅在合成四路交叉口的4对路径上初步验证；巴黎34%建筑高度依靠邻域中值估算，可能影响跨城市特征的纯净度；等视域为单层球壳，丢失背后几何；未涉及动态物体与真实传感器差距。",
+        "code_release": "论文承诺接收后公开发布代码与数据集（GitHub/Zenodo，ODbL许可），目前尚未提供链接。",
+        "relevance_detail": "弱信号：本文用动作条件自回归预测几何等视域，其残差预测设计和自回滚调度采样对长程自回归世界模型的训练有一定借鉴意义，但与V3中基于JEPA的视觉潜在预测（SIGReg防坍缩、Qwen3-VL编码器、动作头插入层次选择等）无直接联系。论文未涉及SSL目标、预测器/目标网络设计或表示坍缩分析，因此对V3的具体设计问题帮助有限。",
+        "followup": "若关注自回归世界模型的训练稳定性，可浏览3.5节的自回滚调度采样与3.4节的持久BEV空间地图读写机制，但整体与V3的设计无关。"
+      }
+    },
+    {
+      "rank": 12,
+      "title": "OpenEAI-Platform: An Open-source Embodied Artificial Intelligence Hardware-Software Unified Platform",
+      "title_zh": "OpenEAI-Platform: 开源具身智能硬件-软件统一平台",
+      "score": 5,
+      "authors": [
+        "Jinyuan Zhang",
+        "Luoyi Fan",
+        "Leiyu Wang",
+        "Yeqiang Wang",
+        "Yicheng Zhu",
+        "Cewu Lu",
+        "Nanyang Ye"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03392",
+      "url": "http://arxiv.org/abs/2606.03392v1",
+      "published": "2026-06-02",
+      "tldr": "发布集成低成本6+1自由度机械臂与基于Qwen3-VL-4B和Diffusion Transformer动作头的VLA模型的开源平台，利用开源数据两阶段训练。",
+      "why": "弱信号: 使用Qwen3-VL与扩散动作头，但未涉及预测器设计或表示学习，仅作为VLA工程参考。",
+      "hits": [
+        "H:VLA"
+      ],
+      "deep": {
+        "problem": "真实世界具身AI中，硬件成本高、控制不可复现，且VLA模型依赖私有数据，导致可复现性差；不同开源机器人数据集形成数据孤岛，缺乏统一接口。本文旨在提供一个完全开源的低成本硬件+软件统一平台，降低可复现性、规模化数据收集和VLA策略研究的门槛。",
+        "method": "硬件：OpenEAI-Arm通过NSGA-III多目标优化MDH参数（综合操作性与耐久效率），控制采用动力学补偿的FF-PID与三阶贝塞尔动作块插值平滑轨迹。算法：OpenEAI-VLA基于Qwen3-VL-4B backbone，引入固定长度可学习特征查询（learnable query embeddings）压缩多模态感知信息，接18层DiT风格的扩散Transformer动作头，用流匹配生成连续动作块。训练分两阶段：预训练仅使用OXE开源数据集（经统一格式转换与清洗），冻结VLM只训练查询token、数据集适配器和动作头；微调混入COCO/VQA-v2/PixMo-Points等多模态数据，同时优化流匹配损失与VLM下一token预测损失，防止遗忘并保持空间定位。",
+        "key_contributions": [
+          "可复现的6-DoF低成本机械臂（材料成本约790美元）及完整制造资料",
+          "完全使用开源数据的可复现两阶段训练recipe，包括数据集清洗、统一转换与多模态协同微调",
+          "基于Qwen3-VL-4B + learnable query + DiT动作头的开源VLA策略，并发布完整训练/推理代码",
+          "在清洁桌面、泡茶、叠毛巾、叠T恤四个真机任务上与π0、π0.5等SOTA基线展开对比，仅用开源数据达到有竞争力成功率"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "自研OpenEAI-Arm（6-DoF），四个真机任务：Clean Table、Make Tea、Fold Towel、Fold T-shirt；同时对比商业机械臂ARX R5和AgileX Piper。数据规模：微调阶段使用少量人类遥操作/拖动演示（数量未明确），所有基线在同一数据集上微调。",
+        "datasets": "预训练：Open X-Embodiment (OXE) 子集，经统一格式转换；微调：自采OpenEAI-Arm任务演示 + COCO、VQA-v2、PixMo-Points。声称仅使用开源数据。",
+        "compute": "未说明",
+        "results_headline": "OpenEAI-VLA在四任务上平均成功率达0.82，超越π0（平均0.75），在Fold T-shirt上与π0.5持平（0.83），硬件侧OpenEAI-Arm上运行π0的平均成功率（0.75）略高于ARX R5（0.71），显著优于Piper（0.64）。",
+        "baselines": [
+          "ACT",
+          "Octo",
+          "OpenVLA-oft",
+          "π0",
+          "π0.5",
+          "ARX R5（仅硬件）",
+          "AgileX Piper（仅硬件）"
+        ],
+        "limitations": "分布外物体鲁棒性不足，跨具身泛化未验证；机械臂缺少力矩/阻抗控制与触觉感知；VLA的预训练数据规模仍远小于π0.5，限制了进一步提升。",
+        "code_release": "论文声明被接收后开源全部硬件设计、驱动、模型及训练/数据流水线，仓库地址：https://github.com/sii-research/ORoboSoul/blob/openeai-platform/",
+        "relevance_detail": "与你当前V3/LWv2工作直接关联较弱——本文是完整VLA系统，而非世界模型或JEPA风格。但可借鉴的地方：① 在Qwen3-VL上使用可学习固定长度查询token作为动作头条件（Sec.3），类似你正在考虑的何处插入动作头的问题；② Table 5消融了微调阶段早/晚解冻VLM的效果（early unfreezing 0.52 vs late 0.72），能为你冻结encoder训练epoch数提供参考；③ 多模态数据协同微调防止遗忘的实践，对你在V3中保持VLM视觉语言能力有启发。整体属于VLA架构经验，缺乏collapse/SSL分析，评分5。",
+        "followup": "可重点阅读Table 5的消融（VLM解冻时机、数据集适配器）及Sec.3的learnable query设计，了解在Qwen3-VL上插入可学习接口的细节。"
+      }
+    },
+    {
+      "rank": 13,
+      "title": "Imaginative Perception Tokens Enhance Spatial Reasoning in Multimodal Language Models",
+      "title_zh": "Imaginative Perception Tokens 增强多模态语言模型的空间推理",
+      "score": 5,
+      "authors": [
+        "Mahtab Bigverdi",
+        "Lindsey Li",
+        "Weikai Huang",
+        "Yiming Liu",
+        "Jaemin Cho",
+        "Jieyu Zhang",
+        "Tuhin Kundu",
+        "Chris Dangjoo Kim",
+        "Zelun Luo",
+        "Linda Shapiro",
+        "Ranjay Krishna"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03988",
+      "url": "http://arxiv.org/abs/2606.03988v1",
+      "published": "2026-06-02",
+      "tldr": "引入 Imaginative Perception Tokens (IPT) 中间表示，让 VLM 推演不可见图形的空间布局，并在视角想象、路径追踪等任务上超越文本链式思维。",
+      "why": "弱信号：其“想象未观测视角”的思路类似 latent world prediction 中的未来预测思想，但该方法依赖于有监督的真实图像，而非自监督 JEPA 式 collapse 防御；可作为跨模态想象力设计的参考，但尚未直接对应你 V3 的 predictor 或 target encoder 设计变量。",
+      "hits": [
+        "M:spatial reasoning"
+      ],
+      "deep": {
+        "problem": "当前 VLM 在需要想象性感知的空间推理任务（如模拟未观察视角、追踪遮挡路径、融合多视角信息）上表现不佳，因为这些推理必须推断出输入中未直接呈现的空间结构。",
+        "method": "在统一多模态模型 BAGEL 中引入“想象性感知令牌”（IPT），训练时联合优化流匹配损失（生成中间图像，如新视角或 BEV 地图）和语言建模损失（基于该中间图像回答问题）。推理时可先产生想象图像再回答，或直接回答（仅保留训练产生的内部空间表征增强）。",
+        "key_contributions": [
+          "定义了三个需要想象性感知的空间推理任务（视角转换、路径追踪、多视图计数），并构建了 ~20K 规模的监督数据集。",
+          "提出 IPT 训练范式，将缺失的空间结构显式化为模型生成的中间视觉表征，提升空间推理。",
+          "实验表明 IPT 训练在多个任务上优于仅标签监督和文本思维链，且即使推理时不生成图像也能带来提升。",
+          "消融实验揭示想象分辨率与推理准确率正相关，且文本思维链因模态错配反而有害。"
+        ],
+        "sim_benchmarks": [
+          "AI2-THOR",
+          "Habitat",
+          "ProcTHOR（仅训练数据）",
+          "MessyTable",
+          "ScanNet"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "合成数据：AI2-THOR（所有任务训练用）、Habitat（PET）、ProcTHOR（PT）。真实数据：Matterport3D 全景（路径追踪真实基准）、Visual Spatial Tuning（视角转换真实迁移）、ScanNet++ 和 MessyTable（多视图计数）。总训练规模约 5万（视角转换 5.5万，路径追踪 1.1万，多视图计数 1.9万）。",
+        "compute": "8 卡 NVIDIA A100 80GB，全微调 BAGEL-7B-MoT（~7B 参数），FSDP bf16，训练单任务。IPT 潜变量分辨率 64×64，最大 token/批次 32768，学习率 1e-5。",
+        "results_headline": "在 AI2-THOR 上，IPT 训练后直接回答时，MVC 准确率从 63.9% 升至 67.3%（+3.4%），PET 达 96.8%（略低于标签监督的 97.5%），PT 平均 49.0%；混合训练进一步提升。跨环境迁移上，IPT 模型在 Habitat PET 上达 87.0%，优于标签监督的 82.0%。Text CoT 在多数设置下劣于 IPT 甚至标签监督。",
+        "baselines": [
+          "GPT-5",
+          "GPT-5.2",
+          "Gemini 2.5 Flash",
+          "Gemini 3 Flash",
+          "InternVL3.5-8B",
+          "Qwen2.5-VL-7B",
+          "Qwen3-VL-8B",
+          "Janus-Pro-7B",
+          "Chameleon 7B",
+          "Bagel（base）",
+          "Bagel（label-only）",
+          "+ Text CoT"
+        ],
+        "limitations": "模型生成的想象图像质量仍是瓶颈，特别是在路径追踪任务上，使用真实想象可使准确率跃升 +36.3 个百分点。当前 IPT 设计高度任务特定，难以直接泛化到不同结构的问题。明确生成想象反而可能误导后续推理（PT 上生成推理比不生成低 10.7%），且真实场景与现实机器人环境覆盖有限。",
+        "code_release": "论文承诺将在项目主页开源代码，但当前未提供链接。",
+        "relevance_detail": "该工作与你的 V3/LWv2 研究在思路上有间接连接：IPT 训练的本质是让模型学会预测“未观察到的未来空间配置”作为中间表征，与你的 latent world prediction 目标相似——通过预测缺失的视觉 token 强化内部表示。论文观察到 IPT 训练后即使不显式生成图像也能提升推理性能（Table 4 answer-only 模式），这一点与你在 VLA 中训练 world predictor 后可能仅用其隐式表征而不一定解码的思路一致。此外，他们对不同潜变量分辨率（Latent-4~64）的消融（Table 3）显示了预测质量对下游任务的影响，可启发你设计 V3 中预测器的 token 维度或目标编码器分辨率。不过，该工作使用的是流匹配生成式损失而非 JEPA 风格的非对比损失，且任务限定于静态空间推理而非动态动作执行，信号偏弱。",
+        "followup": "重点阅读 5.2 节主干结果（特别是 IPT vs Text CoT 的模态错配结论）和 5.3 节消融中 Table 4（训练信号 vs. 推理模式的拆解）与 Table 3（分辨率影响），这些能帮助你论证在 V3 中为何选择视觉预测而非语言作为辅助任务。"
+      }
+    },
+    {
+      "rank": 14,
+      "title": "PlatonicNav: Unveiling Semantic Correspondence in Navigation with Platonic Topological Maps",
+      "title_zh": "PlatonicNav:利用柏拉图拓扑地图揭示导航中的语义对应",
+      "score": 5,
+      "authors": [
+        "Junlin Long",
+        "Zeyu Zhang",
+        "Xu Deng",
+        "Yiran Wang",
+        "Yue Yang",
+        "Luke Borgnolo",
+        "Maxwell Twelftree",
+        "Yang Zhao"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.01788",
+      "url": "https://arxiv.org/abs/2606.01788",
+      "published": "2026-06-01",
+      "tldr": "提出 PlatonicNav 训练无关框架，仅用自监督视觉编码器构建拓扑地图，通过盲匹配实现语言目标 zero-shot 导航。",
+      "why": "弱信号：其利用自监督视觉表征实现语言对齐的思路，与你关心的“latent world prediction 与 action prediction 的跨模态对齐”有概念相似性，但它是视觉-语言对齐而非视觉-动作对齐，且未涉及 JEPA 架构；可作为跨模态 grounding 的 reference，但不直接影响 V3 的 predictor 设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有统一VLN和ObjNav的方法仅停留在架构融合和跨模态训练层面，未探究独立训练的视觉和语言编码器是否已共享共同的语义结构；即使使用对象中心拓扑地图，语言目标仍需显式跨模态监督（如CLIP）才能接地，无法仅从纯视觉构建的地图中实现。核心问题：能否在无配对视觉-语言数据的情况下，发现并利用视觉与语言之间的共享语义对应，统一多种导航任务？",
+        "method": "将Platonic Representation Hypothesis扩展到具身导航，构建Platonic Topological Map，其节点由自监督视觉编码器（DINOv3）提取语义嵌入，边权由几何距离和语义距离（余弦距离）的凸组合构成，并通过盲匹配（blind matching）求解视觉聚类中心与语言类别嵌入之间的最优双射，实现语言目标到视觉拓扑地图的无配对数据接地。整个框架免训练（training-free），直接利用现成编码器。",
+        "key_contributions": [
+          "提出将Platonic Representation Hypothesis应用到具身导航，将纯视觉ObjNav、跨模态ObjNav和VLN统一为同一对象语义流形的不同接口",
+          "设计了PlatonicNav框架，融合几何与语义距离构建Platonic Topological Map，并通过盲匹配在无任何配对视觉-语言数据的情况下实现语言目标接地",
+          "在多个仿真基准（HM3D-IIN、OVON、R2R-CE）和真实四足机器人（Unitree Go2）上验证了跨任务、跨模态和跨具身的泛化能力"
+        ],
+        "sim_benchmarks": [
+          "HM3D-IIN",
+          "HM3D-OVON",
+          "R2R-CE on MP3D"
+        ],
+        "real_robot": "真机设置：Unitree Go2 Air 四足机器人，搭载板载RGB相机，采用teach-and-repeat设定执行ObjNav和VLN任务；数据规模未明确说明",
+        "datasets": "使用Habitat仿真器内HM3D和MP3D场景数据；真机为自有采集轨迹，未提及大规模预训练数据集",
+        "compute": "框架免训练，仅需推理；真机推理使用配有NVIDIA RTX 4060 Laptop GPU的笔记本电脑（Ubuntu 22.04）",
+        "results_headline": "在HM3D-OVON Val-Seen上SR 51.8 / SPL 23.8，Val-Unseen上SR 48.7 / SPL 22.0，显著优于多数非配对数据基线；在R2R-CE Val-Unseen上SR 63.5 / SPL 40.4，超过部分VLN方法但不及当前最佳",
+        "baselines": [
+          "ObjectReact",
+          "BC",
+          "DAgger",
+          "RL",
+          "BCRL",
+          "DAgRL",
+          "VLFM",
+          "DAgRL+OD",
+          "Uni-NaVid",
+          "MTU3D",
+          "各种VLN方法（ETPNav、HNR、CorrectNav等）"
+        ],
+        "limitations": "盲匹配依赖封闭词汇与聚类数设定；规划在预建拓扑图上进行，未处理动态或未探索环境；实验仅采用短距离导航子集，长距离性能未充分验证",
+        "code_release": "已开源：https://github.com/AIGeeksGroup/PlatonicNav",
+        "relevance_detail": "论文利用自监督视觉编码器（DINOv3）的语义距离并通过关系结构对齐实现跨模态接地，这与你关注的表示空间几何（如JEPA中latent alignment）在思路上有类比性。但该工作是免训练的导航应用，完全没有涉及predictor/target设计、表示崩溃防御或VLA动作头插入等V3/LWv2的核心设计问题，未提供任何表示学习消融，仅能作为利用表示距离进行决策的例证，直接指导意义很弱。",
+        "followup": "若想了解盲匹配与表示距离的关系，可看附录A.1及F.1消融，但对你当前V3/LWv2研究无直接帮助。"
+      }
+    },
+    {
+      "rank": 15,
+      "title": "TTT-VLA: Test-Time Latent Prompt Optimization for Vision-Language-Action Models",
+      "title_zh": "TTT-VLA: 视觉-语言-动作模型的测试时隐式提示优化",
+      "score": 4,
+      "authors": [
+        "Wenbo Zhang",
+        "Jianxiong Li",
+        "Shuai Yang",
+        "Sijin Chen",
+        "Jiajun Liu",
+        "Lingqiao Liu",
+        "Xiao Ma"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03127",
+      "url": "http://arxiv.org/abs/2606.03127v1",
+      "published": "2026-06-02",
+      "tldr": "提出在VLA测试时通过隐式提示优化进行自监督适应，只调整少量隐式提示而不修改策略，在SimplerEnv上提高成功率。",
+      "why": "弱信号: 关注VLA测试时适应，但仅优化提示向量，不涉及表示学习或世界模型，难以直接指导V3架构设计。",
+      "hits": [
+        "H:VLA"
+      ],
+      "deep": {
+        "problem": "VLA 模型在部署时面临分布偏移，现有提示引导依赖人工或外部信号，不能从交互中学习。本文探索是否可通过优化一个隐式提示（latent prompt）实现 VLA 的测试时训练（TTT），让引导接口本身从交互中自监督地适应。",
+        "method": "TTT-VLA 框架，核心是 Latent Prompt Optimization（LPO）。训练时在π0.5 的 Mixture-of-Transformers 架构上新增一个可学习的 latent prompt（n 个可训练 token），并引入 state grounding 代理任务（预测末端执行器位置和夹爪状态），与动作预测联合训练。通过注意力掩码和梯度隔离策略（随机阻断 latent prompt 到动作专家的连接，状态损失梯度仅传导至状态专家和 latent prompt）促使 latent prompt 吸收控制相关的空间信息。测试时，从当前环境收集交互数据，冻结策略骨干，仅用代理任务损失更新 latent prompt，实现部署时自适应。",
+        "key_contributions": [
+          "提出基于 Latent Prompt Optimization 的 TTT-VLA 框架，首次在 VLA 上用可学习隐式提示实现自监督测试时训练。",
+          "在 SimplerEnv 的单/多 embodiment 设置下，通过仅更新 latent prompt 一致提升了成功率，例如 WidowX 上从 51.1% 提升至 67.4%（+TTT）。",
+          "通过分析揭示性能提升来源于“关键决策引导”（critical decision steering），即 TTT 主要修正少量关键动作而非全局重写轨迹。",
+          "探究了 offline/online TTT、学习率灵敏度及训练中 random-drop 策略的有效性。"
+        ],
+        "sim_benchmarks": [
+          "SimplerEnv(WidowX tasks: Spoon, Carrot, Cube, Eggplant; Google Robot tasks: Pick Coke Can, Move Near, Open/Close Drawer)"
+        ],
+        "real_robot": "未做真机实验，仅在 SimplerEnv 仿真中评估。",
+        "datasets": "单 embodiment 设置用 BridgeData V2（WidowX）；多 embodiment 设置用 OXE-Aug Bridge V2（含 WidowX 及另外 8 种 embodiment 的数据）。",
+        "compute": "32 块 H100 GPU 训练约 20 小时；TTT 阶段用 8 块 H100 GPU 约 15-30 分钟。",
+        "results_headline": "单 embodiment WidowX 上，π0.5 基线 51.1%，加入 SG-LP 后 63.5%，再经 TTT 达 67.4%；Google Robot 视觉匹配从 67.5% 提至 72.4%，变体聚合从 58.1% 提至 60.1%；多 embodiment WidowX 从 22.8% 提至 31.6%。",
+        "baselines": [
+          "RT-1-X",
+          "OpenVLA",
+          "SpatialVLA",
+          "Magma",
+          "Octo-Base",
+          "Octo-Small",
+          "RoboVLM",
+          "InstructVLA",
+          "π0",
+          "CogACT",
+          "ThinkAct",
+          "π0.5（内部基线）",
+          "π0.5 + SG-LP",
+          "π0.5 + SG-LP + TTT（即 TTT-VLA）"
+        ],
+        "limitations": "未进行真实世界部署评估，仅限仿真；仅探索了 state grounding 一种代理任务，未比较其他自监督信号；未直接与早期 TTT 方法（如 PAD 或 WorldAgen）做可控对比；在线 TTT 不稳定，易导致表示坍缩；部署需额外交互和优化开销。",
+        "code_release": "论文未提开源情况。",
+        "relevance_detail": "本文提出一种为 VLA 引入可学习隐式条件向量的方法，并通过自监督代理任务实现 test-time 适应。这与你在 V3/LWv2 中思考如何将动作/环境上下文作为 latent token 注入 VLM 骨干的思路有间接关联：其 latent prompt 的设计、训练时的注意力掩码与梯度隔离（第 3.2 节）以及 random-drop 策略（附录 Figure 8）可类比于你探索的 action head 插入位置和条件控制方式，但论文本身未涉及 world model、JEPA 或 Predictor/Target 设计，直接启发有限。",
+        "followup": "若关注 VLA 的 test-time adaptation 和 latent token 注入训练策略，可重点阅读第 3.2 节的训练策略与 Figure 3 的注意力掩码设计，以及附录中 random-drop 消融实验（Figure 8）。"
+      }
+    },
+    {
+      "rank": 16,
+      "title": "A Close Look At World Model Recovery In Supervised Fine-Tuned LLM Planners",
+      "title_zh": "A Close Look At World Model Recovery In Supervised Fine-Tuned LLM Planners: 细探监督微调LLM规划器中的世界模型恢复",
+      "score": 4,
+      "authors": [
+        "Patrick Emami",
+        "Nan Qiang",
+        "Peter Graf"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03685",
+      "url": "http://arxiv.org/abs/2606.03685v1",
+      "published": "2026-06-02",
+      "tldr": "通过可解释性实验发现SFT后的LLM能线性编码动作有效性和部分状态谓词，随机游走数据可改善世界模型恢复。",
+      "why": "弱信号: 研究LLM内部世界模型的探测方法可参考用于分析V3潜在预测学到的表示，但非SSL/坍塌核心问题。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "探究经过监督微调（SFT）的LLM规划器是否在内部学到了经典规划问题的世界模型，即能否线性编码动作有效性和状态谓词真值，以及生成时能否区分有效与无效动作。",
+        "method": "以gemma2-9b-instruct为基座，用LoRA在三个数据分布（最优规划、随机游走、无环随机游走++）上进行SFT，并加入状态链式思考（State-CoT）变体。世界模型恢复评估：1）从LLM隐藏状态训练线性探针预测动作有效性和谓词真值；2）基于生成token概率对下一动作进行有效性排序。",
+        "key_contributions": [
+          "证明仅通过有效动作序列SFT，LLM就能线性编码动作有效性和部分状态谓词。",
+          "发现模型内部表征可能已区分有效/无效动作，即使生成端概率未能正确排序。",
+          "提出增强状态覆盖的随机游走++数据能提升世界模型恢复，尤其在分布外泛化上。",
+          "构建了结合线性探针与生成指标的综合评估框架，用于考察LLM规划中的世界模型恢复。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "自生成经典规划数据（Blocksworld 3-5块，Logistics 3-4包裹）；使用pddlgenerators库创建实例，Fast Downward求解器生成最优规划。",
+        "compute": "LoRA微调gemma2-9b-instruct，4个epoch，学习率3e-4，batch size 2-4，梯度累积16，未说明具体GPU数量或训练时长。",
+        "results_headline": "无State-CoT的Plansformer在分布内规划成功率接近99%；线性探针显示动作有效性F1在中高层≈1.0；随机游走训练的模型在生成有效性分类上明显更优（约80% vs 随机游走++36% vs 最优9%），但随机游走++在6-10块OOD规划中更鲁棒。",
+        "baselines": [
+          "最优规划(SFT)",
+          "随机游走(SFT)",
+          "随机游走++(SFT)",
+          "State-CoT变体"
+        ],
+        "limitations": "仅证明内部表征存在，未建立因果性；未测试更大参数量的LLM；实验设计选择（如仅分析有效规划、STRIPS而非自然语言）可能影响结论的普适性。",
+        "code_release": "论文未提开源",
+        "relevance_detail": "与你的V3/LWv2研究的直接关联较弱。论文关于LLM在经典规划中通过SFT恢复世界模型，而你关注的是视觉-语言-动作下的JEPA式自监督预测器学习。唯一可能连接点是：第6.3节对训练数据分布（随机游走 vs 最优规划）如何影响世界模型的线性编码和生成质量的分析，以及第6.4节OOD泛化与内部表征质量的分离现象，可作为对比信号，提醒你关注V3中不同数据采集策略对预测器内部表征结构的影响，但不属于同一技术路径。",
+        "followup": "若要看不同数据分布如何影响模型内部世界表征的可线性性，可关注第6.3节表2/图6和第6.4节图8的OOD探针结果。"
+      }
+    },
+    {
+      "rank": 17,
+      "title": "Worth Remembering: Surprise-Gated Robot Episodic Memory",
+      "title_zh": "值得记忆：基于惊奇门控的机器人情景记忆",
+      "score": 3,
+      "authors": [
+        "Nicolas Gorlo",
+        "Derek K. Wise",
+        "Alberto Speranzon",
+        "Luca Carlone"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03787",
+      "url": "http://arxiv.org/abs/2606.03787v1",
+      "published": "2026-06-02",
+      "tldr": "使用 V-JEPA-2 潜在空间计算贝叶斯惊奇度作为记忆门控，增强 4D 场景图空间记忆，提升机器人问答。",
+      "why": "弱信号: 仅将 V-JEPA-2 作为 representation backbone 使用，未改进 JEPA 架构，对你的 V3 设计问题无直接启发。",
+      "hits": [
+        "H:JEPA",
+        "M:V-JEPA"
+      ],
+      "deep": {
+        "problem": "通用机器人需要根据人类指令回溯过去事件,但长期记忆容量有限,亟需一种原则性机制来选择应存入高质量视觉细节的时刻,而非均匀或随机存储。",
+        "method": "使用预训练 V-JEPA-2 编码器,将滑动视频窗口压缩为 1024 维特征; 用过去窗口特征的移动对角线高斯分布作为局部预测模型,以当前时刻特征的标准化偏离作为 Bayesian surprise 信号(ℓ₁ 松弛); 通过中位数 + MAD 鲁棒阈值检测惊奇峰值,触发非极大抑制后存储短片段作为 episodic memory,嵌入已有的 4D 场景图记忆系统 DAAAM。",
+        "key_contributions": [
+          "首次将认知科学中的 Bayesian surprise 原则引入机器人 episodic memory 的存储决策,形式化为对 V-JEPA-2 隐空间高斯预测分布 KL 发散的在线近似。",
+          "提出一种无需任务导向训练、无需未来帧信息的在(Online)无监督事件分割方法,在 Kinetics-400 GEBD 上超越有监督和离线方法。",
+          "将惊奇门控记忆与 DAAAM 4D 场景图集成,在长时段空间-时间问答(OC-NaVQA)上相对基线均匀/随机记忆提升≥12%,同时存储器稀疏(仅存约 1.7% 帧)。"
+        ],
+        "sim_benchmarks": [
+          "OC-NaVQA(含真实世界记录,非仿真)",
+          "Kinetics-400 (GEBD)"
+        ],
+        "real_robot": "未做真机实验(使用预录 CODa 数据集评估)",
+        "datasets": "推理数据:CODa(OC-NaVQA), Kinetics-400 (GEBD)。训练无额外数据,直接使用 V-JEPA-2 预训练权重。",
+        "compute": "仅推理,未报告具体算力;V-JEPA-2 为预训练模型。",
+        "results_headline": "OC-NaVQA: 问题准确率 0.711→0.796 (+12.0%), 位置误差 41.75m→36.57m, 时间误差 1.792min→1.510min; Kinetics-GEBD: 在线无监督 avg F1 0.833, 优于有监督 ESTimator (0.748) 及离线无监督 CoSeg (0.782)。",
+        "baselines": [
+          "DAAAM",
+          "DAAAM+uniform episodic memory",
+          "DAAAM+random episodic memory",
+          "ReMEmbR (NVILA-Lite-2B/8B)",
+          "ConceptGraphs",
+          "PC (Kinetics-GEBD)",
+          "CoSeg (Kinetics-GEBD)",
+          "ESTimator (Kinetics-GEBD)"
+        ],
+        "limitations": "滑动窗对角高斯模型表达能力有限,未使用如 V-JEPA-2-AC 的因果预测器; 重复出现的惊奇目标会重复存储(缺乏习惯化); 存储为视觉帧,未利用时序演变; 下游推理依赖多模态 LLM,增加 token 开销约 13%。",
+        "code_release": "论文未提",
+        "relevance_detail": "本文未涉及 V-JEPA 本身的 predictor/target 设计或表示坍缩分析,与你 V3/LWv2 的核心训练问题连接较弱。但它在理论上将一个 frozen JEPA encoder 当作部署无关的世界模型,通过局部高斯统计计算惊奇信号——这可以看作一种廉价 latent predictor 的 usage。如果你后续想检验自己训练的 latent predictor(例如 SIGReg 训练后的预测误差)在下游事件检测/分割指标上是否优于简单统计基线,可借鉴本文的 GEBD 评测范式与惊奇归一化方法(Sec.3.2/附录 A)。对当前 V3 的 predictor head 深度、target encoder 设计等无直接指导。",
+        "followup": "关注事件分割范式可读第 3.2 节及附录 A 的惊奇推导; 否则略读。"
+      }
+    },
+    {
+      "rank": 18,
+      "title": "Eliciting Complex Spatial Reasoning in MLLMs through Wide-Baseline Matching",
+      "title_zh": "通过宽基线匹配激发 MLLM 的复杂空间推理能力",
+      "score": 3,
+      "authors": [
+        "Hao Zhong",
+        "Muzhi Zhu",
+        "Shenyan Zeng",
+        "Anzhou Li",
+        "Cong Chen",
+        "Hua Geng",
+        "Duochao Shi",
+        "Wentao Ye",
+        "Tao Lin",
+        "Hao Chen",
+        "Chunhua Shen"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2606.03577",
+      "url": "http://arxiv.org/abs/2606.03577v1",
+      "published": "2026-06-02",
+      "tldr": "提出 ReasonMatch-Bench 基准和动态对应强化学习 (DCRL) 训练方法，以提升多模态大模型的宽基线匹配与空间推理能力。",
+      "why": "弱信号：该方法可改善 VLM 的空间几何理解，对使用 Qwen3-VL 作为 backbone 的 VLA 或许有间接帮助，但不涉及 JEPA、predictor/collapse 设计，未触达你当前核心设计变量。",
+      "hits": [
+        "M:spatial reasoning"
+      ],
+      "deep": {
+        "problem": "当前多模态大模型(MLLM)缺乏宽基线匹配所需的综合空间推理能力(几何理解、视角变化、细粒度感知、遮挡推理),且缺少系统性评估与可扩展的训练框架。",
+        "method": "提出 ReasonMatch-Bench 基准,通过 RGB-D 视频与 SfM 重建自动抽取宽基线图像对及验证对应点;设计 Dynamic Correspondence Reinforcement Learning (DCRL): 图像级视角渐进 + 点级对应课程, 以 GRPO 优化 Qwen3-VL-8B, 使用 holistic matching reward 作为可验证奖励, 无需显式思维链监督。",
+        "key_contributions": [
+          "发布 ReasonMatch-Bench: 覆盖室内/室外/物体场景、分层宽基线匹配难度的多维基准",
+          "提出 DCRL 框架: 双层次自适应课程与 verifiable reward 的 RLVR 训练, 让 MLLM 逐步掌握复杂空间推理",
+          "实验证明 DCRL 在 ReasonMatch-Bench 上大幅度超越开源与闭源 baseline, 并正向迁移至 OmniSpatial、MindCube 等空间基准, 同时不损害通用视觉理解性能"
+        ],
+        "sim_benchmarks": [
+          "ReasonMatch-Bench",
+          "OmniSpatial",
+          "MindCube",
+          "SAT",
+          "MME-RealWorld",
+          "MMStar",
+          "RealWorldQA",
+          "V*Bench"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练数据来自 RGB-D 视频(ScanNet, uCO3D, CO3D)与 SfM 重建(RealEstate10k, DL3DV); 基座模型为 Qwen3-VL-8B-Instruct, 未使用大规模额外预训练数据集",
+        "compute": "Qwen3-VL-8B, GRPO group size 32, effective batch 16, 学习率 1e-6, 训练步数未明确说明",
+        "results_headline": "在 ReasonMatch-Bench 上, Qwen3-VL-8B + DCRL 的 F1 从 27.5 提升至 70.5, 超越 GPT-5-mini(57.9%)和 Gemini-2.5-Pro(42.8%); OmniSpatial 提升 +5.27%, MindCube +3.51%, 且不损害通用视觉理解基准。",
+        "baselines": [
+          "GPT-5-mini",
+          "GPT-5-Chat",
+          "GPT-4o",
+          "Gemini-2.5-Pro",
+          "Claude-4.5-Sonnet",
+          "Qwen3-VL-235B",
+          "Qwen3-VL-8B-Instruct",
+          "SFT (监督微调基线)"
+        ],
+        "limitations": "在极度宽基线、物体中心场景中仍远低于人类水平(DCRL 52.0 F1 vs 人类 84.0); 训练依赖几何可验证性, 难直接泛化到不可验证的空间任务。",
+        "code_release": "论文未提开源代码",
+        "relevance_detail": "论文使用 GRPO + 课程学习提升 Qwen3-VL-8B 的空间对应推理, 但核心贡献在宽基线匹配评估与 RLVR 范式, 完全没有涉及 VLA 中动作头插入、世界模型、JEPA 表征学习或坍塌防御。与你 V3/LWv2 的设计变量(预测头深度、目标编码器、SIGReg 正则等)无直接连接, 仅作为 Qwen3-VL 多视图空间微调的弱参考, 信号强度极低。",
+        "followup": "若对 Qwen3-VL 的 RL 微调与课程设计感兴趣, 可扫读 Section 4.5 的 RL vs SFT 消融及 Figure 3 训练曲线, 但无论文与你的核心研究方向关联。"
+      }
+    },
+    {
+      "rank": 19,
+      "title": "Decentralized Instruction Tuning: Conflict-Aware Splitting and Weight Merging",
+      "title_zh": "去中心化指令微调:冲突感知拆分与权重合并",
+      "score": 3,
+      "authors": [
+        "Minsik Choi",
+        "Geewook Kim"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.01717",
+      "url": "https://arxiv.org/abs/2606.01717",
+      "published": "2026-06-01",
+      "tldr": "提出 MERIT 方法，通过估计任务梯度冲突、PCA 拆分独立微调并合并权重，在 Qwen2.5-VL-3B 上提升多任务表现。",
+      "why": "弱信号：若未来需要为 VLA 微调 Qwen3-VL backbone 以适应多任务，该方法或可减少干扰，但非你当前 V3/LWv2 核心问题，与你正关注的 predictor/collapse 设计无关。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "大规模异构指令微调面临两个瓶颈：数据集间梯度冲突导致优化困难，以及跨节点梯度同步带来的高通信成本。本文旨在同时解决这两个瓶颈，通过将混合数据划分后独立训练、最终在参数空间中一次性合并，实现去中心化指令微调。",
+        "method": "提出 MERIT（Merge-Ready Instruction Tuning）流水线：在合并就绪初始化处估计数据集级梯度冲突，构建余弦相似度矩阵；通过 PCA 提取主导冲突方向，得到数据集的 r 维嵌入；沿 PCA 轴递归按样本量中位数进行平衡分割，得到 K=2^r 个独立分组；每组使用相同初始化和超参独立微调，无组间梯度通信；最后按各组的 token 数加权平均合并所有分支模型。理论分析表明，在共享平坦盆地内权重合并等价于曲率加权的方差缩减，PCA 对齐的分割能最大化该增益，并且合并起到谱过滤与隐式范数正则化的作用。",
+        "key_contributions": [
+          "建立局部平坦盆地内的二次理论，揭示合并带来曲率加权方差缩减、PCA 分裂最大化该增益以及合并的隐式正则化效果。",
+          "设计完整的去中心化指令微调流水线 MERIT，包含梯度冲突估计、PCA 分解、平衡分区、独立训练和 token 加权合并，无需训练时的组间通信。",
+          "在 Qwen2.5-VL-3B（Vision-FLAN 136 任务）上将 8 基准平均分从联合训练的 54.3 提升至 57.0，并在 7B 规模、176 源混合数据上匹配或超越集中式联合训练，同时扩展到纯文本 FLAN 场景。"
+        ],
+        "sim_benchmarks": [
+          "SeedBench",
+          "MMBench",
+          "LLaVA-Wild",
+          "MMVet",
+          "TextVQA",
+          "AI2D",
+          "MathVista",
+          "MMMU",
+          "MMLU",
+          "HellaSwag",
+          "WinoGrande",
+          "BoolQ",
+          "XNLI",
+          "ARC-Challenge",
+          "HumanEval"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "多模态指令数据：Vision-FLAN（136 任务）及 176 源混合数据（1.6M 样本）；文本指令数据：FLAN（66 任务）。",
+        "compute": "3B 模型使用 8×V100 GPU 训练；7B 模型使用 8×A100 GPU 训练；具体 GPU·天未明确说明。",
+        "results_headline": "在 Qwen2.5-VL-3B 上，MERIT-3D（8 组）将 8 个多模态基准的平均分从联合训练 1 epoch 的 54.3 提升至 57.0；7B 规模下 MERIT-2D 在 1.6M 样本的混合数据上平均分从 54.9 提升到 55.4（较弱基座）和 60.9 提升到 61.5（较强基座），并缓解了联合训练中的开放式回答崩塌。",
+        "baselines": [
+          "集中式联合训练（0.5/1/2 epoch）",
+          "随机数据分区后独立训练合并（2/4/8 组）",
+          "冲突诱导分割（2 组）",
+          "均匀模型汤（2/3/4 个模型）"
+        ],
+        "limitations": "方法依赖于合并就绪初始化（例如已指令微调的 MLLM 或预训练 LLM）；仅在 3B 和 7B 规模验证，未涉及百亿参数以上模型；PCA 梯度冲突估计需要少量校准数据，且在小批次场景下的扩展性尚未讨论。",
+        "code_release": "https://github.com/naver-ai/merit",
+        "relevance_detail": "本文聚焦于多模态指令微调中的梯度冲突化解与去中心化训练，与你在 VLA/JEPA 背景下研究视觉表征学习、预测器设计和动作头插入的技术路线几乎无直接交集。仅有的弱信号：第 3 节的平坦盆地理论表明权重平均产生隐式范数正则化（式 2、表 1），可能为 V3 目标编码器的 EMA 动量设计或模型合并提供类比，但 PCA 冲突分裂和指令微调场景与你的预测器/目标架构空间差异很大。整体相关度很低（2/10）。",
+        "followup": "若对合并的正则化理论感兴趣，可快速浏览第 3 节和附录 B 的合并就绪诊断，但不必深入。"
+      }
+    }
+  ]
+}
