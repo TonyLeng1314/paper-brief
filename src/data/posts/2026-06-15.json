@@ -1,0 +1,236 @@
+{
+  "date": "2026-06-15",
+  "kept": 5,
+  "reviewed": 30,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "μ_0: A Scalable 3D Interaction-Trace World Model",
+      "title_zh": "μ_0:一种可扩展的3D交互轨迹世界模型",
+      "score": 7,
+      "authors": [
+        "Seungjae Lee",
+        "Yoonkyo Jung",
+        "Jusuk Lee",
+        "Jonghun Shin",
+        "Amir Hossein Shahidzadeh",
+        "Yao-Chih Lee",
+        "H. Jin Kim",
+        "Jia-Bin Huang",
+        "Furong Huang"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.13769",
+      "url": "https://arxiv.org/abs/2606.13769",
+      "published": "2026-06-11",
+      "tldr": "提出μ_0，通过预测3D交互点的B样条轨迹而非像素，实现动作无关、跨具身的可复用世界模型，其下游策略性能可与有动作监督的VLA模型π0竞争。",
+      "why": "该工作在无动作标签下预训练世界模型并产生有竞争力的VLA策略，直接触及你关心的 world-model-as-pretraining for robot policy 方向，可为V3中预测何种表示（点轨迹 vs latent token）提供参照。",
+      "hits": [
+        "H:VLA",
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "如何从无动作标注的异构视频中学习一种可扩展的、与机器人无关的世界模型, 以紧凑的 3D 交互轨迹作为运动先验, 替代稠密像素生成或依赖稀缺具身动作标签的预测, 从而为下游机器人控制提供可复用的运动表示。",
+        "method": "先通过 TraceExtract 数据管道自动提取带事件层语言描述的 3D 轨迹: (1) 用 DINOv2 语义聚类选取交互中心关键点, (2) 经由全局-局部混合重建将点提升到世界对齐的 3D 空间, (3) 基于轨迹加速度进行动作分块并融合层级 VLM 字幕。μ0 世界模型以预训练的 SmolVLM2-2.2B 为视觉-语言骨干, 附加一个置换等变的 Trace Expert, 该专家交替进行对 VLM 缓存的交叉注意力与自注意力, 并为每个采样点编码 B 样条控制点目标。训练使用条件流匹配: 从噪声控制点出发, 在一个 denoising 流程中预测速度场, 同时加入轨迹有效性头和基于 DINO 簇的刚性保持损失, 最终解码出平滑的未来 3D 轨迹。下游使用时冻结整个 μ0, 仅训练 Action Expert, 通过门控交叉注意力将部分去噪的轨迹特征注入 VLM 特征, 输出机器人动作分块。",
+        "key_contributions": [
+          "提出 TraceExtract: 可扩展的 3D 轨迹监督数据引擎, 可从异构操控视频中提取语义关键点、全局对齐 3D 轨迹及事件对齐语言描述, 将数据规模比之前方法扩大约 8 倍。",
+          "提出 μ0: 查询条件下的 3D 轨迹世界模型, 用 VLM 骨干 + 置换等变 Trace Expert + B 样条参数化 + 条件流匹配训练, 预测语义交互点的未来 3D 运动。",
+          "提出轨迹条件化的动作适配方案: 冻结视频预训练得到的 μ0, 在此基础上训练轻量 Action Expert, 使零动作标注的视频预训练能够与具有大规模动作监督的 VLA 模型匹敌。",
+          "在真机和仿真中验证了 3D 轨迹作为跨具身、可迁移运动先验的有效性, 并在轨迹预测质量上大幅领先多模态大模型和 2D/3D 轨迹基线。"
+        ],
+        "sim_benchmarks": [
+          "RoboCasa365 (8 项任务)"
+        ],
+        "real_robot": "UR3 机械臂 + 二指夹爪, 完成三个任务: Pick <object> into Sink (多物体, 90 demo), Pour Almonds into <object> (80 demo), Unfold Towel (50 demo), 每个任务 20 次 rollout 评估。",
+        "datasets": "未说明具体公开数据集; 预训练数据来自 TraceExtract 对异构人类与机器人操控视频的处理, 来源于自身采集及公开视频, 提取出事件带语的 3D 轨迹三元组。",
+        "compute": "使用 SmolVLM2-2.2B 作为 VLM 骨干 (参数约 2.2B), 训练 2×10⁵ 步, 有效批次大小 24 (双 GPU), 对 VLM 参数组采用 0.1× 学习率; 另有缩放实验至 2.59B 模型。未给出总 GPU·天。",
+        "results_headline": "轨迹预测上, μ0 在 2D Top-5 ADE/FDE/DTW 和全部 3D 指标显著优于 Gemini、GPT-5.5、Track2Act、TraceGen 等基线; 仿真 8 项 RoboCasa365 任务平均成功率 30.25% (vs π0 25.25%、TraceGen 23%); 真实 UR3 三项任务平均成功率 91.7% (vs π0.5 80%、π0 71.7%)。",
+        "baselines": [
+          "Diffusion Policy",
+          "π0",
+          "π0.5",
+          "TraceGen + action expert",
+          "Track2Act",
+          "Hamster",
+          "Gemini-3.1-pro/flash",
+          "GPT-5.5",
+          "3DFlowAction",
+          "Dream2Flow"
+        ],
+        "limitations": "感知堆栈 (语义聚类、3D 重建、跟踪、字幕) 的误差会传导到轨迹监督中; 轨迹表示未显式建模力、触觉与接触模式, 可能限制精细操作; 仅验证在桌面级单臂任务上, 未扩展到移动操作、灵巧手等场景。",
+        "code_release": "论文未提代码开源 (仅提供项目页面 https://mu0-wm.github.io/ )。",
+        "relevance_detail": "该论文提供了一种冻结 VLM 后附加预测器 (Trace Expert) 进行未来状态预测的世界模型范式, 与你在 V3/LWv2 中用 Qwen3-VL 学习潜世界预测的思路相似。其 Action Expert 通过从 Trace Expert 部分去噪特征中读取信息并用门控交叉注意力注入动作头 (Sec 3.4), 可直接启发你在 DiHAL 式层选择上如何插入动作读取头。此外, 设计消融 (附录 E.1) 中关于 B 样条目标表示、DINO 特征注入、刚性损失等选择, 为你的预测头设计 (目标平滑性、语义整合) 提供了可迁移的经验; 缩放分析 (附录 E.2) 表明强轨迹预训练能弥补小动作头容量不足, 这与你们探索大容量世界模型 + 小头策略方向一致。",
+        "followup": "细读 Sec 3.4 的动作专家特征读取与门控交叉注意力机制, 以及附录 E.1 的全组件消融表 6, 附录 E.2 的缩放实验 (表 7、8) 关于在不同动作头大小下预训练的增益。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "极简无监督表征学习：基于Sparse Manifold Transform",
+      "score": 5,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种极简的无监督表征学习框架，利用稀疏流形变换实现无需复杂数据增强或对比损失的高效学习。",
+      "why": "弱信号：该方法可能为V3中防止表征坍缩提供稀疏性约束的替代思路，但不直接触及JEPA的predictor/target设计与SIGReg。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "MBench: A Comprehensive Benchmark on Memory Capability for Video World Models",
+      "title_zh": "MBench:评估视频世界模型记忆能力的综合基准",
+      "score": 4,
+      "authors": [
+        "Shengjun Zhang",
+        "Zhang Zhang",
+        "Simin Huang",
+        "Zhenyu Tang",
+        "Hanyang Wang",
+        "Chensheng Dai",
+        "Min Chen",
+        "Yifan Li",
+        "Yuxin Li",
+        "Yingjie Chen",
+        "Hao Liu",
+        "Chen Li",
+        "Jing Lyu",
+        "Yueqi Duan"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.00793",
+      "url": "https://arxiv.org/abs/2606.00793",
+      "published": "2026-05-30",
+      "tldr": "从实体一致性、环境一致性、因果一致性三个层次构建基准，系统评测视频世界模型的长期状态保留能力。",
+      "why": "弱信号：若V3未来需要评估latent世界模型的长程一致性，该基准的维度可作参考，但本身不提供训练方法。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型评测只关注视觉质量和运动连贯性，忽略模型在长时间跨度下维持稳定世界状态的能力，即缺乏对实体、环境、因果一致性的系统评估。",
+        "method": "提出 MBench 基准，将世界模型记忆分解为实体一致性、环境一致性和因果一致性三个层次，细化为 12 个可量化子维度。基于真实长视频构建，采用规则化指标（SSIM、DINOv2 特征余弦相似度、ArcFace 人脸匹配、相机几何误差等）与 VLM 自动评分相结合，并设计触发条件计分机制（Trigger-Conditioned Scoring），先验证模型是否成功执行记忆触发事件（如出画再入画），再计算一致性得分，最终用触发覆盖率和记忆可靠性的调和平均（M-Score）排名。",
+        "key_contributions": [
+          "首次构建同时覆盖实体、环境、因果一致性的视频世界模型记忆能力评测基准",
+          "提出触发条件计分机制，防止模型因保守生成（如静态场景）而虚高分数",
+          "混合规则化指标与 VLM 的自动评估管线，涵盖几何、纹理、身份、光照、风格、因果关系等维度",
+          "对 14 个主流文本/动作条件视频世界模型进行系统评测，揭示其在长期状态保留上的根本性短板"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验（纯视频生成模型评测）",
+        "datasets": "DL3DV, Tanks and Temples, OpenHumanVID, SpatialVID, Physics-aware-videos 等真实长视频数据集",
+        "compute": "论文未明确说明",
+        "results_headline": "多数模型在物体几何和纹理一致性尚可，但风格一致性极低；动作条件模型常通过冻结场景获得高渲染/空间分，但自演化（Self-evolution）分数显著低下，揭示了因果记忆与物理演化能力的严重不足。",
+        "baselines": [
+          "Memflow",
+          "Self Forcing",
+          "Skyreels V2",
+          "Longlive",
+          "Longcat-Video",
+          "Cosmos-Predict 2.5",
+          "Causal Forcing",
+          "Helios",
+          "Matrix-Game 2.0",
+          "Matrix-Game 3.0",
+          "HY-WorldPlay",
+          "Yume-1.5",
+          "Lingbot-World",
+          "Infinite-World"
+        ],
+        "limitations": "仅面向生成式视频世界模型，不适用于潜在空间预测或表征学习类世界模型；VLM 评分受当前 VLM 能力限制；指标侧重视觉表面一致性，未直接度量物理状态或抽象变量。",
+        "code_release": "已开源：GitHub (https://github.com/study-overflow/MBench) 和 HuggingFace Leaderboard",
+        "relevance_detail": "你的 V3/LWv2 在潜在空间预测未来视觉 token，目标是学习能长期维持世界状态的表征。MBench 的实体、环境、因果三维度记忆分解为你提供了评测世界模型长期一致性的框架思路，尤其是自演化（Self-evolution）指标衡量模型在遮挡/视线离开后能否继续隐藏区域的物理演化，这与 latent predictor 需要维持跨遮挡状态一致性的核心挑战直接呼应。如果你将来需要量化所学世界模型的记忆能力，MBench 的触发条件计分和 DINOv2/几何指标可作为参考。但本文是纯评测基准，没有新的表征学习或 SSL 设计，对当前 V3 架构的 collapse defense/predictor design 无直接启发，属于弱信号。",
+        "followup": "若需设计自己的世界模型评测，可仔细看第 4 节评估管线（实体一致性中的 Texture/Geometry 用 DINOv2、SSIM，因果一致性自演化的 VLM 软门控评分），但对当前 V3 训练与架构改进无直接帮助。"
+      }
+    },
+    {
+      "rank": 4,
+      "title": "Skip a Layer or Loop It? Learning Program-of-Layers in LLMs",
+      "title_zh": "跳过一层还是循环一层？在LLM中学习层级程序",
+      "score": 3,
+      "authors": [
+        "Ziyue Li",
+        "Yang Li",
+        "Tianyi Zhou"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2606.06574",
+      "url": "https://arxiv.org/abs/2606.06574",
+      "published": "2026-06-04",
+      "tldr": "发现预训练LLM层可以动态跳过或循环形成输入定制的执行程序，并提出轻量预测网络学习这种层级程序，在数学推理上提升准确率。",
+      "why": "弱信号: 该工作探索每输入动态跳过/循环层，可能启发你V3中按输入状态动态选择action head插入层的思路，类似于DiHAL式层选择，但目前未涉及动作条件。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "揭示LLM推理中固定深度前向传播的局限性：大量输入存在更优的“层程序”，通过动态跳过或循环预训练层即可获得更高精度或更少计算，且无需微调模型参数。",
+        "method": "提出PoLar（Program-of-Layers）框架，将预训练LLM的层划分为可复用模块，用一个轻量预测网络（以Qwen3-Embedding-0.6B作为外部编码器，通过跨注意力与跨层编码器）为每个输入一次性预测出层级的操作序列（skip/keep/repeat），然后按该程序执行冻结的LLM。监督信号来自离线MCTS搜索到的有效执行程序，训练时用二元分割掩码与操作分类交叉熵联合优化。",
+        "key_contributions": [
+          "首次系统揭示预训练LLM中大量存在的多段、动态层执行程序，且发现层循环+跳过组合优于单独的任一操作",
+          "提出一种无需搜索的端到端预测方法PoLar，将层执行决策从在线搜索转化为单步预测，大幅降低推理开销",
+          "在数学推理基准上，PoLar在保持或减少执行层数的同时，准确性显著超越标准推理及多种动态深度基线",
+          "在域外分布基准上验证所学层执行策略具有泛化能力，表明其对任务特征而非单纯记忆"
+        ],
+        "sim_benchmarks": [
+          "DART-Math",
+          "ASDiv",
+          "MAWPS",
+          "MMLU-Pro"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练：DART-Math（数学推理，5个难度级别）；评估：ASDiv、MAWPS（数学文字题）、MMLU-Pro（多学科选择题）",
+        "compute": "论文未明确说明（预测网络约2.1M参数，外部编码器用Qwen3-Embedding-0.6B，基座LLM为3B-8B规模）",
+        "results_headline": "在LLaMA-3.2-3B-Instruct上，PoLar的pass@5较Base (sampling) 提升最高+20.8%，且平均执行层数更少；同时端到端延迟降低（最低至基准的0.83×）。",
+        "baselines": [
+          "Base (τ=0)",
+          "Base (sampling)",
+          "ShortGPT",
+          "MindSkip",
+          "FlexiDepth",
+          "DR.LLM"
+        ],
+        "limitations": "仅验证于数学推理领域，未知是否适用于多模态或长文本；预测程序受限于最大段长4及每段最多一次重复，可能漏掉更复杂结构；监督信号依赖MCTS搜索到的有效程序，覆盖度有限。",
+        "code_release": "开源：https://github.com/tianyi-lab/PoLar",
+        "relevance_detail": "弱信号。本工作聚焦纯文本LLM的层动态执行，与VLA/JEPA/世界模型无直接关联。如果未来在Qwen3-VL等多模态backbone中考虑按输入难度动态分配视觉编码器层数（类似DiHAL式层选择但加循环），PoLar的段划分与预测网络设计或可提供启发，但当前论文未涉及视觉模态、动作预测或表示坍塌防御。",
+        "followup": "若仅从通用动态层执行角度了解，可读Section 3（预测网络架构）与Section 4（主实验）；对VLA研究者而言价值有限，建议跳过。"
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding：用接地模型引导文本生成以实现机器人控制",
+      "score": 3,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "利用LLM生成计划并由接地模型校验，实现机器人任务。",
+      "why": "弱信号：涉及VLM用于机器人的思路，但缺少对action head插入或latent world prediction的设计消融，不能直接指导V3。",
+      "hits": []
+    }
+  ]
+}
