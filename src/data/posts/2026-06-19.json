@@ -1,0 +1,398 @@
+{
+  "date": "2026-06-19",
+  "kept": 9,
+  "reviewed": 31,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "Current World Models Lack a Persistent State Core",
+      "title_zh": "当前世界模型缺乏持久状态核心",
+      "score": 9,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.20545",
+      "url": "https://arxiv.org/abs/2606.20545",
+      "published": null,
+      "tldr": "论证现有世界模型未维持一个持久的内部状态核心，限制了长程一致性与记忆能力。",
+      "why": "直接指出世界模型架构中状态持久性的缺失，可促使你重新审视 LWv2 的 latent state 更新策略与目标编码器的 EMA 动量的实际作用。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有世界模型基准只评估视频的保真度、运动和相机可控性，不检查动态世界在未被观察时是否继续演化。本文指出世界模型的核心盲点是缺乏“持久状态核心”（persistent state core），即在相机离开并返回后，对象的状态（如位置、动作结果）是否与事件预期一致。",
+        "method": "提出 WRBench 基准，基于 25 个场景（Natural-25）与 4 级事件设计（移位 vs 原地状态变化）构建事件-视图记录。WRBenchLib 为不同模型（源视频、几何缓存、模型推断、纯提示）统一提供相机干预并记录传递条件。评估分为六个诊断维度：相机精度/对齐、视觉完整性、可见空间/状态一致性、重观察支持度、重观察空间/状态一致性，采用 DINOv2、VGGT-Ω 和 Qwen-VL 系列进行自动评分，并用 2,547 条人类标注校准每个维度。",
+        "key_contributions": [
+          "提出首个系统性评估世界模型在视角干预下动态状态持久性的基准 WRBench，将评估分解为从相机执行到重观察状态闭合的诊断链。",
+          "发布 WRBenchLib 开源工具包，统一记录不同生成模型的视角控制条件和重观察可判定边界，实现异构公平比较。",
+          "基于 23 个模型 9,600 个视频的分析，发现所有模型在重观察状态一致性上存在共性失败，缩放和架构改进无法自动提升该能力，指出需要 what-memory 和 endpoint-persistence 训练目标。",
+          "提出 long-to-short 训练策略建议：先在长时程上学习持久性，再加入显式的相机执行监督。"
+        ],
+        "sim_benchmarks": [
+          "WRBench"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "Natural-25（25 个室内外场景 × 4 级事件设计，涵盖移位与原地状态变化）",
+        "compute": "未说明",
+        "results_headline": "所有 23 个模型在重观察状态一致性（re-observed state）得分集中在 0.62–0.66，缩放（Wan 1.3B→14B 反降至 0.62）和架构升级均未提升；Lingbot-World 可见状态最优（0.876/0.735）但视角控制精度仅 0.468，揭示当前世界模型无法在视角干预后保持对象事件终局状态。",
+        "baselines": [
+          "ReCamMaster (源视频条件)",
+          "HyDRA (源视频条件)",
+          "InSpatio World 14B (源视频条件)",
+          "Gen3C (几何缓存条件)",
+          "Spatia (几何缓存条件)",
+          "VerseCrafter (几何缓存条件)",
+          "Wan-Fun 系列 (1.3B, 14B, 5B, A14B，模型推断条件)",
+          "LiveWorld (模型推断条件)",
+          "Lingbot World (模型推断条件)",
+          "Hailuo 2.3 (纯提示条件)",
+          "Kling v2.6 (纯提示条件)",
+          "等共 23 个视频生成模型"
+        ],
+        "limitations": "仅评估了视角干预下的世界状态持久性，未涵盖对象移除等其他未观测变化；自动评分依赖 VLM，人类校准仅覆盖部分维度；提出的 long-to-short 训练策略和端点奖励机制仅止于建议，未在本文实验验证。",
+        "code_release": "开源，代码：https://github.com/JinPLu/WRBench",
+        "relevance_detail": "该论文的核心发现——当前世界模型在视角干预后不能保持对象状态演化——直接关联你在 V3（LWv2）中试图实现的 latent world predictor。你正在设计的 predictor 需要预测未来视觉 token 并保持与动作一致的世界状态，而 WRBench 证明现有“表面渲染”式世界模型缺少 what-memory 来记录隐藏期间的 in-place 状态变化（例如对象折起/倾倒）。Section 4.1.3 提出的 long-to-short 训练策略和 endpoint persistence 目标，可以启发你为 V3 的 predictor 设计新的监督信号（如强制 latent 状态在遮挡后恢复事件端点），并利用该 benchmark 做类似诊断,评估你的模型在 LIBERO/RoboTwin 任务中是否具备此能力。此外，他们分解成 spatial vs. state 变化的分析（Figure 6）与你在 DiHAL 风格动作头插入时的层选择可能有关联，因为不同层可能编码不同粒度的状态信息。",
+        "followup": "重点阅读 Section 4.1（特别是 4.1.1 和 4.1.3 的深入诊断）和 Figure 4–6，以及 long-to-short 策略建议；如需复用其工具，可查阅 WRBenchLib 和评估协议。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "ENPIRE: Agentic Robot Policy Self-Improvement in the Real World",
+      "title_zh": "ENPIRE：真实世界中机器人策略的智能体式自改进",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.19980",
+      "url": "https://arxiv.org/abs/2606.19980",
+      "published": null,
+      "tldr": "提出一种让机器人策略在真实世界中通过智能体式交互进行自改进的方法。",
+      "why": "可能依赖世界模型或 latent 状态实现策略自改进，与你的 world-model-as-pretraining for robot policy 思路高度吻合，值得深入查看。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "在真实世界灵巧操作任务中，策略提升高度依赖人类重置、评估与算法调整，编码代理在数字环境中可自动搜索算法，但缺乏物理世界的可重复反馈闭环。本文旨在构建一个使编码代理能在真实机器人上自主进行闭环策略改进的框架。",
+        "method": "ENPIRE 框架由四个模块组成：Environment (EN) 模块通过工具调用自动构建安全约束、奖励函数与场景重置；Policy Improvement (PI) 模块驱动策略改进（启发式学习、BC、RL 等）；Rollout (R) 模块在单/多机器人上并行评测；Evolution (E) 模块中编码代理分析日志、查阅文献并改进训练代码。分两阶段：先由人类引导构建环境 API，再完全自主地从真实反馈中优化策略。多代理通过 Git 协作分布式探索，用 Hill-Climbing 方式提升成功率。",
+        "key_contributions": [
+          "将物理自动研究形式化为编码代理问题，提出两阶段方法：先构建环境反馈，再自主在线策略改进",
+          "实现 ENPIRE 框架，使编码代理可自主开发工具、构建奖励与重置机制，在真实机器人上闭环优化策略",
+          "在多个高精度操作任务（Pin insertion, PushT, GPU insertion, Ziptie-cutting）上达到 99% 成功率，Pin insertion 收敛至 100% 快于人类参与方法",
+          "展示多机器人并行扩展加速策略学习，提出平均机器人利用率 (MRU) 和平均 token 利用率 (MTU) 指标"
+        ],
+        "sim_benchmarks": [
+          "RoboCasa",
+          "Gym-PushT"
+        ],
+        "real_robot": "真机设置: 8 台双臂 YAM 机器人 (6-DoF 臂 + 1-DoF 夹爪), 任务: PushT, Pin insertion, GPU insertion, Ziptie-cutting; 所有任务均在线学习, 未明确离线数据规模",
+        "datasets": "无大规模预训练数据集; 真机实验使用在线收集数据; 仿真实验使用 RoboCasa 环境",
+        "compute": "每台机器人工作站: 1×NVIDIA RTX 5090 32GB, Intel Core Ultra 9 285K, 128GB RAM; 编码代理为 Codex (GPT-5.5), Claude Code (Opus 4.7), Kimi Code (K2.6); 训练算力未明确说明",
+        "results_headline": "Pin insertion 任务上 ENPIRE 实现 100% 成功率 (50 次连续成功), 速度快于人类参与的 RL 方法 (48); PushT 任务 8 代理约 2 小时达到归一化分数 1.0; 仿真 RoboCasa 上 ENPIRE 超越 GR00T N1.5 和 CaP-X",
+        "baselines": [
+          "GR00T N1.5",
+          "CaP-X",
+          "Human-in-the-loop RL (48)"
+        ],
+        "limitations": "机器人资源和计算资源利用不足, 多代理时 MRU 下降; Token 消耗随舰队规模超线性增长, 大舰队虽缩短墙钟时间但总 token 预算大幅增加, 效率降低",
+        "code_release": "论文未明确说明",
+        "relevance_detail": "弱信号: ENPIRE 的自动研究闭环可自动化消融实验, 但论文聚焦于编码代理驱动的策略改进, 与 V3/LWv2 的 JEPA/SSL 表示学习无直接交叉。未涉及预测器/目标编码器设计、坍缩防御、动作头插入位置等核心设计问题, 对当前研究无具体指导。",
+        "followup": "若对自动化实验流程感兴趣, 可读 4 节 Limitations 和附录 C 的消融研究, 但无直接帮助于 V3 设计。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "ImageWAM: Do World Action Models Really Need Video Generation, or Just Image Editing?",
+      "title_zh": "ImageWAM:世界动作模型真的需要视频生成,还是仅需图像编辑?",
+      "score": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.19531",
+      "url": "https://arxiv.org/abs/2606.19531",
+      "published": null,
+      "tldr": "质疑世界动作模型必须使用视频生成,提出仅利用图像编辑可能已足以进行动作预测。",
+      "why": "如果你的V3世界预测只需单步图像编辑而不需视频生成,可简化predictor设计,但未涉及JEPA/SSL损失与坍塌防御。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "视频生成式世界动作模型(WAM)需要预测完整的多帧未来视频，存在推理代价高、分配容量给动作无关的视觉细节、以及未来幻想误差误导动作预测等问题。本文探詢：世界动作模型是否真的需要视频生成，能否用更紧凑的图像编辑模型来替代。",
+        "method": "提出ImageWAM框架：将预训练的图像编辑模型（如OmniGen2、Flux.2、Ovis-U1）作为机器人动作预测的主干，利用编辑分支在去噪过程中产生的中间KV缓存作为紧凑的世界动作上下文，输入动作专家（Action Expert）进行流匹配动作预测。仅预测单帧终点帧，避免多帧视频解码；推理时只需一次编辑前向步获取缓存，不生成图像。训练时冻结VLM部分，仅训练扩散图像分支和动作专家。",
+        "key_contributions": [
+          "提出ImageWAM：用图像编辑模型替代视频生成模型作为WAM主干，不生成视频或图像，仅用编辑中间缓存作为动作条件",
+          "将机器人操作建模为指令引导的视觉变换，强调编辑预训练的先验对齐：指令-改动对齐，更容易的目标/变化代理，紧凑的推理",
+          "在LIBERO、LIBERO-Plus、RoboTwin 2.0和真机实验中超越多个VLA和FastWAM，推理延迟降至1/4，FLOPs降至1/6",
+          "通过注意力和效率分析，验证编辑缓存聚焦任务相关区域，提供高效世界动作上下文"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "LIBERO-Plus",
+          "RoboTwin 2.0"
+        ],
+        "real_robot": "真机设置：Dobot XTrainer双机械臂平台，4个任务（堆叠碗、折叠毛巾、打开抽屉放记号笔、挂杯子），每任务100条轨迹，共400条数据；评估每个任务100次试验",
+        "datasets": "仅使用下游基准的专家演示进行训练，未使用额外预训练数据；LIBERO：每套500条演示；RoboTwin 2.0：clean场景2500条+随机化场景25000条；真机：400条演示",
+        "compute": "训练用8×NVIDIA H20 GPU，DeepSpeed ZeRO-1（Flux.2 9B用ZeRO-2），bf16精度，AdamW；LIBERO训练约18小时，RoboTwin约5天；参数量：Action DiT约642M（Flux.2 4B）到1.1B（Ovis-U1），总模型大小包括冻住的VLM和编辑主干",
+        "results_headline": "在RoboTwin 2.0随机测试集上SR 93.56%，LIBERO平均98.4%，LIBERO-Plus平均83.1%（Flux.2 4B），真机84.5%，同时推理延迟263ms vs FastWAM 302ms，FLOPs 9.72 vs 13.21（A6000）",
+        "baselines": [
+          "π0",
+          "π0.5",
+          "FastWAM",
+          "OpenVLA",
+          "GR00T N1",
+          "LingBot-VA",
+          "Motus",
+          "UniVLA",
+          "WorldVLA",
+          "BagelVLA"
+        ],
+        "limitations": "模型训练仅依赖下游演示数据，未在大规模异质数据上预训练，可能限制跨场景泛化；编辑缓存依赖编辑模型质量，不同编辑模型之间性能差异大（如OmniGen2 71.8% vs Flux.2 83.1%）；未验证更长的动作预测窗口或对更多实机任务的泛化。",
+        "code_release": "已开源：https://github.com/yuyangalin/ImageWAM",
+        "relevance_detail": "本文提出用图像编辑模型的内部KV缓存取代未来视频生成，作为紧凑的世界动作上下文，与你当前V3/LWv2中的潜在世界预测共享‘避免完整未来预测’的动机。具体可借鉴：Section 3.2中如何从图像编辑分支提取中间缓存（Cτedit）并喂给动作专家，这一设计与你在V3中从预测器输出的潜在表示如何接入动作头高度对应；Section 4.4的消融（Q2：理解与生成解耦，Q3：编辑主干规模影响）为你的predictor head设计提供了‘冻结VLM、仅训练生成分支和动作头’的解耦范式参考；此外，Table 5的效率对比与注意力可视化（Figure 4）为你评估V3推理开销和latent focusing提供了评估思路。但本文并不涉及JEPA或非对比表示坍塌，相关度为中等偏弱。",
+        "followup": "关注第3.2节KV缓存提取与动作条件设计，以及第4.4节关于编辑模型选择和解耦的消融，为V3框架中预测器输出如何条件化动作头提供参考。"
+      }
+    },
+    {
+      "rank": 4,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "稀疏流形变换：最小化无监督表示学习",
+      "score": 5,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种利用稀疏流形变换的最小化无监督学习方法，通过稀疏编码和流形结构避免表示坍缩。",
+      "why": "稀疏性作为 collapse 防御的一种形式，与你在 V3 中探索的 SIGReg 变体可形成对照，但论文未涉及 predictor/target 架构设计，弱信号。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 5,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "接地解码: 用接地模型引导文本生成以进行机器人控制",
+      "score": 5,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出利用接地模型约束LLM文本生成，实现机器人任务规划与控制。",
+      "why": "可能涉及世界模型或感知模型作为接地来指导动作，与跨模态对齐和VLA中的action头设计有弱关联，但未显式涉及JEPA/SIGReg类设计。",
+      "hits": []
+    },
+    {
+      "rank": 6,
+      "title": "Selective Synergistic Learning for Video Object-Centric Learning",
+      "title_zh": "选择性协同学习用于视频对象中心学习",
+      "score": 4,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.15527",
+      "url": "https://arxiv.org/abs/2606.15527",
+      "published": null,
+      "tldr": "提出选择性协同学习框架,提升视频对象中心表征的解耦与学习效果。",
+      "why": "弱信号:对象中心表征可能启发V-JEPA中的对象解耦,但未触及collapse防御、target设计等核心变量。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "Slot-based 视频对象中心学习（VOCL）中，编码器的 slot attention 图与解码器的物体还原图存在结构性不对齐：编码器边界锐利但有噪声，解码器内部一致但边界模糊。现有密集对齐方法在所有时空 patch 上强制一致，反而传播了彼此的缺陷，且计算复杂度为二次，难以扩展。",
+        "method": "提出 Selective Synergistic Learning (SSync)：① 基于局部一致性分析，先选出编码器锐利的边界区域和解码器稳定的内部区域作为可靠教师；② 在这些区域进行非对称的 cross-distillation（边界处用编码器伪标签监督解码器，内部处用解码器伪标签监督编码器），避免错误传播；③ 引入 transitive pseudo-label merging，根据 slots 的时空重叠构建连通图，合并冗余 slot 身份，防止过度碎片化。整体为线性复杂度插件式模块。",
+        "key_contributions": [
+          "提出基于 reliability 的选择性对齐原则：仅在各模块擅长的区域进行互监督，避免密集对齐带来的误差传播",
+          "设计 transitive pseudo-label merging，通过分析 slot 激活的时空一致性来合并冗余 slot，解决了 slot 过度碎片化问题",
+          "SSync 以线性复杂度替代密集对齐的二次复杂度，且无需额外投影头，可作为即插即用模块集成到现有 slot 框架中"
+        ],
+        "sim_benchmarks": [
+          "MOVi-C",
+          "MOVi-E",
+          "YouTube-VIS 2021",
+          "COCO 2017",
+          "RandSF.Q（含 MOVi-D、HQ-YTVIS）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "MOVi-C、MOVi-E、YouTube-VIS 2021、COCO 2017、MOVi-D（均用于对象发现与分割评估）",
+        "compute": "主要实验使用 DINOv2-Small/Base 作为视觉 backbone；批量大小 128，训练 100k-300k 步；硬件为 2× NVIDIA RTX A6000（YouTube-VIS 使用 RTX PRO 6000 Blackwell GPU）；未给出 GPU·天总数",
+        "results_headline": "在 MOVi-C 上 FG-ARI 79.4（vs SlotCurri 77.6）、mBO 39.5（vs 32.8）；MOVi-E 上 FG-ARI 84.0（vs 83.7）、mBO 34.8（vs 29.3）；YouTube-VIS 上 mBO 38.7 最佳；COCO 上 FG-ARI 47.9（vs SRL 42.8）",
+        "baselines": [
+          "SAVi",
+          "STEVE",
+          "VideoSAUR/v2",
+          "SlotContrast",
+          "SRL",
+          "SlotCurri",
+          "RandSF.Q 变体（tsim / ssc）"
+        ],
+        "limitations": "伪标签是在线生成的，早期仍可能包含错误；τmerge 需要根据数据集粗略调整，尽管对 2/3 附近鲁棒；仅评估在视频对象发现基准，未测试下游机器人操作任务",
+        "code_release": "github.com/wjun0830/SSync",
+        "relevance_detail": "weak signal：该文的 selective cross-distillation（基于可靠性的非对称目标选择）和 transitive merging 为你的 V3 中 latent predictor 的 target 设计（如选择哪些 token/区域作为监督目标）及表示崩塌防御（如合并冗余 slot）提供了可借鉴的思路，但应用领域是 object-centric 视频发现，与你在 VLA / world model 语境下的 JEPA 式预测差异较大，直接迁移有限",
+        "followup": "若想挖掘 target 选择与崩塌防御的机制，重点看第 3.2 节边界/内部区域选择规则、第 3.3 节 transitive merging 的图构建及第 4.3 节消融实验"
+      }
+    },
+    {
+      "rank": 7,
+      "title": "Holo-World: Unified Camera, Object and Weather Control for Video World Model",
+      "title_zh": "Holo-World：统一相机、物体与天气控制的视频世界模型",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.20083",
+      "url": "https://arxiv.org/abs/2606.20083",
+      "published": null,
+      "tldr": "构建一个可对相机、物体和天气进行统一操控的视频生成世界模型。",
+      "why": "弱信号：研究侧重生成控制，而非 latent prediction 或 collapse 机制，对你当前 LWv2 的 predictor/target/正则化问题没有直接启示。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型通常将相机、物体运动和环境天气控制分开处理，且天气生成依赖完整源视频或重建场景。本文研究从单张图像出发，同时控制相机轨迹、物体动态并合成目标天气状态的统一源到状态生成问题。",
+        "method": "提出Holo-World，基于冻结的Wan2.1-T2V-14B扩散主干，通过Unified Scene Adapter (UniSA) 将世界保持与天气迁移解耦为World Adapter和State Adapter两个无参数共享的子空间，分别注入渲染的深度/法线/RGB、物体bbox以及源外观锚点。训练时对无天气样本门控关闭State Adapter；采样时使用Scene-Weather Decomposed CFG，将classifier-free guidance分解为场景残差和天气残差，独立控制保持与生成强度。",
+        "key_contributions": [
+          "首次提出统一相机、物体和天气控制的单图像视频世界模型，将天气状态纳入同一控制接口。",
+          "构建HoloStateData数据集，将真实视频、仿真天气配对和V2V天气转换视频统一为源到状态样本，提供相机/物体/天气联合监督。",
+          "设计了Unified Scene Adapter，在同一冻结骨干内通过解耦适配器分别学习世界保持和天气迁移残差，避免相互干扰。",
+          "提出Scene-Weather Decomposed CFG，在采样时将引导方向分解为场景和天气分量，实现更强的天气效果而不损伤场景结构。"
+        ],
+        "sim_benchmarks": [
+          "HoloStateData benchmark (Real/Simulation/V2V各50样本)",
+          "VBench-I2V"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练基于HoloStateData，包含来自SpatialVID-HQ的真实视频(Real)、Unreal Engine渲染的配对仿真天气视频(Simulation)以及由天气编辑模型生成的V2V配对视频，合计15K训练样本。Wan2.1-T2V-14B预训练数据未明确说明。",
+        "compute": "基于Wan2.1-T2V-14B (14B参数)，冻结VAE、文本编码器及DiT骨干，只训练UniSA参数。使用8张NVIDIA H200 GPU，batch size=1，梯度累积=2，学习率2e-5，训练3000步。",
+        "results_headline": "Real子集上Holo-World取得VBench-I2V总体最高89.05分，相机控制误差RotErr 0.719、TransErr 1.123、ObjMC 7.731；Weather子集上Weather Alignment达86.00% (vs Wan2.7-Edit 79.00%)，VLM评价68.51，用户偏好分别以83%/62%优于Cosmos-Transfer2.5和Wan2.7-Edit。",
+        "baselines": [
+          "Uni3C",
+          "GEN3C",
+          "VerseCrafter",
+          "NeoVerse",
+          "Cosmos-Transfer2.5",
+          "Wan2.7-Edit"
+        ],
+        "limitations": "仅限于可控视频生成，并非完整物理模拟器；未在真实机器人场景验证控制能力。",
+        "code_release": "论文提供项目页面 https://xiangchenyin.github.io/Holo-World/ ，未明确说明代码开源。",
+        "relevance_detail": "该工作与你V3/LWv2研究的直接关联较弱。其UniSA将世界保持和天气迁移解耦到两个独立的参数子空间并注入冻结主干，在架构上类似你在Qwen3-VL中插入动作头的思路，以及如何处理多任务解耦的问题。消融实验(Table 4,5)展示了无共享适配器与解耦CFG如何避免场景保持与生成之间的干扰，可为你设计预测头内部是否应分解条件子网络提供一些直觉，但论文是生成式视频世界模型，不涉及JEPA/非对比SSL或潜在预测，因此参考价值有限。",
+        "followup": "若想借鉴解耦设计，可重点看4.2节Unified Scene Adapter的注入形式和5.3节消融实验中对有无G-buffer、UniSA、SW-CFG的对比，以及解耦CFG对Real/Weather子集指标的影响。"
+      }
+    },
+    {
+      "rank": 8,
+      "title": "S-Agent: Spatial Tool-Use Elicits Reasoning for Spatial Intelligence",
+      "title_zh": "S-Agent：通过空间工具使用激发空间推理智能",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.20515",
+      "url": "https://arxiv.org/abs/2606.20515",
+      "published": null,
+      "tldr": "设计一个利用空间工具使用来激发空间推理能力的智能体。",
+      "why": "弱信号：空间推理可能涉及 VLM 中的视觉表征，但未触碰 action head 插入位置或 latent world prediction 的具体问题。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有VLM与工具增强代理在空间推理中依赖静态、无状态的单帧推理，无法处理连续多视图视频中动态3D世界的时空证据积累。本文提出S-AGENT，将空间推理重构为主动的时空证据获取与聚合过程。",
+        "method": "S-AGENT将VLM作为语义规划器，决定需要何种证据；通过三层空间工具（Level 1: 2D视觉证据获取，如关键帧选取、物体接地、开放词汇检测；Level 2: 2D到3D几何提升，如度量深度、相机姿态、点云重建；Level 3: 空间知识聚合，如度量测量、计数、方向、关系专家）逐步将2D观测转换为结构化空间知识。同时维护双记忆系统：Scene Memory（场景实体与几何属性）与Agent Memory（工具调用轨迹与推理历史），实现跨帧、跨视角的状态维护与证据重用。训练阶段从GPT-5.4教师轨迹蒸馏得到S-300K数据集，微调Qwen3-VL-8B得到紧凑型S-AGENT-8B。",
+        "key_contributions": [
+          "提出空间工具使用代理范式S-AGENT，将空间推理定义为时空证据积累而非孤立帧预测。",
+          "设计分层空间工具（2D→3D→专家）与双记忆机制，实现从2D观测到3D场景理解的证据逐步获取与状态维护。",
+          "零样本设置下，S-AGENT使GPT-5.4在MMSI-Bench上提升4.5%，在ViewSpatial-Bench上提升14.4%，超越Gemini 3 Pro等SOTA。",
+          "通过教师轨迹蒸馏训练出S-AGENT-8B，在MMSI-Bench上比Qwen3-VL-8B提升10.5%，与GPT-5.4、Gemini 3 Pro等闭源模型性能相当。"
+        ],
+        "sim_benchmarks": [
+          "MMSI-Bench",
+          "ViewSpatial-Bench",
+          "ReVSI",
+          "VSI-SUPER"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "预训练数据：SenseNova-SI-800K（从中采样100K问题生成轨迹）；微调数据：S-300K（经质量过滤与多粒度分解，共292K条轨迹），用于训练S-AGENT-8B。",
+        "compute": "微调使用8×B200 GPU，训练一个epoch，最大序列长度8192，学习率5e-5。零样本代理调用GPT-5.4等API，未披露具体算力。",
+        "results_headline": "零样本S-AGENT(GPT-5.4)在MMSI-Bench上达46.4%，超越Gemini 3 Pro(45.2%)；S-AGENT-8B在MMSI-Bench上达41.6%，较Qwen3-VL-8B(31.1%)提升10.5%，与GPT-5.4(41.9%)和Gemini 3 Pro(45.2%)性能相当。",
+        "baselines": [
+          "Gemini 3 Pro",
+          "GPT-5.4",
+          "Grok 4",
+          "Qwen3-VL-8B-Instruct",
+          "InternVL3_5-8B",
+          "Seed 1.6",
+          "SenseNova-SI系列",
+          "VST-SFT",
+          "Cambrian-S-7B",
+          "Spatial-MLLM系列"
+        ],
+        "limitations": "基础VLM能力对工具使用效果影响显著（如Qwen3-VL-8B直接+S-AGENT未提升）；Level-2原始3D证据可能引入噪声，需专家过滤才有效；训练数据依赖强教师模型(GPT-5.4)，蒸馏过程可能受限于教师性能。",
+        "code_release": "论文未提",
+        "relevance_detail": "弱信号：S-AGENT将VLM作为空间规划器，通过显式几何工具获取证据，与VLA中VLM作为决策者调用外部工具（如物体检测、深度估计）的思路相似，但尚未涉及动作预测、世界模型学习或JEPA式表征。该工作对VLM空间推理能力的系统化提升（记忆机制、分层证据）可能启发VLA中如何利用外部几何知识增强策略，但无直接技术重叠。",
+        "followup": "若需借鉴工具增强VLM的思路，可阅读第2节方法（分层工具与记忆）及第3.4节消融，了解各层级贡献；对蒸馏训练感兴趣可看第2.2节与附录C。"
+      }
+    },
+    {
+      "rank": 9,
+      "title": "Thinking with Visual Grounding",
+      "title_zh": "Thinking with Visual Grounding: 视觉接地式思维",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.16122",
+      "url": "https://arxiv.org/abs/2606.16122",
+      "published": null,
+      "tldr": "在思维链推理中引入视觉接地，使模型推理过程与视觉证据对齐。",
+      "why": "弱信号：涉及 VLM 中视觉 token 与推理的结合方式，可能间接影响你在 Qwen 中插入 action head 时如何利用视觉接地，但没有直接设计验证。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "视觉推理中，纯自然语言思维链缺乏对图像证据的显式链接，难以验证和监督。本文提出 visually grounded thinking，在推理过程中穿插点或框坐标，将思考步骤与图像区域直接绑定。",
+        "method": "构建基于 SAM3 的合成数据管道：从 VQA 数据蒸馏正确推理痕，用 LLM 提取关键视觉对象，再用 SAM3 agent 生成 mask，转换为点或框坐标，合成带 grounding 标注的推理痕。冷启动用 SFT，然后用 GRPO 进行 RL，奖励由答案正确性、格式和 grounding 质量（box IoU 或 point F1）组成，基础模型为 Gemma3-4B-IT。",
+        "key_contributions": [
+          "设计了可扩展的合成数据管道，利用 SAM3 agent 生成对象 mask 作为视觉监督，同时支持点/框两种 grounding 模式。",
+          "提出 grounding 质量奖励（box IoU / point F1），在 RL 中直接监督模型在推理中正确引用视觉证据。",
+          "实验表明 visually grounded thinking 在计数和空间推理上显著提升 4B 模型性能，甚至超越 Gemma3-27B-IT，且点 grounding 对计数更有效，框 grounding 奖励对空间任务增益明显。"
+        ],
+        "sim_benchmarks": [
+          "TallyBench",
+          "CountQA",
+          "VSR-zeroshot",
+          "EmbSpatial",
+          "SpatialMQA",
+          "MultihopSpatial"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "合成数据源于 TallyQA、Pixmo-Count、VSR、MultihopSpatial、SpatialMQA，经蒸馏和 SAM3 处理生成 19,909 条 SFT 及 RL 训练样本。",
+        "compute": "训练与评估约 400 H200 GPU hours，基础模型 Gemma3-4B-IT（4B 参数），SFT 6 epochs，RL 100 steps。",
+        "results_headline": "Visually grounded thinking 相比原始 Gemma3-4B-IT 在计数和空间推理上大幅提升，例如 TallyBench 准确率从 33.33 升至 39.31（点 grounding），空间推理上 4B 模型达到甚至超过 Gemma3-27B-IT。",
+        "baselines": [
+          "Gemma3-4B-IT（无思考）",
+          "Non-grounded Thinking（纯文本思考）",
+          "Thinking with Grounding Box（无 grounding reward）",
+          "Thinking with Grounding Point（无 grounding reward）",
+          "Gemma3-12B-IT / 27B-IT（参考）"
+        ],
+        "limitations": "点 grounding 奖励是离散 F1 信号，优化难度大，未带来一致下游增益；实验仅覆盖计数和空间推理，泛化性未知；数据合成仍依赖 VLM 蒸馏，可能引入偏误。",
+        "code_release": "论文声明将开源数据与代码，但未提供具体 URL。",
+        "relevance_detail": "弱信号。本文聚焦 VLM 推理中的视觉 grounding 与奖励设计，与研究者关注的 VLA、JEPA、动作头插入等无直接重叠。唯一可借鉴的点是：将视觉 evidence 的定位监督（IoU / F1）融入 RL 训练，这种密集空间奖励的思路或许能为世界模型中预测未来 visual tokens 的定位提供类比，但当前 V3/LWv2 中的预测头设计不涉及显式坐标输出，因此启示有限。",
+        "followup": "若想了解空间定位奖励与 RL 的交互，可细读 Section 5.3（grounding reward 效果）及 Section 5.4（box vs point 比较）。"
+      }
+    }
+  ]
+}
