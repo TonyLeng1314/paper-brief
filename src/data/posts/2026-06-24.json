@@ -1,0 +1,183 @@
+{
+  "date": "2026-06-24",
+  "kept": 4,
+  "reviewed": 26,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "World Value Models for Robotic Manipulation",
+      "title_zh": "面向机器人操作的 World Value Models",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.24742",
+      "url": "https://arxiv.org/abs/2606.24742",
+      "published": null,
+      "tldr": "提出了一种结合世界模型与价值函数学习的机器人操作框架，利用世界模型预测未来状态以辅助价值估计和策略优化。",
+      "why": "该工作直接探索了世界模型预测如何服务于机器人操作，与你的 V3/LWv2 中将 latent world prediction 用于动作预测的思路高度一致，可对比其预测器设计（是否条件于动作、预测目标选择等）。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有机器人价值模型多基于VLM backbone，缺乏时间建模与未来规划能力，难以从混合质量数据中精确估计任务进度。本文旨在利用世界模型的时空先验构建通用价值模型，以准确评估次优行为（如犹豫、重试），并提升下游策略学习。",
+        "method": "WVM以预训练视频世界模型Wan2.2（5B）为backbone，通过Mixture-of-Transformers (MoT) 耦合一个轻量级value DiT（0.7B），将价值估计形式化为分布式的value chunk流匹配（flow matching）训练。训练时加入视频流共同训练目标、prefix randomization（概率p=0.5）和视频倒放（rewinding）增强，使模型能同时捕捉单调、停滞和回退的任务进度。",
+        "key_contributions": [
+          "首次将预训练视频世界模型重新用作价值学习的backbone，克服VLM时空建模不足的瓶颈。",
+          "提出面向机器人的大规模价值流模型，以分布式的chunk级流匹配替代传统标量回归，获得SOTA。",
+          "发布Suboptimal-Value-Bench，包含800条人标注的犹豫/重试轨迹，覆盖三种实体，弥补现有专家-only VOC的不足。"
+        ],
+        "sim_benchmarks": [
+          "RoboSuite"
+        ],
+        "real_robot": "真机设置: AgileX 双手机器人 (3个任务), ARX 双臂 (5个任务), 每任务50条次优轨迹用于策略微调; 预训练自采集数据含AgileX单臂/双臂和ARX共约522条轨迹。",
+        "datasets": "预训练混合: RoboCOIN (98K条), EgoDex (299K), RoboReward (7.4K), 自采RoboSuite仿真 (1.8K), AgileX单臂/双臂 (共280条), ARX (242条)。",
+        "compute": "32× NVIDIA A100 40GB, 训练约40小时; 模型总参数量约5.7B (视频DiT 5.0B + value DiT 0.7B)。",
+        "results_headline": "WVM在Suboptimal-Value-Bench上Hesitation-RMSE平均0.05 (最佳baseline 0.14), Retry-VOC平均0.78 (baseline 0.62), Expert-VOC平均0.95 (baseline 0.88); 下游策略使用WVM加权后成功率显著提升。",
+        "baselines": [
+          "GVL",
+          "VLAC",
+          "Robometer",
+          "TopReward",
+          "RoboReward",
+          "Robo-Dopamine"
+        ],
+        "limitations": "训练数据规模有限，零样本泛化弱；Suboptimal-Value-Bench任务局限于pick-and-place，未覆盖灵巧操作与长程任务。",
+        "code_release": "论文未提具体开源链接，仅表示将开源WVM和Suboptimal-Value-Bench。",
+        "relevance_detail": "弱信号: WVM利用预训练视频世界模型提供时空特征，再通过MoT耦合价值预测头，这种‘世界模型特征→预测头’的范式与你正在构建的V3/LWv2 (JEPA encoder→latent predictor) 结构相似，但WVM是生成式世界模型，目标为value estimation而非latent prediction。可留意其MoT不对称注意力设计（Section 3.2）和prefix randomization防止shortcut的机制（Section 3.3, p=0.5），这些关于如何防止predictor利用历史前缀作弊的思路，可能对你在V3中设计predictor conditioning时有参考价值。",
+        "followup": "建议深读Section 5.3的消融实验，重点看video co-training、prefix randomization和value head设计对指标的拆解，以及Section 3.2的MoT耦合细节。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "Qwen-AgentWorld: Language World Models for General Agents",
+      "title_zh": "Qwen-AgentWorld:面向通用智能体的语言世界模型",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.24597",
+      "url": "https://arxiv.org/abs/2606.24597",
+      "published": null,
+      "tldr": "提出基于Qwen的语言世界模型,使智能体在行动前进行内部世界状态推演。",
+      "why": "弱信号:用语言做世界模型分支,和你的V3/LWv2用视觉latent做世界预测思路不同,可能仅在“将预测器作为内部模拟”这一抽象层面对你有所启发,但缺乏视觉encoder/target设计的具体ablation。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "该论文要解决的核心问题是：当前大语言模型（LLM）智能体缺乏通用的语言世界模型来模拟多域交互环境，以及如何利用世界建模进一步提升通用智能体的能力边界。",
+        "method": "提出 Qwen-AgentWorld，一个基于语言模型的自回归世界模型（Language World Model, LWM），通过三阶段训练：持续预训练（CPT）注入环境状态转移知识和领域语料；监督微调（SFT）激活“预测下一状态”的思维链推理；强化学习（RL）采用混合奖励（五维评分+规则验证）提升模拟保真度。模型接收交互历史和当前动作，自回归地输出下一时刻的环境文本观察。",
+        "key_contributions": [
+          "首次构建覆盖 7 个域（MCP、Search、Terminal、SWE、Android、Web、OS）的语言世界模型 Qwen-AgentWorld（35B-A3B 与 397B-A17B），以长思维链推理统一模拟多种智能体环境。",
+          "提出 AgentWorldBench，一个基于前沿模型真实交互轨迹的世界模型评估基准，通过五维评分（Format/Factuality/Consistency/Realism/Quality）评估模拟质量。",
+          "展示了两种将世界模型赋能通用智能体的互补范式：解耦为环境模拟器以进行可扩展、可控的 agentic RL，以及统一为智能体基础模型，将世界建模作为下游任务 warm-up 提升性能。",
+          "证明可控仿真能够超越真实环境训练，通过针对性扰动暴露智能体弱点，在 Tool Decathlon、WideSearch 等基准上带来额外增益。"
+        ],
+        "sim_benchmarks": [
+          "AgentWorldBench",
+          "Terminal-Bench 1.0 & 2.0",
+          "OSWorld-Verified",
+          "SWE-Bench Verified",
+          "SWE-Bench Pro",
+          "BFCL v4",
+          "Claw-Eval",
+          "QwenClawBench",
+          "WideSearch",
+          "Tool Decathlon",
+          "MCPMark"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "10M+ 环境交互轨迹（源自专用智能体基础设施、开放交互痕迹和内部智能体轨迹）及覆盖工业/医疗/法律等专业知识语料；SFT/RL 使用内部轨迹约 92k 条（平均 19k tokens）",
+        "compute": "训练规模：Qwen-AgentWorld-35B-A3B 和 397B-A17B MoE 模型；具体 GPU·days 未明确说明",
+        "results_headline": "在 AgentWorldBench 上，Qwen-AgentWorld-397B-A17B 总分领先 Claude Opus 4.6 达 14.3 分（0-100 尺度）；作为模拟器进行 agentic RL 后，Claw-Eval 提升 4.3 分；作为智能体基础模型统一训练后，Terminal-Bench 2.0 提升 3.9 分，SWE-Bench Verified 提升 4.6 分。",
+        "baselines": [
+          "Claude Opus 4.6",
+          "Gemini 3 Flash",
+          "GPT-5.2"
+        ],
+        "limitations": "仅处理文本环境，GUI 域使用可访问性树而非像素，无法模拟视觉细节；训练数据依赖内部轨迹，可能存在分布偏差；世界模型的事实性维度（Factuality）得分在所有评估维度中最低，长程模拟保真度仍有挑战。",
+        "code_release": "论文声明已开源代码及模型，提供 GitHub/HuggingFace/ModelScope 链接（URL 见论文首页）。",
+        "relevance_detail": "弱信号。论文中“将世界模型训练作为智能体 warm-up”（§6.2 统一范式）与 V3/LWv2 利用世界模型预训练提升机器人策略的思路存在高层相似，但该工作完全基于文本环境、无视觉潜在预测结构，不涉及 JEPA 类预测器/目标设计、坍塌防御或 VLM 动作头插入等 V3 核心问题，无法为当前具体设计提供直接指导。",
+        "followup": "若关注世界模型预训练的范式验证，可阅读 §6.2（Agent Foundation Model）；若对可控仿真实现感兴趣，可参考 §6.1.2 的模拟指令注入机制。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding: 用接地模型引导文本生成以实现机器人控制",
+      "score": 4,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出一种grounded decoding方法,使用接地模型(如机器人环境模型)引导语言模型生成机器人控制命令。",
+      "why": "可能涉及语言模型与机器人动作的跨模态对齐,但未明确包含世界模型或predictor设计,对你的V3设计启发有限。",
+      "hits": []
+    },
+    {
+      "rank": 4,
+      "title": "OpenThoughts-Agent: Data Recipes for Agentic Models",
+      "title_zh": "OpenThoughts-Agent:智能体模型的数据配方",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.24855",
+      "url": "https://arxiv.org/abs/2606.24855",
+      "published": null,
+      "tldr": "探索训练智能体模型所需的数据构造策略和配方。",
+      "why": "可能涉及训练数据配比,但并非VLA或世界模型架构层面,且无具体JEPA/SSL成分。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "公开文献中缺乏如何为通用 agentic 模型策划训练数据的系统性知识,现有开源工作通常只针对单一 benchmark,无法保证跨任务泛化。",
+        "method": "提出 OpenThoughts-Agent 六阶段 SFT 数据流水线(任务源选择、混合、增强、过滤、教师模型选择、轨迹过滤)并做超 100 组消融实验;随后通过合成任务增强将数据规模从 10K 扩展到 100K。RL 部分用 RLOO 算法在 8B 规模做数据源消融,对比多种 RL 数据源。",
+        "key_contributions": [
+          "对 SFT 数据流水线六个阶段进行了>100 次受控消融,发现任务指令选择和轨迹长度过滤最关键",
+          "在 7 个 agentic benchmark(包括 OOD)上训练出 Qwen3-32B 系列最强开源数据模型,较 Nemotron-Terminal-32B 平均提升 3.9 pp",
+          "证明合成任务增强可突破数据多样性瓶颈,使性能随数据量单调增长",
+          "验证了“中等强度的 SFT 模型最适合作为 RL 起点”的结论,并公开全部数据/流水线/模型"
+        ],
+        "sim_benchmarks": [
+          "SWE-Bench Verified",
+          "Terminal-Bench 2.0",
+          "OpenThoughts-TBLite",
+          "Aider Polyglot",
+          "BFCL-Parity",
+          "MedAgentBench",
+          "GAIA-127",
+          "FinanceAgent-Terminal"
+        ],
+        "real_robot": "未做真机实验(纯 agentic 模型,无机器人操作)。",
+        "datasets": "SFT 主要数据源:SWE-Smith、StackExchange (SuperUser/Tezos)、IssueTasks(合成);RL 数据源包括 pymethods2test、r2egym、nemotron-code-oracle 等;最终训练集 OpenThoughts-Agent-v2 含 100K 轨迹。",
+        "compute": "SFT 消融:每 10K 次微调约 160 GPU-hours (GH200);最终 32B SFT 使用 full-parameter 微调;RL:24×A100 80GB,批量 64,总墙钟约 46 小时。",
+        "results_headline": "Qwen3-32B 微调后 7 benchmark 平均 44.8%,较 Nemotron-Terminal-32B (40.9%) 提升 3.9 pp;SWE-Bench Verified 上达 54.0%,Terminal-Bench 2.0 上达 26.2%。",
+        "baselines": [
+          "Nemotron-Terminal-32B",
+          "SWE-Lego-Qwen3-32B",
+          "SERA-32B",
+          "SA-SWE-32B",
+          "DeepSWE-Preview",
+          "Qwen3-32B (base)"
+        ],
+        "limitations": "RL 实验仅在 8B 规模进行,未验证 32B 迁移性;未消融 base model 选择(仅用 Qwen3 家族);最大训练集仅 100K,趋势是否外推到百万级轨迹未测试。",
+        "code_release": "已开源:全量数据、流水线、模型权重发布于 openthoughts.ai。",
+        "relevance_detail": "弱连接:论文聚焦 agentic 模型的 SFT/RL 数据策展,不涉及 VLA、JEPA 或表征学习。唯一可借鉴的是大规模消融实验的方法论(如何独立测试流水线每一阶段),以及“教师模型性能≠教学效果”的发现(类似你在 DiHAL 中选择最佳 Transformer 层时可能遇到的 teacher/student mismatch),但内容本身不直接助力 V3/LWv2 设计。",
+        "followup": "若有兴趣,可快速浏览 Sections 3.1–3.6 的消融设计(特别是 Table 5 的过滤策略和 Table 6 的教师模型选择),但与本研究方向距离较远。"
+      }
+    }
+  ]
+}
