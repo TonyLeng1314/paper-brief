@@ -1,0 +1,250 @@
+{
+  "date": "2026-06-26",
+  "kept": 7,
+  "reviewed": 26,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "Fast LeWorldModel",
+      "title_zh": "Fast LeWorldModel",
+      "score": 10,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.26217",
+      "url": "https://arxiv.org/abs/2606.26217",
+      "published": null,
+      "tldr": "提出加速LeWorldModel训练或推理的方法。",
+      "why": "直接加速你正在复现的LeWorldModel，可能影响V3的predictor head效率设计、target encoder更新频率等实际训练变量，高度相关。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LeWorldModel (LeWM) 的潜在规划依赖自回归单步滚动，导致候选动作序列评估速度慢，且随预测步长增长，潜在预测误差不断累积。",
+        "method": "Fast-LeWM 将 LeWM 的单步状态转移替换为动作前缀并行预测。用一个因果 Transformer 将动作序列编码为前缀 token，并与当前潜在状态一起送入并行潜在预测器，一次性生成所有 future latents；训练时使用密集前缀损失（每个 prefix 对应一个目标 latent）加 SIGReg 正则化，规划时直接通过前缀 token 得到终端潜在状态，并可选择加入自一致性罚项。",
+        "key_contributions": [
+          "识别 LeWM 中单步局部转移接口带来的计算瓶颈与误差累积问题",
+          "提出动作前缀编码 + 并行潜在预测的 Fast-LeWM 架构，将累积动作效应作为直接训练目标",
+          "在 4 个目标条件规划任务上将平均成功率从 85.8% 提升至 90.5%，同时将 CEM 求解时间从 54.4s 降至 28.3s，动态模块加速 3.9×",
+          "前缀预测显著降低开环潜在预测损失及其随步长的增长率，同时保持物理状态信息的线性可探测性"
+        ],
+        "sim_benchmarks": [
+          "Two-Room",
+          "Reacher",
+          "PushT",
+          "OGBench-Cube"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "使用与 LeWM 相同的离线数据集（Two-Room / PushT / Reacher / OGBench-Cube），论文未说明具体数据规模",
+        "compute": "模型 17.9M 参数；训练 10 epoch，batch size 128（Cube 为 32）；未说明总 GPU·days，推理耗时在单张 NVIDIA 4090 上测量。",
+        "results_headline": "Fast-LeWM 将平均规划成功率从 85.8%（LeWM）提升到 90.5%，同时将 CEM 整体求解时间从 54.4s 缩短至 28.3s，并大幅降低开环潜在预测误差及其随 horizon 的增长斜率。",
+        "baselines": [
+          "PLDM",
+          "DINO-WM",
+          "LeWM",
+          "Long-Action LeWM（消融）"
+        ],
+        "limitations": "论文未明确讨论局限。观察可得：动作前缀编码假设固定的规划 horizon；自一致性项引入额外计算；未在真实机器人上验证；实验仅覆盖低维连续动作空间。",
+        "code_release": "https://github.com/Yuntian-Gao/Fast-LeWorldModel",
+        "relevance_detail": "与你的 V3/LWv2 直接相关：你正在复现的 LeWorldModel（LeWM）恰好是这篇论文改进的基础。它们把自回归单步转移变成动作前缀并行预测，这为你在 VLA 中设计 world-model predictor 提供了直接替代方案——用前缀编码取代 RNN 式展开。Section 3.4-3.5 的动作前缀编码器和并行预测器设计，以及 Section 4.5 的消融（state token 的作用、终端-only 与密集监督的对比），可以为你的 predictor 头架构、条件注入方式和监督粒度选择提供具体借鉴。",
+        "followup": "重点阅读 Section 3.3-3.7 的架构设计与损失函数，以及 Section 4.5 的完整消融表；同时关注附录中可能存在的更多细节。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "In-Context World Modeling for Robotic Control",
+      "title_zh": "机器人控制的In-Context World Modeling",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.26025",
+      "url": "https://arxiv.org/abs/2606.26025",
+      "published": null,
+      "tldr": "提出在上下文中进行世界建模并用于机器人控制的方法。",
+      "why": "直接涉及world-model-as-pretraining for robot policy，可能影响你V3中predictor如何通过in-context conditioning引入action以及世界模型与策略的对齐方式。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "标准VLA模型仅以当前观测和指令为条件，隐式假设系统配置（如相机视角、机器人形态）固定不变，导致在新配置下泛化性能骤降。本文将此视为测试时的系统辨识问题，并提出利用无任务自探索交互历史来推断系统配置，实现无需参数更新的适应。",
+        "method": "提出In-Context World Modeling（ICWM）：训练时，在每个训练样本前拼接N个跨配置的任务无关交互片段（起始图像、动作、结束图像），迫使模型从上下文隐式学习行动-观测对应关系；推理时，先执行N次安全随机探测动作收集三元组，将其作为上下文前缀，模型在单次前向传播中隐式恢复系统配置ψ并生成动作。模型基于Qwen2.5-VL-3B骨干和FAST动作分词器，动作块大小5，N=5个上下文片段。",
+        "key_contributions": [
+          "将VLA泛化问题重构为测试时系统辨识问题，指出缺少显式ψ条件会导致对训练配置的平均化并引发泛化失效",
+          "提出ICWM，通过拼接自生成的无任务交互片断作为上下文，在无参数更新和无任务演示的情况下实现隐式系统辨识",
+          "在LIBERO仿真和UR5e真机平台上验证了ICWM对未见相机视角的显著提升，并展示了其对语义扰动和形态变化的额外泛化能力"
+        ],
+        "sim_benchmarks": [
+          "LIBERO (Spatial, Object, Goal, Long)，采用跨视角协议：8个训练方位角，6个未见测试方位角"
+        ],
+        "real_robot": "UR5e机械臂 + Robotiq 2F-85平行夹爪；12相机多视角系统，6个用于训练、6个用于测试；4个操作任务（放玩具入篮、叠杯子、提篮子、拿茄子到盘子），每个任务每新视角25次试验，共计600次评估。",
+        "datasets": "预训练：Qwen2.5-VL-3B预训练权重；主训练数据：LIBERO仿真数据在8个训练视角下重新渲染。真机数据：每任务约100-150个遥控演示，共约500-600个演示。",
+        "compute": "使用8块NVIDIA A100 GPU训练；优化器AdamW，权重衰减1e-4，学习率峰值5e-5（50k步热身）后余弦衰减。",
+        "results_headline": "在LIBERO上，ICWM在OOD视角的平均成功率比Multi-View BC提升13.0%（如Long套件MV 19.8% vs ICWM 25.0%）；真实世界中，MV由原视角68%跌至OOD视角17%，ICWM提升至约29%（相对提升71%）。",
+        "baselines": [
+          "Multi-View BC (MV)",
+          "Explicit Configuration (EXP，输入真实相机角度文本)",
+          "NORA",
+          "π-FAST",
+          "π0.5"
+        ],
+        "limitations": "特定极端视角（如135°）下，所有方法均因物体遮挡和视野受限表现不佳；语义泛化提升较温和，受限于训练数据中缺乏多样化场景配置；探测阶段虽一次部署即可复用，但仍引入少许一次性时间开销。",
+        "code_release": "论文未明确说明",
+        "relevance_detail": "论文不涉及JEPA/预测器-目标网络架构，但它将世界建模视为上下文推理而非显式预测，这与你在V3/LWv2中尝试用预测器学习未来视觉token的世界模型目标有潜在启发：可将交互历史（动作与图像变化）作为预测器的额外条件输入，帮助编码器隐式推断环境动态，以增强未来状态预测的准确性。然而，论文未对预测器深度、条件化设计或对比/非对比损失进行消融，因此对你当前具体的预测器-目标器设计问题（如SIGReg、EMA动量、动作头插入位置）的直接指导有限——属于弱信号，但值得作为“上下文即世界模型”的范式参考。",
+        "followup": "可重点阅读第6节（Analysis），尤其是上下文成分消融（表1）、t-SNE表征可视化（图7）和不同探测策略对比（表2），以理解隐式世界模型在表征层面的行为。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "ViQ: Text-Aligned Visual Quantized Representations at Any Resolution",
+      "title_zh": "ViQ: 任意分辨率下文本对齐的视觉量化表示",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.27313",
+      "url": "https://arxiv.org/abs/2606.27313",
+      "published": null,
+      "tldr": "提出一种支持任意分辨率且与文本对齐的视觉量化表示。",
+      "why": "弱信号: 若将量化表示用作JEPA式target，可影响你V3的target encoder设计、避免倒塌的离散化策略，为SIGReg之外提供比较线索。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "多模态学习中，连续视觉特征与离散文本 token 存在本质差异，现有离散视觉编码难以同时保留低层细节和高层语义，且多固定分辨率，限制了统一表示。",
+        "method": "ViQ 采用两阶段训练：第一阶段文本对齐预训练，通过任意分辨率适配、自蒸馏和文本监督使视觉编码器适应多模态任务；第二阶段视觉离散化，引入 proximal representation（瓶颈压缩+L∞ 归一化）逐步约束特征空间，再使用多头 FSQ（有限标量量化）并结合 2D RoPE 位置编码，并通过 VAE 潜在损失保持低层细节。",
+        "key_contributions": [
+          "提出 ViQ，一种支持任意分辨率、平衡语义与细节的离散视觉编码器，在多模态理解和重建任务上达到与连续编码器相当的性能。",
+          "设计 proximal representation 渐进压缩策略，大幅降低高维特征量化时的信息损失。",
+          "在 9 个多模态基准上，ViQ 搭配 Qwen2.5-1.5B/7B 分别取得 57.2/63.9 的平均分，与 InternViT-2.5-6B 持平或略优，同时训练效率提升 20%-70%。",
+          "开源代码与权重，并展示离散码在图像存储上的高压缩比（仅为原始图像的 1/96）。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "预训练数据：约 6B 视觉-语言 tokens，涵盖 captioning、chart、OCR、diagram 等；微调数据：LLaVA-OneVision 2000K 样本。未说明具体数据集来源。",
+        "compute": "训练：Stage 1 使用 128 块 NVIDIA A100 GPU，Stage 2 使用 256 块 NVIDIA A100 GPU。视觉编码器参数量 1.3B。未明确说明全部 GPU·days。",
+        "results_headline": "ViQ 在 9 个多模态理解基准上平均得分：搭配 Qwen2.5-1.5B 达 57.2，与 InternViT-2.5-6B 的 57.0 持平；搭配 Qwen2.5-7B 达 63.9，略超 InternViT-2.5-6B 的 63.8。同时图像重建 rFID 0.62，训练效率提升 20%-70%。",
+        "baselines": [
+          "OAI-CLIP-L",
+          "SigLIP2-g",
+          "DinoV2-g",
+          "OryxViT",
+          "AIMv2-H",
+          "InternViT-2.5",
+          "InternViT-2.5-6B",
+          "QLIP",
+          "UniTok"
+        ],
+        "limitations": "未在更大规模 LLM（如 70B+）上验证；离散压缩固有的高频细节损失限制了在极端细节密集任务上的表现；鲁棒性依赖预训练数据质量。",
+        "code_release": "已开源：GitHub https://github.com/yuxumin/ViQ，HuggingFace 权重 https://huggingface.co/XuminYu/ViQ weights",
+        "relevance_detail": "弱信号。该论文专注于多模态视觉离散化与训练效率，与你的 V3/LWv2 中的未来视觉 token 预测器、目标编码器 EMA 设计及 collapse 防御无直接关系。其 proximal representation（逐步 L∞ 约束）和多阶段渐进压缩思路在概念上类似特征空间约束，但未涉及时序动态或动作条件，无法直接应用于 JEPA 框架。若你考虑将离散 token 作为世界模型状态表示，可能提供一种压缩方案，但需额外设计预测器和时序建模。",
+        "followup": "若考虑离散世界模型状态表示，可参阅第 3.2 节 proximal representation 与 FSQ 设计，以及第 4.5 节消融实验，但需重新设计预测器和时序动态。"
+      }
+    },
+    {
+      "rank": 4,
+      "title": "Why Multi-Step Tool-Use Reinforcement Learning Collapses and How Supervisory Signals Fix It",
+      "title_zh": "为何多步工具使用强化学习会崩溃以及监控信号如何修复它",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.26027",
+      "url": "https://arxiv.org/abs/2606.26027",
+      "published": null,
+      "tldr": "分析多步工具调用RL的崩溃原因，并提出用监督信号修复。",
+      "why": "弱信号: 若其崩溃分析采用动力学视角，可能与你关注的Tian式表示倒塌理论相通，可借鉴稳定性控制机制到你的SIGReg/VICReg设计中。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 5,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding: 用 grounded 模型引导文本生成以进行机器人控制",
+      "score": 4,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出一种解码策略，通过 grounded 模型（如环境反馈）约束 LLM 的文本生成，以生成符合物理约束的机器人动作序列。",
+      "why": "弱信号: 可能涉及 VLM 与动作生成的结合，但核心是文本空间解码，没有涉及 latent world prediction 或 backbone 内部 action 插入点的 ablation，对你的 V3 问题帮助有限。",
+      "hits": []
+    },
+    {
+      "rank": 6,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "基于Sparse Manifold Transform的极简无监督表示学习",
+      "score": 3,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "利用稀疏流形变换进行极简无监督表示学习，不依赖负样本。",
+      "why": "弱信号: 作为早期的非对比SSL方法，其稀疏性约束可能为SIGReg之外的倒塌防御提供思路，但与JEPA式predictor/target设计关联不大。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 7,
+      "title": "PhysiFormer: Learning to Simulate Mechanics in World Space",
+      "title_zh": "PhysiFormer:在世界空间中学习力学模拟",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2606.27364",
+      "url": "https://arxiv.org/abs/2606.27364",
+      "published": null,
+      "tldr": "提出PhysiFormer，一个在统一世界坐标系中学习物理力学模拟的Transformer模型。",
+      "why": "弱信号：若其预测架构涉及未来状态预测与编码器-预测器分离，可能与V3的latent world prediction思路有微弱交集，但摘要缺失无法判断。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "如何用神经网络直接从 3D 网格顶点的初始状态（位置、速度、材质）一次性生成物理真实的多物体刚体与弹性体未来运动轨迹，避免自回归模型的误差累积。",
+        "method": "PHYSIFORMER 是一个基于 DiT 的扩散模型，使用 flow matching 进行 x-prediction 训练。它直接在 3D 原始坐标空间进行去噪，输入为初始顶点 X0、V0 和材质嵌入，通过因子化注意力（时间注意力 / 全空间注意力 / 物体级注意力）降低复杂度并隐式建模物体分群，输出整个时间窗的顶点轨迹，再用提供的网格拓扑渲染。",
+        "key_contributions": [
+          "提出统一神经模型，同时处理刚体和弹性体，直接在 3D 轨迹空间进行生成式仿真。",
+          "展示通用 DiT 架构加上时间、空间、物体因子化注意力，无需显式物体编码即可有效建模多物体物理。",
+          "生成式建模可捕捉未显式给定的物理参数（质量、摩擦）的不确定性，输出多样但物理可行的未来。",
+          "系统对比自回归基线，证明自回归方法在该任务上存在不可消除的误差累积，而全序列扩散显著更优。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "自建合成数据集，使用 Genesis 物理仿真器生成约 105k 条轨迹（D1: 10k 刚体地板启动; D2: 15k 复杂形状刚体; D3: 60k 空中启动刚体; D4: 20k 弹性体），每条 49 帧，Δt=1/240 s。",
+        "compute": "2 × NVIDIA H100（94 GB），训练 PHYSIFORMER-L（DiT-L，24 层，隐藏维度 1024，16 头），有效 batch size 64，lr=4e-5，用 bf16 AMP。",
+        "results_headline": "在 10k 刚体测试集上，PHYSIFORMER 的 49 帧 MSE 为 9.55×10⁻³，远优于最佳自回归基线 TIE r=1.0（14.8×10⁻³），刚性保持损失 1.85×10⁻⁴（TIE 为 20.6×10⁻⁴），动量漂移比 1.91（TIE 2.29）；并泛化至未见几何、10 个以上物体和混合材质。",
+        "baselines": [
+          "ΦAR_ctx1（单帧自回归）",
+          "ΦAR_ctx4（4 帧上下文自回归）",
+          "ΦAR_ctx4_noised（训练时注入噪声）",
+          "TIE r=0.4",
+          "TIE r=1.0"
+        ],
+        "limitations": "固定轨迹长度和网格分辨率；缺乏显式碰撞约束，偶尔出现虚假接触、穿透和朝向不连续；接触丰富的场景仍需物理一致性损失。",
+        "code_release": "已开源，项目页面 https://yimingc9.github.io/physiformer 提供代码和模型。",
+        "relevance_detail": "与你的 VLA × latent world prediction 方向基本无直接关联。PHYSIFORMER 是在 3D 几何坐标空间直接用扩散模型做物理仿真，不涉及视觉编码器、非对比 SSL、JEPA 或动作头插入。唯一的弱信号是因子化物体感知注意力（Section 3.2），形式上与 DiHAL 式的多对象分组有相通之处，但完全不在同一问题设定中，难以迁移到你的 V3 框架。",
+        "followup": "若对全序列扩散替代自回归的范式感兴趣，可速览 Section 4（实验对比），但与你的当前课题关联度低，不建议深入。"
+      }
+    }
+  ]
+}
