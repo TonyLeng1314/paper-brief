@@ -1,0 +1,152 @@
+{
+  "date": "2026-07-03",
+  "kept": 3,
+  "reviewed": 14,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "Learning to Move Before Learning to Do: Task-Agnostic pretraining for VLAs",
+      "title_zh": "先学移动再学执行：面向VLA的任务无关预训练",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02466",
+      "url": "https://arxiv.org/abs/2607.02466",
+      "published": null,
+      "tldr": "提出一种VLA的任务无关预训练策略，先让模型学习基本的移动动作技能，再在下游任务中微调。",
+      "why": "直接击中你V3中“world-model-as-pretraining”和action head插入设计的问题：他们如何从纯运动数据中学习表征、以及预训练后的action head如何适应下游，可能影响你VLA预训练阶段的方案选择。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "VLA训练受限于昂贵的专家演示数据（观测-指令-动作三元组）。本文提出将物理运动能力（how to move）与语义任务理解（what to do）解耦，利用大量廉价的无标签交互数据（任务无关轨迹、自主随机玩耍）预训练物理先验，从而大幅降低对人工标注的依赖。",
+        "method": "两阶段框架 TAP：Stage 1 通过逆动力学目标（给定观测 o_t 与 o_{t+1} 预测动作 a_t）在无语言标注的任务无关数据上自监督预训练，使模型聚焦运动变化，学习物理运动先验；Stage 2 在少量带语言指令的专家数据上微调，将物理先验与语义指令对齐。模型使用 Qwen2.5-VL(3B) + SigLIP 视觉编码器，动作空间为相对位姿（delta pose），训练损失为 MSE。",
+        "key_contributions": [
+          "提出“分解假设”：how to move 可完全从无标签交互数据习得，仅需极少标记数据完成 what to do 的对齐。",
+          "设计 TAP 两阶段框架，利用逆动力学将废弃的无关轨迹和自主探索数据转化为物理先验，显著缓解专家数据瓶颈。",
+          "在 SIMPLER 仿真和真实 WidowX 上验证：TAP 使用不到 5k 专家数据即可匹敌或超越基于 1M+ 专家数据预训练的大规模 VLA，且在视觉扰动下保持 25% 成功率（基线降至 0%）。",
+          "通过部分成功率分解与注意力图分析，证明预训练单独提升了抓取等物理能力，而非仅加速语义学习。"
+        ],
+        "sim_benchmarks": [
+          "SIMPLER"
+        ],
+        "real_robot": "WidowX 250s 机器人，两个任务：Put carrot on plate 和 Push pumpkin to the left。真机数据：200 条专家演示 + 30 小时自主随机玩耍（Stage 1 预训练）。",
+        "datasets": "Stage 1 预训练：仿真利用 Bridge dataset 中任务无关轨迹（20k episodes），真机用自主生成的无标签交互数据。Stage 2 微调：仿真用 5k 语言标注专家轨迹，真机用 200 条。",
+        "compute": "论文未明确说明（使用 Qwen2.5-VL 3B 模型，未给出 GPU·days 等算力细节）。",
+        "results_headline": "SIMPLER 上 TAP-20k 达到 Avg-All 33.32%，比标准 BC 绝对提升 10%，大幅超越 OpenVLA（7.75%）和 RT-1-X（3.03%）；真实世界中，在相机视角变化和背景纹理置换等扰动下，TAP 仍保持 15-25% 成功率，而 NORA 等基线崩溃至 0%。",
+        "baselines": [
+          "Standard BC（相同架构从零训练）",
+          "RT-1-X",
+          "OpenVLA",
+          "NORA",
+          "Octo",
+          "π0"
+        ],
+        "limitations": "语义推理仍是主要瓶颈（约占失败 75%），在长程指令或强视觉干扰下易出现目标混淆或执行循环；纯粹反应式 VLA 在极端 3D 空间推理上仍受限。",
+        "code_release": "开源，GitHub: https://github.com/sjh0354/Task-Agnostic-Pretrain，HuggingFace 模型: https://huggingface.co/collections/Michael0354/task-agnostic-pretrain",
+        "relevance_detail": "与你 V3/LWv2 的直接连接在于：他们使用观测对预测动作的逆动力学目标，实际上是将未来观测作为隐式目标，这与你的未来视觉 token 预测存在范式相似性。可借鉴的点：(1) 预测头的设计——他们用 VLM 编码器拼接两个视觉输入直接输出动作，你可以探索将动作预测与未来 token 预测联合训练的架构变化（见 Sec 3.2）；(2) 注意力分析（Sec 4.4）显示预训练迫使模型关注夹爪与物体，类似 JEPA 学到的物理交互特征，这为你判断 V3 中世界模型是否学到了有用表征提供了可视化验证思路；(3) 分解物理能力与语义对齐的两阶段策略，可能启发你在 DiHAL 框架下如何将世界模型预训练与下游动作策略解耦。",
+        "followup": "重点看 Sec 4.4 的收敛动态与注意力图分析，以及 Sec 4.3 真机鲁棒性实验，理解无标签交互数据如何塑造表示；若有兴趣实现自主数据收集，可阅读附录 A 的约束轨迹生成流程。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "WorldDirector: Building Controllable World Simulators with Persistent Dynamic Memory",
+      "title_zh": "WorldDirector: 通过持久动态记忆构建可控世界模拟器",
+      "score": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02517",
+      "url": "https://arxiv.org/abs/2607.02517",
+      "published": null,
+      "tldr": "提出一种带持久动态记忆的可控世界模拟器，用于生成视觉环境。",
+      "why": "可能抽取持久记忆模块来设计 latent world prediction 的上下文缓存，这直接与 V3 中 target encoder 的 EMA 动量选择和长时预测稳定性有关。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型将物理动态与像素渲染耦合，且依赖持续视觉观察来维持运动，在动态对象离开视野后难以保持持续运动和外观一致性，缺乏对象永久性与动态记忆。",
+        "method": "WorldDirector 通过 LLM 作为中心编排器解耦语义运动编排与视频合成：LLM 将用户指令转化为 3D 边界框与相机轨迹，并投影为 2D 位置条件 B；同时引入外观条件 A（从上下文提取 RGB 对象特征）并采用时间丢弃机制防止过拟合；通过因果分块自回归生成，结合静态与动态上下文检索、空间感知交叉注意力与相机注入，实现长序列可控世界模拟。",
+        "key_contributions": [
+          "提出显式解耦语义级运动规划与视频合成的可控世界模拟框架",
+          "设计外观绑定机制与时间丢弃策略，保证对象离开视野后再次出现时的身份一致性",
+          "实现基于 LLM 的 3D 轨迹规划与因果分块生成，支持任意长度视频生成与可提示的世界事件"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "合成游戏数据（自建平台生成 15 秒视频，带有精确相机参数和故意设计的对象消失-重现场景，评估集 100 个视频）",
+        "compute": "64 块 NVIDIA A100 (80GB) GPU，训练 3000 步，约 72 小时",
+        "results_headline": "在重建指标上达到 SOTA，PSNR 18.127, SSIM 0.502, LPIPS 0.359；动态一致性指标 DSC_DINO 0.769, DSC_CLIP 0.917，均优于 Yume1.5、HY-World 等基线。",
+        "baselines": [
+          "Yume1.5",
+          "HY-World",
+          "Infinite-World",
+          "LingBot-World",
+          "HyDRA"
+        ],
+        "limitations": "依赖合成游戏数据，引入域差距，导致视觉保真度受限（如不自然运动、模糊面部）；未使用真实世界数据。",
+        "code_release": "论文未明确说明",
+        "relevance_detail": "该工作属于视频世界模型的可控生成范畴，与你在 V3/LWv2 中关注的 JEPA 式潜在世界预测和非对比学习有本质差异。弱连接点：解耦规划与生成的思想（Section 3.2）与 JEPA 中预测器/目标编码器解耦有精神类似；外观条件的时间丢弃机制（Eq.2）为防止信息泄露而采用稀疏采样，可启发预测器未来输入的条件设计；因果分块上下文检索（Section 3.2.2）对长时程记忆维护有参考意义，但整体不直接针对 VLA 策略学习或表征崩溃防御。",
+        "followup": "若对世界模型中的身份保持与记忆机制感兴趣，可浏览 3.2 节、4.2 节的消融实验以及附录 D 的外观条件消融。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Representation Distribution Matching for One-Step Visual Generation",
+      "title_zh": "面向一步视觉生成的表征分布匹配",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02375",
+      "url": "https://arxiv.org/abs/2607.02375",
+      "published": null,
+      "tldr": "利用表征分布匹配方法实现一步式视觉生成，可能减少采样步数。",
+      "why": "弱信号: 分布匹配思想或许可借鉴于防止表征坍塌，但其主要面向生成，对你的SIGReg/VICReg设计中的momentum target设计帮助有限。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "如何通过表征分布匹配（RDM）训练单步图像生成器，在不依赖在线教师、对抗训练或扩散轨迹的情况下，达到超越少步扩散模型的质量？本文旨在厘清RDM的设计空间中两个关键轴——分布比较方式与表征空间选择——以找到最佳配方。",
+        "method": "提出iRDM：使用平方MMD（高斯核），用精确批内排斥项和基于Nyström近似的全域冻结参考（4096个锚点）来估计损失；对条件任务匹配图像-文本联合分布；训练时使用10个异构预训练编码器的集合，并通过比例拉格朗日控制器自适应加权，防止生成器仅过拟合单一编码器；评估采用独立于训练损失的Sliced-Wasserstein距离（SWr14）面板指标。",
+        "key_contributions": [
+          "将单步生成领域的方法统一为表征分布匹配（RDM）范式，明确比较轴和表征轴两个设计自由度",
+          "证明正确的MMD估计（Nyström参考+大批次生成）可使经典MMD成为强目标，催生iRDM，在ImageNet单步生成上SWr14达1.30（此前SOTA为2.05），并在FLUX.2后训练中以单步超越四步版本",
+          "揭示单一编码器打分可被游戏（得分低于真实分布但图像仍伪），提出多编码器平衡的约束优化方案，并配套难以游戏的SWr14评价指标",
+          "在文本到图像任务上，联合匹配图文分布使单步模型GenEval从0.801升至0.826，超过四步教师，仅需90 GPU-hours"
+        ],
+        "sim_benchmarks": [
+          "ImageNet-256",
+          "GenEval (text-to-image)",
+          "PickScore (human preference)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "ImageNet-256 (1.28M训练图像)；文本到图像后训练：使用约30万张FLUX.2教师生成图（经PickScore排序的COCO渲染+GenEval验证正确的样本）构建Nyström参考",
+        "compute": "ImageNet后训练：4000步，bs=5120，学习率1.6e-6，主算力未给出总GPU时；FLUX.2后训练：180步，bs=10240，约90 H200 GPU-hours。模型：pMF-H FD-SIM checkpoint（参数量未说明），FLUX.2 [klein] 4B参数",
+        "results_headline": "单步ImageNet生成SWr14 1.30（之前最佳2.05），PickScore击败以前单步模型超71.2%；单步FLUX.2 GenEval 0.826 > 四步0.794，PickScore 22.76 > 四步22.58",
+        "baselines": [
+          "pMF-H (FD-SIM)",
+          "Drifting-L",
+          "iMF-XL",
+          "Open-MAGVIT2-L",
+          "SiT-XL/2",
+          "DiT-XL/2",
+          "VAR-d30",
+          "JiT-H",
+          "MDTv2-XL/2",
+          "MAR-H",
+          "DDT-XL/2",
+          "SiT-XL/2+REPA",
+          "REG-XL",
+          "LightningDiT-XL",
+          "RAE-XL",
+          "REPA-E SiT-XL/1",
+          "DMD2 (FLUX后训练)"
+        ],
+        "limitations": "与真实数据仍有可测差距（SWr14 1.30 vs 真实地板1.0）；当前方案仅使用固定预训练编码器集，未利用多尺度核或任务特定编码器；生成器只能匹配冻结参考，无法在线改进。",
+        "code_release": "论文未明确说明开源代码，提供项目页面 https://alan-lanfeng.github.io/rdm/",
+        "relevance_detail": "该论文聚焦于生成模型的表征分布匹配，与你的VLA/JEPA世界模型研究直接关联很弱。唯一的微弱信号在于多编码器平衡约束优化避免单一指标过拟合的思路——类似SSL中防止表征坍塌时需多视角/多度量约束，但具体技术（MMD-Nyström、大批次生成、联合图文匹配）完全针对图像生成，无法迁移到V3的潜世界预测或动作头设计。",
+        "followup": "若对多编码器评估及游戏抵抗感兴趣，可扫读Section 3.1和4.4，但整体不建议深入跟进。"
+      }
+    }
+  ]
+}
