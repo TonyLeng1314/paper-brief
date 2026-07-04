@@ -1,0 +1,204 @@
+{
+  "date": "2026-07-04",
+  "kept": 5,
+  "reviewed": 10,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "使用稀疏流形变换的极简无监督表示学习",
+      "score": 5,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种基于稀疏流形变换的无监督表示学习方法，可能通过稀疏先验避免表示坍缩。",
+      "why": "弱信号：若该方法不依赖负样本且能防坍缩，可能为 V3 的 collapse defense 提供替代思路，但未明确针对 JEPA 式 predictor/target 架构，无摘要细节难以判断。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "The Moving Eye: Enhancing VLA Spatial Generalization via Hybrid Dynamic Data Collection",
+      "title_zh": "移动之眼：通过混合动态数据采集增强VLA空间泛化能力",
+      "score": 5,
+      "authors": [
+        "Jincheng Tang",
+        "Yilong Zhu",
+        "Zhengyuan Xie",
+        "Jiang-Jiang Liu",
+        "Jiaxing Zhang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.02322",
+      "url": "http://arxiv.org/abs/2607.02322v1",
+      "published": "2026-07-02",
+      "tldr": "分析 VLA 模型的捷径学习问题，通过机械臂上移动相机混合采集连续运动与多静态视角数据，减轻虚假相关性，提升空间泛化。",
+      "why": "该工作揭示了 VLA 模型在空间关系上的脆弱性，与 V3 如何利用 latent world prediction 学习鲁棒的状态表征可能相关，但未涉及动作头插入层或 predictor 设计，可作为 VLA training 的 data strategy 参考。",
+      "hits": [
+        "H:VLA"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "ACID: Action Consistency via Inverse Dynamics for Planning with World Models",
+      "title_zh": "ACID:通过逆动力学在规划中实现动作一致性的世界模型方法",
+      "score": 4,
+      "authors": [
+        "Gawon Seo",
+        "Dongwon Kim",
+        "Suha Kwak"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.02403",
+      "url": "http://arxiv.org/abs/2607.02403v1",
+      "published": "2026-07-02",
+      "tldr": "在动作条件世界模型规划中加入逆动力学一致性约束，使规划轨迹的中间状态可执行性更强，提升规划质量。",
+      "why": "弱信号：利用世界模型进行规划，但重点在规划代价而非世界模型预训练或表示学习，未能直接回答 V3 中 predictor head 深度、target EMA 等设计问题。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "标准planning cost只根据预测终点与目标的距离评分,忽略了中间transition的realizability——预测轨迹在想象中到达目标,但实际环境执行时会发生漂移。ACID要解决的是:不重新训练world model,在决策时如何让planning cost识别并惩罚那些“看起来能到目标但实际无法执行”的动作序列。",
+        "method": "提出ACID框架:用一个预训练的逆动力学模型(IDM,flow matching transformer)作为验证器,在CEM规划的每一步从预测的latent transition反向推断动作,再与条件动作计算残差(cycle action consistency)。将该残差作为action consistency cost,与原有goal cost通过自适应权重(wa=λ·σ_g/σ_a,基于各cost的方差缩放)加权求和,用于重排序候选动作序列。IDM离线训练,推理时只增加少量前向开销,不修改world模型本身。",
+        "key_contributions": [
+          "提出cycle action consistency概念:要求预测的latent transition通过IDM恢复的动作与条件动作一致,从而逐步检测不可实现的预测过渡。",
+          "设计scale-invariant自适应权重,使action consistency cost在不同world model、任务及CEM迭代中都能稳定参与精英选择,避免需每个任务单独调参。",
+          "在三种JEPA风格(Le-WM,PLDM,DINO-WM)和一种视频生成world model(NWM+CompACT)上验证,覆盖刚体/柔性体操作、关节控制及视觉导航,均一致提升成功率或降低chamfer距离,并在更少planning compute下达到baseline同等性能。"
+        ],
+        "sim_benchmarks": [
+          "OGBench-Cube",
+          "Reacher (DeepMind Control Suite)",
+          "PushT",
+          "Rope Manipulation (AdaptiGraph)",
+          "Granular Manipulation",
+          "RECON视觉导航"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "各环境使用线下数据集:Cube用OGBench的10k expert episodes;Reacher用SAC策略采集10k episodes;PushT用20k expert episodes;Rope和Granular各用DINO-WM的1k trajectories随机动作;导航用RECON的5k+真实世界轨迹。未使用OXE/DROID等通用机器人数据。",
+        "compute": "IDM为4层transformer(宽度192),训练200K步,batch size 256,单RTX 6000 Ada。World model训练细节见原论文。推理overhead:IDM前向延迟为WM的8.9%–39%不等。",
+        "results_headline": "ACID在Le-WM上Cube SR 70.0→74.0,Reacher 76.0→88.0,PushT 96.0→100.0;PLDM上Cube 58.0→68.0,Reacher 76.0→90.0,PushT 72.0→76.0;DINO-WM上Rope Chamfer 1.38→0.56,Granular 0.49→0.30;且仅用30个CEM样本即达到baesline 300样本的性能。",
+        "baselines": [
+          "Original goal cost only planning (同一CEM solver)",
+          "四种world model的原始规划版本(Le-WM, PLDM, DINO-WM, NWM w/ CompACT)"
+        ],
+        "limitations": "在部分可观测或外源干预下,IDM的单射一致性假设减弱;需要额外训练IDM(但复用离线数据,且验证器可跨world model复用);改进仅在planning cost上,效果上限受限于world模型本身质量。",
+        "code_release": "论文有项目主页https://gawon1224.github.io/ACID/,但文中未明确是否开源代码。",
+        "relevance_detail": "直接连接:(1)实验的Le-WM恰用SIGReg防坍塌,而你V3/LWv2也基于SIGReg,ACID在该模型上验证了planning提升,你可在自己的world model推理时借鉴cycle consistency代价来做轨迹筛选,或直接用IDM评估predicted transition质量。(2)IDM as verifier的思路与你在设计predictor head时考虑predictive realism相关:虽然ACID在决策时用IDM,但它提示了predited transition与action一致性是关键信号,你或许可将inverse consistency作为训练附加损失(而非仅在planning时),以提升latent predictor的realizability。(3)自适应权重wa=λ·σ_g/σ_a的scale-invariant设计,为你将来开发规划模块时的超参鲁棒性提供现成方案,特别是Tab.4中固定权重与自适应对比及附录E的σ分析,与你常做的超参鲁棒性验证思路吻合。",
+        "followup": "重点读Sec.3.2 cycle action consistency定义及Eq.(3)代价计算,Sec.3.3自适应权重中关于σ_g/σ_a变化的三因素分析,以及Tab.4固定权重vs自适应的消融实验;附录E提供了σ随任务、模型、迭代变化的实证,直观解释为何需要自适应权重。"
+      }
+    },
+    {
+      "rank": 4,
+      "title": "WorldDirector: Building Controllable World Simulators with Persistent Dynamic Memory",
+      "title_zh": "WorldDirector:构建具有持久动态记忆的可控世界模拟器",
+      "score": 3,
+      "authors": [
+        "Hanlin Wang",
+        "Hao Ouyang",
+        "Qiuyu Wang",
+        "Wen Wang",
+        "Qingyan Bai",
+        "Ka Leong Cheng",
+        "Yue Yu",
+        "Yixuan Li",
+        "Yihao Meng",
+        "Zichen Liu",
+        "Yanhong Zeng",
+        "Yujun Shen",
+        "Qifeng Chen"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.02517",
+      "url": "http://arxiv.org/abs/2607.02517v1",
+      "published": "2026-07-02",
+      "tldr": "将动态实体运动编排与视觉生成解耦，利用 LLM 协调轨迹和相机运动，实现持久物体记忆的可控视频世界模型。",
+      "why": "弱信号：该工作是视频生成式世界模型，而非 latent prediction 式 JEPA，与 V3 中 latent future token 预测及 collapse defense 无直接关联。",
+      "hits": [
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型无法在物体长时间离开视野后保持其动态轨迹和外观的一致性，导致重新出现时身份丢失或运动冻结。本文要解决“动态物体持久记忆”和“物体永存性”问题，实现可控的长期世界模拟。",
+        "method": "提出 WorldDirector，将语义级的运动编排与视觉生成解耦。使用 LLM 规划动态物体的 3D 轨迹和相机运动，投影为 2D 包围盒序列作为 Location Condition；引入 Appearance Binding 机制，利用历史帧中同类物体的裁剪特征作为外观锚点（配合 Temporal Drop 防止滑动伪影）；在因果分块生成中，通过混合静态/动态双流检索构建上下文记忆，结合空间感知交叉注意力实现实体级文本控制。训练基于 flow matching，对预设的 3D VAE 潜在空间进行条件去噪。",
+        "key_contributions": [
+          "首次显式解耦运动编排与视觉生成，用 LLM 规划 3D 轨迹作为确定性空间条件，保证物体状态与相机视角严格同步",
+          "提出 Appearance Condition 与 Temporal Drop 机制，解决重入场景的身份一致性，同时避免对参考图像过拟合导致的运动僵硬",
+          "设计双流（静态+动态）上下文检索与因果分块推理策略，实现在任意长度视频中维持物体永存性记忆",
+          "在多个可控世界模型基准上取得 PSNR/SSIM/LPIPS 及动态物体一致性（DSC）的最优结果，并展示可自由编排新物体进入场景的能力"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "自建游戏引擎合成数据，生成 15 秒视频并自动标注 3D 包围盒、相机参数；利用 SAM3/Qwen2.5-VL-72B 提取实体动态描述。未使用 OXE/DROID/Ego4D 等真实机器人数据。",
+        "compute": "训练：8 节点 × 8 A100 (80GB)，共 64 GPU，采用 FSDP+BF16 混合精度，全局 batch size 64，训练 3000 步，约 72 小时；推理：使用 Gemini 作为 LLM 规划器。",
+        "results_headline": "在自建 100 段测试集上，PSNR 达 18.127（比最优 baseline 高 3.35dB），LPIPS 降至 0.359，动态物体 DSC_DINO 达 0.769，显著优于 HyDRA 等基线。",
+        "baselines": [
+          "Yume 1.5",
+          "HY-World 1.5",
+          "Infinite-World",
+          "LingBot-World-Fast",
+          "HyDRA"
+        ],
+        "limitations": "依赖游戏合成数据，存在领域差距，有时出现肢体运动不自然或面部模糊；未在真实世界数据上验证视觉逼真度。",
+        "code_release": "论文未提开源代码，仅提供项目页面 https://worlddirector.github.io/",
+        "relevance_detail": "弱信号。本文的 Appearance Condition 与位置条件显式解耦的思路，可类比 V3 中是否将未来视觉 token 的预测条件化（例如，动作或位置作为一种显式 anchor 注入 predictor）。但其本质是可控视频生成，而非潜在世界预测或 JEPA 式的表征坍塌防御。具体可关注 Section 3.2.1 的 Appearance Binding 与 Temporal Drop，可能启发 V3 在设计预测目标时如何防止模型对历史上下文的廉价利用（类似避免“滑动”伪影）。整体上与研究者当前 JEPA/SSL/VLA 主线关联有限。",
+        "followup": "若对可控世界模拟的架构感兴趣，可读 Section 3.2 的条件注入设计和 Section 4.2 的消融，尤其 Appearance Condition 与自注意力路由的对比对该论文的局限有提示。"
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Efficient PEFT Methods with Adaptive Checkpointing for Vision Models and VLMs on Resource Constrained Consumer-GPUs",
+      "title_zh": "资源受限消费级GPU上视觉模型与VLM的高效参数高效微调方法及自适应检查点",
+      "score": 3,
+      "authors": [
+        "Altay Toktassyn",
+        "Jurn-Gyu Park"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.02158",
+      "url": "http://arxiv.org/abs/2607.02158v1",
+      "published": "2026-07-02",
+      "tldr": "比较 LoRA/AdaLoRA/QLoRA/BitFit 等 PEFT 方法在 ViT/Mamba 视觉骨干上的效率，提出内存预算感知的自适应梯度检查点策略，并评估 DINOv2 等基础模型。",
+      "why": "弱信号：QLoRA 等方法可用于 Qwen3-VL 微调，若 V3 需要高效适配 VLA 训练，该文提供低内存占用方案，但与核心的 predictor/target 设计及 collapse 问题无关。",
+      "hits": [
+        "M:DINOv2"
+      ],
+      "deep": {
+        "problem": "在消费级GPU（≤2 GB VRAM）上微调现代视觉模型时，内存和能量瓶颈严重。本文比较五种 PEFT 方法与三种梯度检查点策略，并评估训练免费的基金会模型基线（对比 VLM、DINOv2、自回归 VLM），以确定最佳精度-效率折衷。",
+        "method": "在四个视觉骨干（ViT-S/TinyViT/Vim-S/MambaVision-T）上实施 Full FT、LoRA、AdaLoRA、QLoRA、BitFit 微调；提出内存预算感知的自适应检查点算法（运行时监控 GPU 内存，对超过阈值 τ·M 的层执行 cascade 检查点）；从精度、训练时间、能量、峰值 VRAM 四维度评估，并扩展 NetScore 指标（新变体 NS_M 和 NS#）。同时评估三类基线：零样本对比 VLM（OpenCLIP, SigLIP）、自蒸馏自监督 DINOv2（k-NN/线性探针）和自回归 VLM（SmolVLM, MobileVLM, PaliGemma）。",
+        "key_contributions": [
+          "全面比较五种 PEFT 方法在 Transformer 和 Mamba 骨干下的精度、能量、内存，给出每个 (architecture, PEFT) 组合的 Pareto 前沿",
+          "提出部署感知的多目标 NetScore 变体 NS_M（侧重峰值 VRAM）和 NS#（同时惩罚 VRAM、推理时间、功耗）",
+          "设计并评估内存预算感知的自适应梯度检查点算法，较静态检查点降低 9-30% 能量开销",
+          "在相同能量约束下对比微调模型与三类训练免费基线，揭示 DINOv2 小样本下超越微调、自回归 VLM 无竞争力的现象"
+        ],
+        "sim_benchmarks": [
+          "CIFAR-100",
+          "DTD"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "CIFAR-100（物体分类）和 DTD（纹理分类）；骨干预训练使用 ImageNet-21k 或 ImageNet-1k",
+        "compute": "单张 NVIDIA RTX 2060 SUPER（8 GB VRAM），人为限制至 2 GB；模型参数量 21-32 M；训练 10 epoch，AdamW；功耗测量用 pynvml",
+        "results_headline": "QLoRA 和 BitFit 以 1-2% 精度代价降低 20-30% 能量；自适应检查点减少峰值内存 43-79% 但引入 9-30% 能量开销；DINOv2 在 CIFAR-100 上准确率 0.917 超过最佳微调模型 0.897，而小型自回归 VLM 竞争力弱",
+        "baselines": [
+          "Full Fine-Tuning",
+          "Zero-shot OpenCLIP/SigLIP",
+          "DINOv2 (k-NN/线性探针)",
+          "Autoregressive VLMs (PaliGemma/MobileVLM/SmolVLM)"
+        ],
+        "limitations": "训练仅 10 个 epoch，可能不利于缓慢适配的方法（如 BitFit）；自适应检查点在异构混合骨干（如 TinyViT 的 MBConv 茎）下可能 OOM 或能效差于静态检查点；实验限于小型分类数据集，未在更大规模任务验证",
+        "code_release": "已开源：https://github.com/JokerOneK/cifar100_vits16_repro",
+        "relevance_detail": "本文聚焦 PEFT 效率工程与内存管理，与你当前 V3/LWv2 关心的预测器深度、目标编码器设计、崩溃防御或 VLA 动作头插入位置无直接实验关联。文中 DINOv2 仅作为自监督基线用于比较，未提供任何 JEPA 类或世界模型相关的架构/损失洞见。唯一可注意的点是该文展示了冻结自监督特征的迁移表现（k-NN 精度 0.917），但这一现象与你的 JEPA 目标编码器设计问题联系极弱。",
+        "followup": "若想快速查看自监督特征与微调的能量-精度对比，可扫读 Table VI/VII 中 DINOv2 行，但无 VLA/JEPA 架构启发，无需深读。"
+      }
+    }
+  ]
+}
