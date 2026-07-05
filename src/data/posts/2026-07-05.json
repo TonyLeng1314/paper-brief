@@ -1,0 +1,206 @@
+{
+  "date": "2026-07-05",
+  "kept": 6,
+  "reviewed": 42,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "WorldDirector: Building Controllable World Simulators with Persistent Dynamic Memory",
+      "title_zh": "WorldDirector:构建具有持久动态记忆的可控世界模拟器",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02517",
+      "url": "https://arxiv.org/abs/2607.02517",
+      "published": null,
+      "tldr": "提出一个可控世界模拟器，利用持久动态记忆实现长时程一致的世界生成。",
+      "why": "该世界模拟器架构可能启发你 V3 中 latent world predictor 的记忆机制设计，尤其是如何处理长时程预测中的状态持久性。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型将物理动态与像素渲染耦合，依赖连续视觉观测维持运动，导致动态对象离开视野后运动冻结或身份丢失，无法实现对象持久性和动态记忆。",
+        "method": "WorldDirector 将语义运动编排与视频生成显式解耦：LLM 作为中央编排器，将用户指令转化为 3D bounding box 与相机轨迹，投影为 2D bounding box 序列作为 Location Condition；引入 Appearance Binding 机制从历史帧注入 RGB 动态对象特征作为视觉锚点，配合 Temporal Drop 防止外观过拟合；采用 Spatial-Aware Cross-Attention 将实体特定文本提示路由到对应空间区域；在因果自回归架构中集成静态与动态上下文检索，训练目标为 flow matching MSE 损失，仅作用于当前生成 chunk。",
+        "key_contributions": [
+          "提出解耦语义编排与视觉生成的框架，实现持久动态对象记忆与对象永久性",
+          "设计 Appearance Binding 与 Temporal Drop 机制，在保持身份一致性的同时避免滑动伪影",
+          "利用 LLM 进行 3D 轨迹规划，支持可提示的世界事件（Promptable World Events），可自由引入新实体",
+          "在 PSNR/SSIM/LPIPS 及动态对象一致性指标 DSC_DINO/DSC_CLIP 上全面超越 Yume1.5、HY-World 等 baseline"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "自建游戏平台合成 15 秒视频，通过 SAM3 提取 2D bounding box 轨迹，Qwen2.5-VL 生成实体描述；未使用公开真实数据集",
+        "compute": "64×A100 80GB，全局 batch size 64，训练 3000 步，约 72 小时；基于 LingBot-World-Base 模型",
+        "results_headline": "PSNR 18.127、SSIM 0.502、LPIPS 0.359，DSC_DINO 0.769、DSC_CLIP 0.917，均优于 Yume1.5、HY-World、Infinite-World 等 baseline，尤其在动态对象重新出现时保持身份一致性。",
+        "baselines": [
+          "Yume1.5",
+          "HY-World",
+          "Infinite-World",
+          "LingBot-World",
+          "HyDRA"
+        ],
+        "limitations": "依赖合成游戏数据引入领域差距，偶尔导致视觉保真度下降（如不自然运动、模糊面部）；未来需整合真实世界数据。",
+        "code_release": "论文未提",
+        "relevance_detail": "弱信号：该工作将高层语义规划（LLM）与低层视频生成解耦，类似 V3/LWv2 中是否可将动作规划与潜在世界预测分离；Appearance Binding 机制提供了一种保持动态对象身份一致性的方法，或可启发 VLA 中的长期记忆设计。但论文基于扩散生成而非 JEPA/SSL，直接技术迁移有限。",
+        "followup": "若关注解耦架构与外观条件设计，可读 Section 3.2 及 4.2 消融；整体与 V3/LWv2 直接关联较弱。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "Learning to Move Before Learning to Do: Task-Agnostic pretraining for VLAs",
+      "title_zh": "先学移动再学做事：面向VLA的任务无关预训练",
+      "score": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02466",
+      "url": "https://arxiv.org/abs/2607.02466",
+      "published": null,
+      "tldr": "提出一种任务无关的预训练方法，让VLA先学习运动基元再学习具体任务。",
+      "why": "可能提供VLA预训练中动作头插入位置和方式的消融，直接关系到你在V3中DiHAL-style层选择的开放问题。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "VLA模型受限于昂贵且稀缺的专家演示数据，因为传统训练将物理能力（“如何移动”）与语义对齐（“做什么”）混为一谈。本文提出“分解假设”，旨在利用廉价、无标签的任务无关交互数据单独学习物理先验，从而大幅减少对专家标注数据的依赖。",
+        "method": "提出Task-Agnostic Pretraining (TAP)两阶段框架。Stage 1：任务无关预训练，使用自监督Inverse Dynamics目标，给定观测对(𝑜𝑡, 𝑜𝑡+1)预测动作𝑎𝑡，从任务无关轨迹或自主随机探索数据中学习物理先验，无需语言标注。Stage 2：任务特定对齐，用少量专家演示进行Behavior Cloning微调，将语言指令与预训练的物理表征对齐。模型基于Qwen2.5-VL (3B) + SigLIP视觉编码器，输出delta-pose动作。",
+        "key_contributions": [
+          "提出“分解假设”，将VLA学习解耦为物理能力获取与语义指令对齐两个独立阶段。",
+          "设计TAP框架，利用Inverse Dynamics从廉价无标签交互数据中预训练可迁移的物理先验，显著降低对专家数据的需求。",
+          "在SIMPLER和真实WidowX机器人上验证：TAP用极少标签数据匹配或超越大规模预训练VLA，并在视觉扰动下保持鲁棒性。",
+          "通过消融实验揭示预训练规模决定下游性能上限，物理先验主要提升抓取等低层能力。"
+        ],
+        "sim_benchmarks": [
+          "SIMPLER"
+        ],
+        "real_robot": "WidowX 250s机器人，执行“将胡萝卜放到盘子上”和“将南瓜推到左侧”两个任务。真实实验仅使用200条专家演示，自主随机探索收集30小时任务无关数据。",
+        "datasets": "预训练数据：仿真中用Bridge数据集中的任务无关轨迹（20k episodes），真实世界用自主随机探索数据（30小时）。微调数据：仿真5k专家演示，真实200条专家演示。Baseline大规模模型使用OXE等数据集。",
+        "compute": "论文未明确说明训练算力或GPU·days，仅提及使用Qwen2.5-VL 3B模型。",
+        "results_headline": "SIMPLER上TAP-20k达到Avg-All 33.32%，比标准BC绝对提升10%，并大幅超过OpenVLA (7.75%)、RT-1-X (3.03%)等百万级专家数据训练的模型；真实世界中，相机扰动下TAP保持25%成功率，而NORA等baseline降至0%。",
+        "baselines": [
+          "Standard BC",
+          "OpenVLA",
+          "NORA",
+          "Octo",
+          "π0",
+          "RT-1-X"
+        ],
+        "limitations": "错误分析显示约75%的失败源于语义推理错误，表明单一反应式VLA的隐式推理能力仍是瓶颈；极端视觉变化下仍存在3D空间推理困难。未探讨扩展到更多任务或更大规模预训练的限制。",
+        "code_release": "已开源，GitHub: https://github.com/sjh0354/Task-Agnostic-Pretrain，HuggingFace模型: https://huggingface.co/collections/Michael0354/task-agnostic-pretrain",
+        "relevance_detail": "该工作属于World-model-as-pretraining for robot policy，利用Inverse Dynamics从无标签交互数据学习物理先验，与你正在做的V3/LWv2中latent world prediction有相似动机（从观察预测与动作相关的量）。具体连接点：1）Stage 1的Inverse Dynamics目标可视为一种自监督预测任务，其设计思路（预测动作而非未来状态）可能启发你调整预测头目标；2）Section 4.4的消融实验（Figure 3收敛动态、Figure 4数据缩放）展示了预训练如何改变loss landscape和性能上限，这对你设计V3预训练阶段的数据规模和训练步数有参考价值；3）但论文未涉及JEPA、SIGReg或表征崩溃防御，直接相关性中等。",
+        "followup": "重点阅读Section 4.4消融研究及Figure 4的数据缩放分析，理解预训练规模如何决定下游性能上限，可能为V3的预训练数据量与训练步数设置提供借鉴。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "基于稀疏流形变换的极简无监督表示学习",
+      "score": 7,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种无需负样本的无监督表示学习方法，通过稀疏流形变换和在线聚类避免表示坍缩。",
+      "why": "该方法通过稀疏约束防止坍缩，可为你 V3 的 SIGReg 之外提供另一种坍缩防御思路，但未涉及 predictor/target 设计。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding: 用 grounded 模型引导文本生成以进行机器人控制",
+      "score": 5,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出一种将 grounded 模型（如 affordance 或物理约束）融入语言模型解码过程的方法，用于生成机器人可执行指令。",
+      "why": "弱信号: 涉及 VLM 输出与机器人动作的衔接方式，可能为 V3 中 action head 如何与 Qwen 解码器交互提供思路，但更偏解码策略而非表示学习。",
+      "hits": []
+    },
+    {
+      "rank": 5,
+      "title": "From SRA to Self-Flow: Data Augmentation or Self-Supervision?",
+      "title_zh": "从 SRA 到 Self-Flow: 数据增强还是自监督？",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.02508",
+      "url": "https://arxiv.org/abs/2607.02508",
+      "published": null,
+      "tldr": "探讨一种从 SRA 到 Self-Flow 的方法，分析其本质是数据增强还是自监督学习。",
+      "why": "弱信号: 可能涉及自监督表示学习中的增强策略，但标题模糊，无法判断是否与 JEPA 式 predictor/target 设计或崩溃防御有关。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 6,
+      "title": "Denser neq Better: Limits of On-Policy Self-Distillation for Continual Post-Training",
+      "title_zh": "更密集不等于更好：在线策略自蒸馏在持续后训练中的局限性",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.01763",
+      "url": "https://arxiv.org/abs/2607.01763",
+      "published": null,
+      "tldr": "研究在线策略自蒸馏在持续后训练中的效果，发现密集蒸馏未必提升性能。",
+      "why": "弱信号：自蒸馏中的表示坍缩问题可能与你的SIGReg防御有关，但论文聚焦后训练而非预训练，关联较弱。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "在持续后训练中，on-policy self-distillation（如 SDPO）是否真的能减轻灾难性遗忘？本文重新审视这一乐观观点，揭示 SDPO 虽能加速领域内专业化，但在跨域持续学习时反而导致更严重的遗忘甚至崩溃。",
+        "method": "对比 SDPO（自蒸馏策略优化，利用教师模型提供密集 token 级监督）与 GRPO（组相对策略优化，序列级奖励）在单域及多域持续后训练中的表现。提出 StableSDPO（定期刷新并冻结教师）以解耦教师新鲜度与稳定性。通过 SVD 参数漂移、响应嵌入漂移、JS 散度等诊断工具分析遗忘机制，并给出教师投影导致过度 KL 漂移的理论分析。",
+        "key_contributions": [
+          "分离了 on-policy 数据与训练目标两个常被混淆的因素，证明 on-policy 自蒸馏并不自动继承 on-policy RL 的保留特性。",
+          "揭示 SDPO 是强大的专业化方法但脆弱的持续学习信号：其收益高度依赖教师稳定性和 token 可靠性，CoT 蒸馏对长程噪声推理有害。",
+          "在单域和分阶段持续训练中，SDPO 比 GRPO 表现出更严重的遗忘，遗忘集中在部分对齐的中间距离 OOD 任务上。",
+          "通过参数漂移、响应漂移、崩溃案例（格式化伪影放大）和过度 KL 漂移定理，系统诊断了密集自蒸馏导致遗忘的根源。"
+        ],
+        "sim_benchmarks": [
+          "AIME",
+          "Math500",
+          "GPQA",
+          "BFCLv4",
+          "LCBv6",
+          "ZLogic",
+          "MMLU-R"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练数据：DAPO-Math-17k（MATH），SciKnowEval（SCIENCE），ToolAlpaca（TOOLUSE），Dolci-Think-RL-7B（CODING）。评估数据：AIME, Math500, GPQA, BFCLv4, LCBv6, ZLogic, MMLU-R。",
+        "compute": "论文未明确说明训练算力，使用 Qwen3-4B 和 Olmo-3-7B 系列模型。",
+        "results_headline": "持续学习下，SDPO0 在 MATH 阶段从 32.71% 升至 56.42%，但最终降至 34.38%；GRPO 最终升至 57.29%。SDPO5% 在第三阶段后全面崩溃至 0%。单域 SDPO0 在 AIME 上提升 23.71 个百分点，但 GPQA 等中间距离任务普遍下降。",
+        "baselines": [
+          "GRPO",
+          "基础模型（未训练）"
+        ],
+        "limitations": "SDPO 的密集 token 监督会放大噪声和格式伪影，在持续学习中缺乏内在的遗忘抑制机制；论文未提出完整的解决方案，仅指出需通过 token 加权、教师控制或数据平衡来增强安全性。",
+        "code_release": "https://github.com/Moenupa/SDPO-CL",
+        "relevance_detail": "弱信号。论文对教师-学生框架中教师更新频率、稳定性与崩溃的分析（第3节、第5.2节）可类比于 JEPA 类方法中 target encoder 的 EMA 动量设计及表示坍塌防御。例如，StableSDPO 的“定期刷新并冻结”策略与 V3 中 target encoder 的 detach 与动量更新有相似权衡；崩溃案例中的自强化循环（confirmation bias）提示密集自监督可能放大高频伪影，这与 SIGReg 防止表示坍塌的动机相通。但整体属于 LLM 持续后训练，与 VLA/世界模型无直接关联。",
+        "followup": "若关注教师稳定性与坍塌防御，可重点阅读第3节（教师 EMA 与 StableSDPO 实验）和第5.2节（崩溃分析）；理论部分（5.3）提供了过度 KL 漂移的视角，但对 V3 的直接指导有限。"
+      }
+    }
+  ]
+}
