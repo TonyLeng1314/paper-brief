@@ -1,0 +1,237 @@
+{
+  "date": "2026-07-08",
+  "kept": 6,
+  "reviewed": 22,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "RynnWorld-Teleop: An Action-Conditioned World Model for Digital Teleoperation",
+      "title_zh": "RynnWorld-Teleop: 一种面向数字遥操作的动作条件世界模型",
+      "score": 9,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.06558",
+      "url": "https://arxiv.org/abs/2607.06558",
+      "published": null,
+      "tldr": "提出动作条件化的世界模型 RynnWorld-Teleop，用于数字遥操作中的未来状态预测。",
+      "why": "动作条件化世界模型直接对应你 V3 中 predictor head 的 action conditioning 设计，可参考其条件化方式和架构选择。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "物理遥操作数据收集受限于硬件和场地，无法规模化。本文提出数字遥操作范式，用动作条件化的生成式世界模型替代真实机器人，从单张参考图像和操作员手势流合成机器人视角视频，解耦数据采集与物理基础设施。",
+        "method": "RynnWorld-Teleop 基于 Wan-I2V 视频 DiT，引入深度感知骨骼渲染（深度调制颜色和半径）作为动作条件，采用渐进式跨域训练（先在大规模人类自我中心视频 EgoDex/VITRA 预训练，再在配对的人-机器人遥操作数据上微调），并通过流式自回归蒸馏（因果流匹配预热 + 分布匹配蒸馏 DMD）将双向教师压缩为 4 步推理的因果学生模型，实现 40+ FPS 实时生成。数据生成管道包含重定向、骨骼条件合成和分块重锚定，输出同步的（RGB 观测，机器人动作）轨迹供模仿学习。",
+        "key_contributions": [
+          "形式化数字遥操作范式，明确机器人中心、动作接地、实时性三项要求",
+          "提出 RynnWorld-Teleop，结合深度感知骨骼表示、渐进人-机器人训练和流式自回归蒸馏，首次实现满足三要求的实时交互式世界模型",
+          "将世界模型扩展为完整数字遥操作系统，可从单张参考图像实例化任意操作场景并生成无限动作条件 rollout",
+          "首次实证纯合成数据训练的策略可零样本 Sim2Real 迁移，且增强真实数据后成功率显著提升（如 π0.5 在 Lid Placement 从 42.86% 升至 62.86%）"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "TIANJI M6 移动机器人，双臂 + 双 WUJI 灵巧手，RealSense D435i 相机。四项任务：双抓取、推块、双手抬升、盖子放置。世界模型训练用 1800 个真实遥操作片段，策略评估每任务 35 次试验。",
+        "datasets": "预训练：EgoDex（74M 帧）、VITRA（30.7M 帧）；机器人域适应：自收集真实机器人数据集（1800 片段，含四种任务）",
+        "compute": "64×NVIDIA H100 GPU；基础模型 Wan2.2-TI2V-5B（5B 参数）；TI2V 微调 2000 步；LoRA/SFT 两阶段训练；蒸馏阶段因果预热 + DMD",
+        "results_headline": "EgoDex-Test 上 SFT 模型 PSNR 26.78, SSIM 0.887, LPIPS 0.119, FVD 550；因果学生模型 FPS 40.0。策略训练：π0 仅用 300 合成数据在 Block Pushing 达 82.86% 成功率；增强真实数据后 π0.5 在 Lid Placement 提升 +20%。",
+        "baselines": [
+          "CogVideoX-1.5-I2V-5B",
+          "Wan-2.2-TI2V-5B / Wan-2.1-I2V-14B / Wan-2.2-I2V-14B",
+          "InterDyn",
+          "CosHand",
+          "Mask2IV",
+          "Diffusion Policy (DP)",
+          "π0.5",
+          "π0"
+        ],
+        "limitations": "复杂物理现象（液体、高变形物体）生成质量不足；跨机器人平台需逐平台微调，尚未实现跨 embodiment 泛化。",
+        "code_release": "已开源：https://github.com/alibaba-damo-academy/RynnWorld-Teleop，同时提供 HuggingFace 和 ModelScope 模型权重",
+        "relevance_detail": "弱信号。论文核心是视频生成式世界模型，而非 JEPA 式潜在预测或非对比 SSL。但渐进式跨域训练（Sec. 3.4）中先在大规模人类数据预训练再在机器人数据微调的策略，与你考虑的在 Qwen3-VL 上先预训练再插入动作头的思路类似，可参考其阶段划分和分布对齐设计。蒸馏部分（Sec. 3.5）的因果预热 + DMD 流程对 V3 中预测头设计无直接启发。整体更偏向数据引擎，而非你当前 V3/LWv2 的 collapse 防御或预测器深度消融。",
+        "followup": "若关注跨域迁移与条件融合，可深读 Sec. 3.4 渐进训练和 Sec. 5.4 消融（条件融合策略、预训练价值）；若关注实时推理架构，可看 Sec. 3.5 蒸馏设计。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "RynnWorld-4D: 4D Embodied World Models for Robotic Manipulation",
+      "title_zh": "RynnWorld-4D: 面向机器人操作的 4D 具身世界模型",
+      "score": 9,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.06559",
+      "url": "https://arxiv.org/abs/2607.06559",
+      "published": null,
+      "tldr": "提出 RynnWorld-4D，一个预测未来场景时空演变的 4D 具身世界模型。",
+      "why": "4D 世界模型中的 latent prediction 机制和动作条件化可能直接启发你 V3 的 latent world predictor 设计，尤其是如何处理时空维度。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有机器人世界模型多基于2D像素视频生成，缺乏对3D几何和时空一致性的显式建模，无法直接为灵巧操作提供精确的空间与运动信息。本文要解决如何从单张RGB-D图像和语言指令，同步生成未来RGB、深度、光流序列（即4D表示），并用其支撑高频闭环操控。",
+        "method": "基于Wan-2.2-TI2V-5B扩散Transformer，扩展为三支路架构，分别处理RGB、深度、光流三模态；插入联合交叉模态注意力（Joint Cross-Modal Attention）模块，每三个Transformer块一次，通过共享Key/Value实现模态交互，保证外观-几何-运动一致性。训练分三阶段：各分支独立适应、冻结主干仅训练JA模块、全参数联合SFT。利用超254M帧的伪标注数据集Rynn4DDataset 1.0进行预训练。策略部分：RynnWorld-4D-Policy冻结世界模型，从中间层（block 15）提取多分支隐藏状态，经Flow Former压缩后，用流匹配头直接预测动作块，绕过多步去噪，实现约9Hz闭环控制。",
+        "key_contributions": [
+          "提出RGB-DF投影4D表示，可反向投影为3D场景流，在保留视频扩散先验的同时显式编码几何与运动。",
+          "设计三支路4D世界模型RynnWorld-4D，通过联合交叉模态注意力同步生成外观、深度与光流，实现高保真时空一致。",
+          "构建大规模4D体现视频数据集Rynn4DDataset 1.0，包含人类自我中心和机器人操作视频的深度与光流伪标注。",
+          "提出RynnWorld-4D-Policy，直接利用内部预测的4D特征，以单前向传播生成动作序列，在真实灵巧双手操纵任务上达到SOTA。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "TIANJI M6双臂机器人配WUJI HAND，加装RealSense D435i FPV相机。六个任务：Dual Picking、Block Pushing、Hand-over、Bimanual Lifting、Lid Placement、Bowl Stacking。世界模型训练使用2400 real-world演示，策略训练每任务200演示。",
+        "datasets": "Rynn4DDataset 1.0：混合Epic-Kitchens、EgoVid、RoboMIND、RDT-1B、Galaxea、RoboCoin、AgiBot，共254.4M帧，每帧带Qwen3-VL生成的字幕、Depth Anything 3深度和DPFlow光流伪标注。",
+        "compute": "基于Wan-2.2-TI2V-5B（5B参数，30层DiT，d=3072），训练采用bf16混合精度、DeepSpeed ZeRO-2、81×480×640分辨率。推理用NVIDIA RTX 5090 FP8。总GPU·days未说明。",
+        "results_headline": "真机：RynnWorld-4D-Policy在Bimanual Lifting达97.14%，Lid Placement 65.71%，优于DP（57.14%）和π0（34.29%）；Hand-over 28.57%（π0/π0.5几乎为0）。世界模型：几何δ1=0.610（TesserAct 0.279），光流AEPE 0.170，视觉SSIM 0.754。",
+        "baselines": [
+          "DP",
+          "π0",
+          "π0.5",
+          "CogVideoX",
+          "Wan-2.2-TI2V-5B",
+          "Wan-2.1-I2V-14B",
+          "Free4D",
+          "TesserAct",
+          "4DNeX",
+          "Independent Branches (消融)",
+          "w/o MA (消融)",
+          "w/o 4D Pre-training (消融)",
+          "w/o RoPE in JA (消融)",
+          "shared FFN (消融)"
+        ],
+        "limitations": "扩散去噪过程引入推理延迟，控制频率约9 Hz，无法满足超高频控制需求；模型主要针对自我中心视角，扩展到多视图或多机器人协作仍需研究。",
+        "code_release": "已开源：GitHub (https://github.com/alibaba-damo-academy/RynnWorld-4D)、HuggingFace、ModelScope。",
+        "relevance_detail": "本文非JEPA/SSL类，但4D预测世界模型为策略提供的结构化表征，与研究者关心的‘世界模型作为预训练用于策略’相关。Table 5的模态消融（仅RGB vs RGB+Depth vs RGB+Flow）直接显示在Latent世界模型中增加几何与运动预测能显著提升操作精度，这提示在V3/LWv2框架中若将未来深度或光流作为辅助预测目标，可能比纯RGB token预测更有效。此外，RynnWorld-4D-Policy固定世界模型中间层特征（block 15）的做法与DiHAL层选择问题相似，但本文未对层作消融。弱信号——方法路线不同（扩散生成 vs JEPA预测）。",
+        "followup": "重点阅读4.4节Table 5的模态贡献和Table 4的跨模态注意力消融，以及3.3节Joint Cross-Modal Attention的设计；3.5节推理延迟分析对理解部署约束有参考。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "title_zh": "Minimalistic Unsupervised Representation Learning with the Sparse Manifold Transform",
+      "score": 6,
+      "authors": [
+        "Yubei Chen",
+        "Zeyu Yun",
+        "Yi Ma",
+        "B. Olshausen",
+        "Yann LeCun"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/0380271e23c5a3348f9f8ad1906b692b22f8b75e",
+      "published": null,
+      "tldr": "提出一种基于稀疏流形变换的无监督表示学习方法，通过稀疏编码和流形约束学习表示。",
+      "why": "弱信号: 其稀疏性和流形约束可能为 V3 的 collapse defense 提供不同于 SIGReg 的正则化思路。",
+      "hits": [
+        "A:Yann LeCun"
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "AlayaWorld: Long-Horizon and Playable Video World Generation",
+      "title_zh": "AlayaWorld: 长时程可交互视频世界生成",
+      "score": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.06291",
+      "url": "https://arxiv.org/abs/2607.06291",
+      "published": null,
+      "tldr": "提出 AlayaWorld，一个能够生成长时程、可交互视频的世界模型。",
+      "why": "弱信号: 若其内部使用 latent prediction 而非纯生成，可能为 V3 的 predictor 设计提供参考，但更偏向生成而非 representation learning。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "交互式视频世界生成面临四大挑战：控制（开放导航与任意动作）、一致性（时空一致与回环闭合）、稳定性（长时程生成无视觉漂移）和运行时（实时低延迟交互）。现有方法难以同时满足这些要求。",
+        "method": "AlayaWorld 基于 LTX-2.3 DiT 微调，集成 prompt 切换机制、AdaLN 风格相机控制模块、3D 缓存、历史压缩模块、错误库和 DMD 少步蒸馏。相机控制结合显式渲染证据（3D 缓存）与轻量 AdaLN 调制；一致性通过空间索引记忆（3D 缓存）与时间压缩记忆（Frame Preservation）联合实现；稳定性采用错误库联合扰动训练，将残差注入记忆与目标段以增强自回归鲁棒性；运行时通过 DMD 蒸馏至 4 步去噪、小 chunk 尺寸和 chunk 边界 prompt 切换实现实时交互。",
+        "key_contributions": [
+          "提出全栈开源交互式世界生成框架，统一数据准备、训练、推理与部署",
+          "结合空间 3D 缓存与时间压缩记忆实现回环一致性，覆盖纯空间/纯时间记忆的互补失效模式",
+          "引入错误库联合扰动训练策略，同时扰动条件记忆与目标段以提升长时程稳定性",
+          "支持实时生成与在线 prompt 切换，实现可玩的开放动作交互（如施法、战斗、召唤）"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明",
+        "compute": "未说明",
+        "results_headline": "论文仅展示定性结果（相机控制、开放动作、一致性、一分钟长时程生成、多样风格），未提供定量指标与 baseline 对比。",
+        "baselines": [
+          "未明确列出"
+        ],
+        "limitations": "论文未明确讨论局限；可读出的局限包括：依赖深度估计构建 3D 缓存，动态物体表示困难；仅定性评估，缺乏定量指标；基于单一 backbone（LTX-2.3）微调，泛化性未知。",
+        "code_release": "计划 2026 年 7 月中旬开源完整代码，目前未公开。",
+        "relevance_detail": "弱信号。论文聚焦游戏/视频世界生成，不涉及机器人策略学习或 JEPA。但其空间记忆+时间压缩记忆的联合设计（§3.2）和错误库训练策略（§3.3，类似 Helios）对构建用于机器人的持久世界模型有参考价值，尤其在处理长时程自回归漂移方面。与 V3/LWv2 的直接连接有限：V3 关注 latent 预测与 collapse 防御，而本文是像素级视频生成，架构与训练目标差异大。",
+        "followup": "若关注世界模型稳定性训练，可深读 §3.3 稳定性部分及错误库机制；空间/时间记忆联合设计见 §3.2。"
+      }
+    },
+    {
+      "rank": 5,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding:用接地模型引导文本生成以进行机器人控制",
+      "score": 5,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出一种将语言模型输出与物理接地模型结合的引导解码方法，使生成的文本动作序列满足机器人动力学约束。",
+      "why": "弱信号：涉及 VLM 用于机器人控制，可能启发你如何将 action head 与 visual token 对齐，但主要是文本生成约束而非视觉预测架构。",
+      "hits": []
+    },
+    {
+      "rank": 6,
+      "title": "SIEVE: Structure-Aware Data Selection for Imitation Learning with VLA Models",
+      "title_zh": "SIEVE: 面向 VLA 模型模仿学习的结构感知数据选择",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.06442",
+      "url": "https://arxiv.org/abs/2607.06442",
+      "published": null,
+      "tldr": "提出一种结构感知的数据选择方法，用于提升 VLA 模型在模仿学习中的数据效率。",
+      "why": "弱信号: 与 VLA 数据 pipeline 相关，但不涉及你当前 V3/LWv2 的架构或损失设计问题。",
+      "hits": [
+        "H:VLA",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "VLA 模仿学习面临大规模演示数据集中的冗余、噪声和覆盖不均问题，现有数据选择方法要么基于轨迹级整体评分，要么限于状态-动作对的局部信号，都无法有效捕捉长程行为中的可重用结构。",
+        "method": "SIEVE 将演示视为可重用基元与过渡接口的组合。首先根据末端执行器抓取/释放边界分割轨迹，用 V-JEPA2 提取片段表示并通过 Mini-Batch K-Means 聚类发现视-动基元；然后以最大化基元和过渡的组合模式暴露为目标，在组合模式空间中贪心分配选择预算；最后在每个组合模式桶内选择余弦相似度最高的 medoid 轨迹，以提供中心、稳定且易于行为克隆的监督。",
+        "key_contributions": [
+          "提出基于基元组合的轨迹效用视角，通过基元发现和结构暴露分配以实现可重用结构的最大化暴露",
+          "引入学习友好型轨迹选择策略，在组合模式内部优先保留中心且一致的演示，以稳定行为克隆",
+          "在 SimplerEnv-WidowX、SimplerEnv-GoogleRobot 及 RoboCasa-GR1 上验证，SIEVE 仅用 50% 数据和 50% 训练步数即可超越全量数据训练，在多个 VLA 模型上一致有效"
+        ],
+        "sim_benchmarks": [
+          "SimplerEnv-WidowX (Bridge-V2)",
+          "SimplerEnv-GoogleRobot (Fractal)",
+          "RoboCasa-GR1 (GR00T-X-Sim)"
+        ],
+        "real_robot": "训练数据基于真实机器人 WidowX 和 Google Robot 的演示数据集，但所有策略评估均在仿真环境进行，未做真机实验。",
+        "datasets": "Bridge-V2（约 53K 条轨迹）、Fractal（约 87K 条轨迹）、GR00T-X-Sim 下采样人形桌面操作子集（24K 条模拟轨迹）",
+        "compute": "8× NVIDIA H100 (80GB)，模型为 Qwen3-VL-4B-GR00T / Qwen3-VL-4B-OFT，训练超参数见附录 Table 5。",
+        "results_headline": "在 Bridge-V2 上，SIEVE 用 50% 数据和 25K 训练步数达平均成功率 56.3%，超越全量训练（51.8%）；在 Fractal 上同样 50% 设置下达到 76.4%（全量 75.0%），且始终优于 Random、DemInf、SCIZOR 等基线。",
+        "baselines": [
+          "Full-Training",
+          "Random",
+          "DemInf",
+          "SCIZOR"
+        ],
+        "limitations": "基元分割依赖手工定义的末端执行器状态翻转，对非抓取型任务泛化性未验证；自动选择聚类数 K 需要用随机子集和预设搜索范围，可能引入额外开销；未探讨不同操作者演示风格对基元质量的影响。",
+        "code_release": "已开源：https://github.com/ChangtiWu/SIEVE",
+        "relevance_detail": "核心主题为演示数据选择，与研究者当前在 V3/LWv2 中关注的 JEPA 自监督学习（predictor 设计、collapse 防御、DiHAL 层选择等）直接关联较弱。论文使用 V-JEPA2 作为冻结视频编码器提取片段表示，但未对 JEPA 的 predict/target 结构进行任何消融或改进，仅将其作为现成表征工具。唯一潜在关联是若未来需要为 VLA-FT 或世界模型预训练筛选高质量演示，可借鉴其基于基元组合的结构化预算分配思路。",
+        "followup": "若对数据选择策略感兴趣，可查看 Section 4 的方法细节与 Table 4 消融实验（结构暴露项与轨迹选择策略的有效性），但对 V3/LWv2 主线推进帮助有限。"
+      }
+    }
+  ]
+}
