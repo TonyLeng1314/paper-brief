@@ -1,0 +1,313 @@
+{
+  "date": "2026-07-11",
+  "kept": 7,
+  "reviewed": 40,
+  "min_score": 3,
+  "papers": [
+    {
+      "rank": 1,
+      "title": "LEEVLA: Seeing What Matters in Latent Environment Evolution for Vision-Language-Action",
+      "title_zh": "LEEVLA: 在潜在环境演化中看见关键信息用于视觉-语言-动作",
+      "score": 9,
+      "authors": [
+        "Qi Lyu",
+        "Baicheng Liu",
+        "Xudong Wang",
+        "Jiahua Dong",
+        "Lianqing Liu",
+        "Zhi Han"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.08182",
+      "url": "http://arxiv.org/abs/2607.08182v1",
+      "published": "2026-07-09",
+      "tldr": "提出LEEVLA，通过漂移引导的动态优先级排序和结构化特征流生成（原型到外围预测+互邻域对比损失）实现任务感知的潜在环境演化。",
+      "why": "直接相关：其原型到外围预测（P2P）和互邻域对比损失为你的V3 predictor head设计与collapse defense提供了具体的替代方案，且整体框架正是VLA中的潜在世界预测。",
+      "hits": [
+        "H:VLA",
+        "H:latent world"
+      ],
+      "deep": {
+        "problem": "现有 VLA 将视觉 token 等同对待且依赖人工选择的显式推理线索，难以发现未知但任务相关的隐式环境因素，在复杂动态场景中泛化受限。LEEVLA 旨在让 VLA 在隐空间中自动聚焦关键区域并学习结构化环境状态演化，无需辅助模态。",
+        "method": "提出 drift-guided dynamic prioritization (DGDP) 指导“where to attend”：通过 dynamic position prioritization（DPP，基于相邻时间步余弦相似度变化）和 semantic drift guidance（SDG，利用视觉-指令内积衡量语义漂移）融合得到平衡优先级权重。提出 structured feature flow generation (SFFG) 指导“how to evolve”：先对多视角未来视觉特征聚类并按到簇心距离排序，从原型到外围逐步预测（P2P 预测，加权余弦损失）；再通过 mutual-neighborhood contrastive (MC) loss 基于二阶 k-NN 互邻居构建正样本对，保持拓扑一致性。总体损失 = L1 动作回归 + P2P 损失 + MC 损失，所有模块仅在训练时使用，不增加推理开销。",
+        "key_contributions": [
+          "提出 drift-guided dynamic prioritization (DGDP) 模块，通过 DPP 与 SDG 自动发现与指令相关且动态变化的关键视觉区域，生成训练时的注意力权重。",
+          "提出 structured feature flow generation (SFFG) 策略，结合 prototype-to-periphery (P2P) 有序预测和 mutual-neighborhood contrastive (MC) loss，在隐空间中结构化地建模未来状态演变并维护簇内拓扑一致性。",
+          "在大规模和小规模 VLA（0.5B / 7B）下，在 LIBERO、CALVIN 和真机任务上均取得 SOTA，验证了显式任务相关的隐式结构化推理对可扩展 VLA 的有效性。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO (Spatial, Object, Goal, Long)",
+          "CALVIN (ABC-D)"
+        ],
+        "real_robot": "Universal Robots UR5 协作机械臂，完成放置物体、按按钮、关抽屉三个任务，每设置 20 次连续试验。",
+        "datasets": "LEEVLA-large 基于 OpenVLA-7B，在 Open X-Embodiment 混合物上进一步预训练（未列出具体子集）；LEEVLA-mini 基于 miniVLA，在 LIBERO-90 上训练。",
+        "compute": "训练使用 8×A100 (80 GB) GPU；LEEVLA-large 预训练 50k–150k 步，LEEVLA-mini 20k–50k 步；未说明 GPU·days 总和。",
+        "results_headline": "LEEVLA-mini 平均 LIBERO 成功率 97.5%（vs. FLOWER 95.7%）；LEEVLA-large 平均 98.2%（vs. π0.5 97.5%）；CALVIN 平均长度 4.34（vs. OpenVLA-OFT 4.10）；真机平均 78.5%（vs. OpenVLA 40%）。",
+        "baselines": [
+          "Octo",
+          "UniACT",
+          "Seer",
+          "DreamVLA",
+          "FLOWER",
+          "OpenVLA",
+          "CoT-VLA",
+          "π0",
+          "π0.5",
+          "OpenVLA-OFT",
+          "UniVLA"
+        ],
+        "limitations": "MC 损失训练延迟较高（约 1201 ms/步），可能影响大规模训练效率；未来特征提取依赖固定视觉 backbone，未引入动量目标编码器；真机实验仅三个简单任务，泛化性验证有限；未讨论更长的未来预测步数或与 JEPA 风格非对比方法的比较。",
+        "code_release": "开源：https://github.com/LyuQi127/LEEVLA",
+        "relevance_detail": "LEEVLA 的核心思想——在 VLA 中学习“where & how”的结构化隐空间未来预测——与你正在推进的 V3/LWv2 中潜在世界预测高度吻合。具体来说：(1) SFFG 的 P2P 预测按聚类排序输出未来视觉 token，这对手头的预测器输出组织方式（当前为扁平 token）有直接启发，你可以参考 §4.2 中的排序策略，结合 DGDP 权重做加权预测；(2) DGDP 的 DPP+SDG 优先级权重类似于在 LWv2 的预测损失上施加自适应 mask， §4.1 给出的公式可直接迁移到 JEPA 目标上，用于抑制背景噪声；(3) MC 损失使用互邻居构建正样本（§4.2 公式 9–10），可视为一种非参数拓扑约束，虽不是 SIGReg，但为你在 V3 中解决 collapse 提供了基于局部邻接对称性的替代方案，值得与协方差正则化对比或融合。需注意：该文的目标特征来自冻结 visual backbone，未提及 EMA 目标编码器，因此不能直接复制其对目标侧的设计。",
+        "followup": "必读 §4.2 的 P2P 有序预测和 MC 损失细节，以及消融表 5 中各组件对 LIBERO-Goal 的提升量；可结合自己对预测器头设计的假设，尝试将 DGDP 权重作为你的预测损失 mask 进行实验。"
+      }
+    },
+    {
+      "rank": 2,
+      "title": "WCog-VLA: A Dual-Level World-Cognitive Vision-Language-Action Model for End-to-End Autonomous Driving",
+      "title_zh": "WCog-VLA: 一种双层世界认知的视觉-语言-动作模型用于端到端自动驾驶",
+      "score": 5,
+      "authors": [
+        "Xuerun Yan",
+        "Zhexi Lian",
+        "Nuoheng Zhang",
+        "Shiyu Fang",
+        "Haoran Wang",
+        "Chen Lv",
+        "Jia Hu",
+        "Binyang Song"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2607.08375",
+      "url": "http://arxiv.org/abs/2607.08375v1",
+      "published": "2026-07-09",
+      "tldr": "提出WCog-VLA，在语义层用3D感知和博弈链式推理，在生成层用对齐解耦扩散Transformer合成多智能体轨迹，实现主动自动驾驶。",
+      "why": "弱信号: 使用生成式世界模型预测多智能体轨迹，但并非JEPA式潜在预测，且未ablate action head插入位置，对你的V3/LWv2设计直接启发有限。",
+      "hits": [
+        "H:VLA",
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "现有VLA模型缺乏全面的世界认知与未来动态预测能力，导致只能被动驾驶，无法在复杂社会交互场景中主动规划。本文旨在赋予VLA模型语义级世界预测与生成级世界演化双重认知，实现主动自动驾驶。",
+        "method": "提出WCog-VLA双层次世界认知框架：语义层基于InternVL3-2B VLM，注入3D感知agent tokens，解耦输出为世界认知与Game-CoT博弈推理；生成层引入Aligned Decoupled Diffusion Transformer (ADDT)，通过条件编码器与场景表示对齐（余弦相似度约束）后，由生成解码器合成多智能体联合轨迹。训练分四阶段：3D感知预训练、VLM监督微调（含Game-CoT）、ADDT监督微调（L_diff + L_align）、DiffGRPO强化微调。",
+        "key_contributions": [
+          "提出双层次世界认知VLA框架，桥接语义预测与生成演化，实现主动驾驶",
+          "设计ADDT生成式世界模型，通过解耦编码器-解码器与表示对齐，高效合成物理合理的多智能体联合轨迹",
+          "构建包含85k样本的Game-CoT博弈推理数据集，填补社会驾驶博弈推理监督空白",
+          "在NAVSIM v1/v2上取得SOTA，PDMS 92.9，EPDMS 85.9"
+        ],
+        "sim_benchmarks": [
+          "NAVSIM v1",
+          "NAVSIM v2"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "NAVSIM（1192训练/136测试场景），公开驾驶VQA数据集（DriveLM, CODA-LM, LingoQA, nuScenes-QA, NuInstruct, DriveGPT4）共158k样本，自建NAVSIM定制数据170k（85k轨迹VQA + 85k Game-CoT）",
+        "compute": "4× NVIDIA A100 40GB GPU；VLM骨干InternVL3-2B（约2B参数），ADDT为16-block DiT（编码器8+解码器8）",
+        "results_headline": "NAVSIM v1上PDMS 92.9，超过所有camera-only与多模态baseline，比3B的LatentVLA高0.5；NAVSIM v2上EPDMS 85.9，安全指标NC 98.8、TTC 98.2均为最高",
+        "baselines": [
+          "Constant Velocity",
+          "Ego Status MLP",
+          "VADv2",
+          "DrivingGPT",
+          "UniAD",
+          "BevDrive",
+          "TransFuser",
+          "PARA-Drive",
+          "DRAMA",
+          "Hydra-MDP",
+          "DiffusionDrive",
+          "WoTE",
+          "iPad",
+          "QwenVL2.5-8B",
+          "InternVL3-8B",
+          "ReCogDrive-2B",
+          "AutoVLA-3B",
+          "LatentVLA-3B"
+        ],
+        "limitations": "当前语义世界认知仅关注周围agent，忽略了道路几何与地图拓扑的未来演化，尚未构建最全面的世界模型。",
+        "code_release": "论文未提开源",
+        "relevance_detail": "弱信号。本文的双层次世界认知（语义预测+生成演化）与你在V3中探索的latent world prediction有概念相似性，但实现路径完全不同（扩散模型 vs JEPA）。具体可借鉴点：ADDT的解耦编码器-解码器架构（Sec 3.2）将条件编码与轨迹生成分离，并通过表示对齐（L_align，余弦相似度约束）稳定潜在特征、减少去噪步数——这种显式对齐正则化思路可类比SIGReg防止表示坍塌，或许能启发你在预测器头设计时引入类似的特征空间约束。但整体面向自动驾驶，与RoboTwin操作场景差异大。",
+        "followup": "若想提取架构思想，重点看Sec 3.2的ADDT设计、表示对齐机制及Table 5的消融（对齐与解耦的收益）。"
+      }
+    },
+    {
+      "rank": 3,
+      "title": "Grounded Decoding: Guiding Text Generation with Grounded Models for Robot Control",
+      "title_zh": "Grounded Decoding:用 grounded 模型引导文本生成以控制机器人",
+      "score": 4,
+      "authors": [
+        "Wenlong Huang",
+        "F. Xia",
+        "Dhruv Shah",
+        "Danny Driess",
+        "Andy Zeng",
+        "Yao Lu",
+        "Peter R. Florence",
+        "Igor Mordatch",
+        "S. Levine",
+        "Karol Hausman",
+        "Brian Ichter"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/33af17e7cc5cd4ee18c9e6e8c5fca7e224592ec0",
+      "published": null,
+      "tldr": "提出用 grounded 模型引导文本生成来执行机器人控制任务。",
+      "why": "弱信号:可能涉及语言模型用于机器人控制，但未明确 ablate 如何在 VLM 中插入 action head，与 V3 架构探索的直接关联弱。",
+      "hits": []
+    },
+    {
+      "rank": 4,
+      "title": "Languages are Rewards: Chain of Hindsight Finetuning using Human Feedback",
+      "title_zh": "语言即奖励：基于人类反馈的链式后见之明微调",
+      "score": 4,
+      "authors": [
+        "Hao Liu",
+        "Carmelo Sferrazza",
+        "P. Abbeel"
+      ],
+      "source": "semantic_scholar",
+      "arxiv_id": null,
+      "url": "https://www.semanticscholar.org/paper/974e75813699f7fba8a71b58001e4bfda9c5231b",
+      "published": null,
+      "tldr": "将语言作为奖励信号，通过链式后见之明微调模型。",
+      "why": "弱信号:涉及语言反馈用于策略微调，但未明确涉及 VLM backbone 或 world model 表征学习，可能对 VLA 的微调方式有微弱启发。",
+      "hits": []
+    },
+    {
+      "rank": 5,
+      "title": "LongE2V: Long-Horizon Event-based Video Reconstruction, Prediction, and Frame Interpolation with Video Diffusion Models",
+      "title_zh": "LongE2V: 基于事件的长时程视频重建、预测与帧插值使用视频扩散模型",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.08770",
+      "url": "https://arxiv.org/abs/2607.08770",
+      "published": null,
+      "tldr": "使用视频扩散模型进行事件相机视频的长时程预测与插值。",
+      "why": "弱信号: 视频预测任务，但基于事件相机和扩散模型，非JEPA式潜在预测，且不涉及VLA或action head设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "事件相机输出稀疏异步事件流，从中恢复高质量视频是一个病态问题。现有回归方法产生模糊纹理，扩散模型在长序列预测中误差累积严重，插帧方法在复杂动态下出现鬼影。本文旨在用一个统一框架同时解决事件驱动的视频重建、预测和帧插值，并保证长期时间稳定性。",
+        "method": "LongE2V 以预训练视频扩散模型 CogVideoX I2V 为骨干，将事件流离散化为事件体素作为条件输入。通过扩展第一投影层并全量微调，对 DiT 模块施加 LoRA 高效适配。针对长期生成，提出 Autoregressive Unrolling（训练时用模型自身预测替代真值上下文，迭代微调）和 Adaptive Context Switch（基于注意力权重动态决定是否更新上下文）以抑制漂移。针对零样本插帧，提出 Reencoding Alignment（解码-像素翻转-重编码以修正 3D VAE 潜空间时序不对齐）和 Cross Residual Correction（交叉注入残差补偿编解码损失）。同时引入 Event Voxel Density Augmentation 增强对不同传感器分辨率的鲁棒性。",
+        "key_contributions": [
+          "首次利用预训练视频扩散先验统一处理事件视频重建、预测和帧插值，数据效率高",
+          "提出 Autoregressive Unrolling 和 Adaptive Context Switch 缓解长序列生成中的时间漂移",
+          "提出 Reencoding Alignment 与 Cross Residual Correction 解决插帧时 3D VAE 潜空间时序不对齐和细节损失",
+          "设计 Event Voxel Density Augmentation 实现跨传感器分辨率的鲁棒泛化"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "训练仅用 BS-ERGB 训练集；评估重建/预测用 ECD、MVSEC、HQF 三个真实事件相机数据集；插帧评估用 BS-ERGB 测试集和 HQF",
+        "compute": "论文未明确说明",
+        "results_headline": "重建任务上 LPIPS 全面优于 SOTA（如 HQF 上 0.240 vs HyperE2VID 0.257）；预测任务上 PSNR/SSIM/LPIPS 大幅超越 VDM-EVFI（HQF 上 PSNR 16.67 vs 13.52）；零样本插帧在 BS-ERGB 上 LPIPS 0.124 优于监督方法 CBMNet-Large 的 0.170",
+        "baselines": [
+          "E2VID",
+          "FireNet",
+          "E2VID+",
+          "FireNet+",
+          "SPADE-E2VID",
+          "SSL-E2VID",
+          "ET-Net",
+          "HyperE2VID",
+          "VDM-EVFI",
+          "CBMNet-Large",
+          "TLXNet+"
+        ],
+        "limitations": "作者指出未来需加速推理并探索高效记忆机制以维持长期一致性；当前方法依赖预训练视频扩散模型，生成速度可能较慢",
+        "code_release": "论文未明确说明",
+        "relevance_detail": "弱信号。论文提出的 Autoregressive Unrolling 训练策略（用模型自身预测替代真值上下文进行微调）与序列预测中 teacher forcing 导致的 exposure bias 问题类似，这一思想可能对 V3/LWv2 中预测器训练时的自回归展开有启发，但领域差异大（事件视频生成 vs 潜在世界预测），无直接架构或损失函数层面的可迁移设计。其余贡献（事件体素、3D VAE 对齐、交叉残差）与 VLA/JEPA/SSL 无关。",
+        "followup": "若对自回归训练策略感兴趣，可阅读 Sec. 3.2 中 Autoregressive Unrolling 部分及 Fig. 3，但整体借鉴价值有限。"
+      }
+    },
+    {
+      "rank": 6,
+      "title": "Why Can't I Open My Drawer? Mitigating Object-Driven Shortcuts in Zero-Shot Compositional Action Recognition",
+      "title_zh": "为什么我打不开抽屉？缓解零样本组合动作识别中的物体驱动捷径",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2601.16211",
+      "url": "https://arxiv.org/abs/2601.16211",
+      "published": null,
+      "tldr": "提出方法缓解零样本组合动作识别中模型依赖物体表面线索而非真实动作的捷径行为。",
+      "why": "弱信号: 动作识别与VLA中的action head设计间接相关，但该文研究识别而非预测或生成，与V3的latent world prediction无直接关联。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "零样本合成动作识别（ZS-CAR）中，模型通过物体驱动的捷径（object-driven shortcuts）预测动词，而非基于时间证据，导致对未见动词-物体组合泛化能力差。根因是组合监督稀疏且偏斜，以及动词学习难度远高于物体。",
+        "method": "提出 RCORE 框架，包含两个组件：1) Co-occurrence Prior Regularization (CPR) 通过合成新的动词-物体组合（将另一视频的静态物体注入高运动区域）扩展监督，并对频繁共现对施加 margin 约束作为硬负例，同时采用 batch-adaptive label space expansion 避免在全空间训练；2) Temporal Order Regularization for Composition (TORC) 通过时间扰动（反转、打乱）强制动词表示对时间顺序敏感，包括余弦相似度损失和熵损失，以减少对静态物体线索的依赖。",
+        "key_contributions": [
+          "通过 FSP/FCP 等诊断指标量化并揭示了 ZS-CAR 中物体驱动捷径的严重程度及其与泛化失败的关系",
+          "提出 CPR 抑制共现先验并扩展合成组合监督，提出 TORC 强制动词表示的时间敏感性",
+          "在 Sth-com 和新构建的 EK100-com 上，在开放世界评估下一致提升未见组合准确率，并降低 shortcut 诊断指标"
+        ],
+        "sim_benchmarks": [
+          "Sth-com",
+          "EK100-com"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "Sth-com（79K 视频，161 动词，248 物体，源自 Something-Something V2 和 Something-Else）；EK100-com（71K 视频，81 动词，216 物体，源自 EPIC-KITCHENS-100）",
+        "compute": "论文未明确说明",
+        "results_headline": "在 Sth-com 上，RCORE 将 CLIP 基线的未见组合 H.M. 从 36.47% 提升至 38.67%，InternVideo2 基线从 44.73% 提升至 46.88%；在 EK100-com 上，CLIP 未见组合准确率从 21.56% 提升至 28.41%，InternVideo2 从 30.33% 提升至 37.31%，同时 FSP/FCP 显著下降。",
+        "baselines": [
+          "AIM (CLIP独立)",
+          "C2C",
+          "Jung et al.",
+          "LoRA (InternVideo2独立)",
+          "LogicCAR (closed-world)",
+          "C2C (enhance)"
+        ],
+        "limitations": "评估仍局限于固定词表，合成组合可能引入噪声，方法仅适用于 encoder-based VLM，未扩展到 decoder-based VLM；未见组合的绝对准确率仍然较低。",
+        "code_release": "https://github.com/KHU-VLL/RCORE",
+        "relevance_detail": "弱信号。论文针对视频动作识别中的物体驱动捷径（verb依赖object共现），与您当前 V3/LWv2 的 JEPA 世界模型、VLA 架构设计无直接交集。但其中诊断 shortcut 的 FSP/FCP 思想，以及强制时间敏感性（TORC）的正则化方案，若迁移到机器人操作的动作预测中，也许能帮助缓解模型对静态物体信息的过度依赖，但该连接非常间接，论文未涉及任何 world model 或 VLA 实验。",
+        "followup": "若关注动作预测中的捷径学习，可速读 Section 3 的诊断指标和 Section 5.4 的消融，但整体对 VLA 研究帮助有限。"
+      }
+    },
+    {
+      "rank": 7,
+      "title": "Linear Attention Architectures: Mechanisms, Trade-offs, and Cross-Layer Routing",
+      "title_zh": "线性注意力架构：机制、权衡与跨层路由",
+      "score": 3,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.07953",
+      "url": "https://arxiv.org/abs/2607.07953",
+      "published": null,
+      "tldr": "系统分析线性注意力机制的效率、表达能力及跨层路由策略。",
+      "why": "弱信号: 分析注意力架构可能启发predictor head设计（如深度、跨层交互），但未直接涉及SSL或JEPA。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "比较软注意力与四种线性注意力变体（DeltaNet、Gated DeltaNet、Kimi Delta Attention、Gated DeltaNet-2）在语言建模中的机制、训练吞吐、验证损失等权衡，并探索轻量级跨层路由方法以缓解深层网络中的信息稀释。",
+        "method": "将各线性注意力统一为循环记忆更新框架，显式对比记忆衰减、擦除、写入控制等设计差异。提出跨层路由：CLER将下层delta-rule写入误差注入上层值目标，CLVR将下层写入值通过零初始化投影注入共享残差流。在350M参数、15B token的FineWeb-Edu上训练，比较纯线性堆栈与混合堆栈，并评估AdamW与Muon优化器。",
+        "key_contributions": [
+          "用统一循环记忆符号表达DeltaNet家族，明确各变体在记忆控制粒度上的差异",
+          "提供Kimi Delta Attention、Gated DeltaNet-2等新变体的Megatron训练实现并开源",
+          "在350M/15B规模下绘制验证损失-吞吐前沿，发现Kimi Delta Attention+Muon混合堆栈损失最低，纯Gated DeltaNet+AdamW吞吐最高",
+          "提出跨层值路由（CLVR），在DeltaNet和Gated DeltaNet上小幅降低最终验证损失，且优于基于误差的路由"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "FineWeb-Edu（LLaMA2分词器）",
+        "compute": "350M参数模型训练15B tokens，使用单节点4×GH200 GPU，bf16精度；另有1.3B/40B和3B/60B的DeltaNet扩展实验",
+        "results_headline": "350M/15B下Kimi Delta Attention+Muon混合堆栈最终验证损失2.273，纯Gated DeltaNet+AdamW吞吐最高（归一化100%）；CLVR在350M/1B上降低损失约0.01，在350M/15B上降低约0.002-0.006",
+        "baselines": [
+          "Softmax Attention",
+          "DeltaNet",
+          "Gated DeltaNet",
+          "Kimi Delta Attention",
+          "Gated DeltaNet-2"
+        ],
+        "limitations": "所有比较均为单次运行，无重复种子统计；下游评估仅限HellaSwag/PIQA/WinoGrande；跨层路由增益随模型规模增大而缩小，且未在Kimi Delta Attention或Gated DeltaNet-2上验证",
+        "code_release": "已开源：https://github.com/tommasocerruti/linear-attention-architectures（含Megatron实现、训练启动脚本、评估包装）",
+        "relevance_detail": "弱信号。论文对DeltaNet家族的记忆更新机制（delta rule、门控擦除/写入）进行了系统消融，这与V3中潜在世界预测器的更新设计（如是否使用误差修正、门控遗忘）有类比，但论文聚焦纯语言建模，未涉及视觉或动作。跨层路由（CLVR）将下层内部信号注入残差流，可能启发在VLM中跨层传递动作相关特征，但论文未在VLA场景验证。整体对V3/LWv2的直接指导有限。",
+        "followup": "若想借鉴记忆门控设计，可细读第3节各变体的更新公式；若关注跨层信息传递，可看第4节CLVR与第6.6节的消融表。"
+      }
+    }
+  ]
+}
