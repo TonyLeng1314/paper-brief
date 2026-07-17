@@ -15,11 +15,15 @@ GitHub Action (cron 00:00 UTC = 08:00 +08)
   ├─ Python: scripts/fetch_papers.py
   │   ├─ sources.py         (arxiv / HF Papers / Semantic Scholar)
   │   ├─ filter.py          (关键词排序 + broad exploration 候选)
-  │   ├─ annotate.py        (DeepSeek V3.2 分桶评分:direct / adjacent / explore)
+  │   ├─ annotate.py        (DeepSeek V4 Flash 分桶评分:direct / adjacent / explore)
   │   └─ render.py          (写 src/data/posts/YYYY-MM-DD.json)
   ├─ git commit + push
   └─ Node: npm ci && npm run build  (Astro → dist/)
        └─ deploy to GitHub Pages
+
+Site-only Action (push: src / public / Astro config)
+  └─ Node: npm install && npm run build
+       └─ deploy to GitHub Pages (不抓论文,不调用 LLM)
 ```
 
 Python 数据管道和 Astro 站完全解耦:Python 只产 JSON,Astro 通过 Content Collection 读 JSON 渲染。
@@ -85,17 +89,18 @@ npm run build   # dist/
 | `research_profile.md` | Long-form description of you, cached as LLM system prompt. |
 | `scripts/sources.py` | Pull papers from arxiv / HF Papers / Semantic Scholar. |
 | `scripts/filter.py` | Keyword-ranked candidate selection with a reserved exploration slice. |
-| `scripts/annotate.py` | DeepSeek V3.2 → TLDR + reading value + bucket + multi-axis scores. |
+| `scripts/annotate.py` | DeepSeek V4 Flash → TLDR + reading value + bucket + multi-axis scores. |
 | `scripts/render.py` | Write daily JSON to `src/data/posts/`. |
 | `scripts/fetch_papers.py` | Orchestrator. |
 | `src/data/seen_papers.json` | Persistent keys for cross-day deduplication (generated automatically). |
 | `astro.config.mjs` | Astro 配置:站点 base path、build format。 |
 | `src/content.config.ts` | Astro Content Collection 的 Zod schema。 |
 | `src/data/posts/*.json` | Python 写、Astro 读的数据源。 |
-| `src/layouts/Base.astro` | 全局布局:topbar + main + cyber-fx 特效层。 |
-| `src/components/` | Hero / PaperCard / PostCard / CyberFx。 |
+| `src/layouts/Base.astro` | 全局布局、顶栏与临时配色面板。 |
+| `src/components/` | Hero / PaperCard / PostCard / SearchBox。 |
 | `src/pages/index.astro` | 首页(全屏 hero + post grid)。 |
 | `src/pages/posts/[date].astro` | 单日页(paper 列表)。 |
-| `src/styles/global.css` | 整套 Cyberpunk 样式 + keyframes。 |
-| `src/scripts/cursor.ts` | spotlight 跟鼠标 + DOM meteor 生成 + IntersectionObserver stagger。 |
+| `src/styles/global.css` | 全局阅读样式与四套主题变量。 |
+| `src/scripts/theme.ts` | 主题切换、强调色和 session 状态。 |
 | `.github/workflows/daily.yml` | The daily cron(Python fetch + Astro build)。 |
+| `.github/workflows/deploy-site.yml` | Push 版式代码后只构建并部署网站。 |
