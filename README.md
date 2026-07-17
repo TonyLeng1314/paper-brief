@@ -14,8 +14,8 @@
 GitHub Action (cron 00:00 UTC = 08:00 +08)
   ├─ Python: scripts/fetch_papers.py
   │   ├─ sources.py         (arxiv / HF Papers / Semantic Scholar)
-  │   ├─ filter.py          (keyword + author 预筛,省 LLM token)
-  │   ├─ annotate.py        (OpenAI 兼容 API — DeepSeek 默认,system 自动缓存)
+  │   ├─ filter.py          (关键词排序 + broad exploration 候选)
+  │   ├─ annotate.py        (DeepSeek V3.2 分桶评分:direct / adjacent / explore)
   │   └─ render.py          (写 src/data/posts/YYYY-MM-DD.json)
   ├─ git commit + push
   └─ Node: npm ci && npm run build  (Astro → dist/)
@@ -33,20 +33,22 @@ Python 数据管道和 Astro 站完全解耦:Python 只产 JSON,Astro 通过 Con
 3. **Enable Pages**: Settings → Pages → Source: `GitHub Actions`。
 4. **Edit your taste**:
    - `research_profile.md` —— 你是谁、你在研究什么、什么算 "relevant"。这段会被 LLM 缓存。
-   - `config.yaml` —— 关键词、关注作者、过滤阈值、每天最多几篇。
+   - `config.yaml` —— 关键词、关注作者、三类配额、阈值和模型。
 5. **Trigger the first run**: Actions → "Daily paper brief" → Run workflow。
 6. 等 2-3 分钟。打开 `https://<YOUR_USERNAME>.github.io/paper-brief/`。
 
 ## Tuning
 
-- 漏掉好文章 → `config.yaml`:`filter.mode: loose`、降低 `min_score`、加关键词。
-- 太多噪音 → `filter.mode: strict`、提高 `min_score`、`max_papers_per_day` 调小。
-- LLM 评分跑偏 → 改 `research_profile.md` 里的 "VERY relevant / NOT relevant" 区段,越具体越好。
+- 默认 `filter.mode: broad`:关键词只负责排序,并保留一部分零关键词探索候选。
+- 漏掉好文章 → 提高 `explore_fraction` / `llm_cap`,或降低 `min_score`。
+- 太多噪音 → 提高 `min_score`,或调小 `max_papers_per_day` 和各 `bucket_quotas`。
+- 范围跑偏 → 改 `research_profile.md` 的稳定兴趣与 discovery policy,不要把当前项目写成唯一标准。
+- 已成功评审的论文记录在 `src/data/seen_papers.json`,不会跨天重复消耗调用额度。
 
 ## Cost
 
 - arxiv / HF Papers / Semantic Scholar:免费。
-- LLM:默认 `deepseek-v4-pro`,每天 ~30-50 篇候选,粗估 ¥0.05-0.2 / 天。
+- LLM:初筛和深读默认 `deepseek-v3.2`; broad 模式最多初筛 180 篇,实际费用取决于服务商定价和当日新论文数。
 - GitHub Actions:Public repo 免费额度足够。
 
 ## Local dev
@@ -82,10 +84,11 @@ npm run build   # dist/
 | `config.yaml` | All knobs: keywords, authors, thresholds, LLM model. |
 | `research_profile.md` | Long-form description of you, cached as LLM system prompt. |
 | `scripts/sources.py` | Pull papers from arxiv / HF Papers / Semantic Scholar. |
-| `scripts/filter.py` | Cheap keyword + author pre-filter. |
-| `scripts/annotate.py` | OpenAI 兼容 API(默认 DeepSeek)→ TLDR + why + score。 |
+| `scripts/filter.py` | Keyword-ranked candidate selection with a reserved exploration slice. |
+| `scripts/annotate.py` | DeepSeek V3.2 → TLDR + reading value + bucket + multi-axis scores. |
 | `scripts/render.py` | Write daily JSON to `src/data/posts/`. |
 | `scripts/fetch_papers.py` | Orchestrator. |
+| `src/data/seen_papers.json` | Persistent keys for cross-day deduplication (generated automatically). |
 | `astro.config.mjs` | Astro 配置:站点 base path、build format。 |
 | `src/content.config.ts` | Astro Content Collection 的 Zod schema。 |
 | `src/data/posts/*.json` | Python 写、Astro 读的数据源。 |

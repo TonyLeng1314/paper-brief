@@ -19,7 +19,8 @@ from sources import Paper
 log = logging.getLogger(__name__)
 
 ANNOTATION_INSTRUCTIONS = """You are scoring and annotating papers for the researcher whose profile is in the
-system message above.
+system message above. Optimize for broad, high-quality discovery rather than
+forcing every paper to support the researcher's current project.
 
 You will receive a JSON array of papers. For EACH paper, output an object with:
 - "key": the paper's dedup key (echo back exactly what was given)
@@ -27,17 +28,21 @@ You will receive a JSON array of papers. For EACH paper, output an object with:
   acronyms (JEPA / VLA / SE(3) / LoRA / VLM / DINOv2 / VICReg / SIGReg 等) as English.
   Method names with colons stay: e.g. "UWM-JEPA:在信念空间中想象的预测世界模型".
 - "tldr": ONE sentence in CHINESE summarizing what the paper actually does.
-- "why": ONE sentence in CHINESE naming the SPECIFIC open question from the
-  researcher's profile that this paper could inform. If the connection is weak,
-  start with "弱信号:". Be concrete. Bad: "和你的 SSL 工作相关"。
-  Good: "在 I-JEPA 式 setup 里 ablate 了 predictor depth,正是你 V3 还没扫过的变量"。
-  Technical terms keep English.
-- "score": integer 0-10, following the relevance tiers in the profile.
+- "why": ONE concrete sentence in CHINESE explaining why the paper is worth
+  reading. The value may be direct utility, a transferable mechanism, or a new
+  direction. Mention V3/LWv2 ONLY when there is a genuine specific connection.
+  Do not force a current-project connection and do not default to "弱信号".
+- "bucket": exactly one of "direct", "adjacent", or "explore", following the profile.
+- "domain_fit": integer 0-10 for fit to the researcher's STABLE interests.
+- "transfer_value": integer 0-10 for reusable method/evidence/tooling value.
+- "novelty": integer 0-10 for horizon-expanding or assumption-challenging value.
+- "score": integer 0-10 for overall reading priority. A high-novelty explore
+  paper can score highly even without a direct current-project connection.
 
 IMPORTANT: title_zh, tldr, why MUST be in Chinese (中文). Technical jargon stays English.
 
 Output ONLY a JSON array, no preamble, no markdown fences. Schema:
-[{"key": "...", "title_zh": "...", "tldr": "...", "why": "...", "score": 7}, ...]
+[{"key":"...","title_zh":"...","tldr":"...","why":"...","bucket":"adjacent","domain_fit":6,"transfer_value":8,"novelty":7,"score":7}, ...]
 """
 
 
@@ -48,6 +53,10 @@ class Annotation:
     why: str
     score: int
     title_zh: str = ""
+    bucket: str = "adjacent"
+    domain_fit: int = 0
+    transfer_value: int = 0
+    novelty: int = 0
 
 
 def _paper_to_dict(p: Paper) -> dict[str, Any]:
@@ -80,7 +89,7 @@ def _extract_json_array(text: str) -> list[dict]:
 def annotate_papers(
     papers: list[Paper],
     research_profile: str,
-    model: str = "deepseek-chat",
+    model: str = "deepseek-v3.2",
     api_key: str | None = None,
     batch_size: int = 10,
 ) -> dict[str, Annotation]:
@@ -102,10 +111,10 @@ def annotate_papers(
     )
 
     system_prompt = (
-        "You are an expert research assistant who helps a VLA researcher triage "
-        "their daily paper firehose. Below is their long-form research profile. "
-        "It will not change between requests in this session — use it as the "
-        "ground truth for what 'relevant' means.\n\n"
+        "You are an expert research assistant curating a broad daily research "
+        "brief for an embodied-intelligence researcher. Below is their long-form "
+        "profile. Treat stable interests and the discovery policy as primary; "
+        "the current project is only one optional lens.\n\n"
         "===== RESEARCHER PROFILE =====\n"
         + research_profile.strip()
         + "\n\n"
@@ -157,16 +166,27 @@ def annotate_papers(
             k = it.get("key")
             if not k or k not in by_key:
                 continue
-            try:
-                score = int(it.get("score", 0))
-            except (TypeError, ValueError):
-                score = 0
+
+            def score_field(name: str) -> int:
+                try:
+                    value = int(it.get(name, 0))
+                except (TypeError, ValueError):
+                    value = 0
+                return max(0, min(10, value))
+
+            bucket = str(it.get("bucket", "adjacent")).strip().lower()
+            if bucket not in {"direct", "adjacent", "explore"}:
+                bucket = "adjacent"
             out[k] = Annotation(
                 key=k,
                 tldr=str(it.get("tldr", "")).strip(),
                 why=str(it.get("why", "")).strip(),
-                score=max(0, min(10, score)),
+                score=score_field("score"),
                 title_zh=str(it.get("title_zh", "")).strip(),
+                bucket=bucket,
+                domain_fit=score_field("domain_fit"),
+                transfer_value=score_field("transfer_value"),
+                novelty=score_field("novelty"),
             )
 
     return out

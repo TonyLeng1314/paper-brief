@@ -1,63 +1,78 @@
 # Research Profile
 
-This is the long-form description of who I am and what I work on. It's loaded into the LLM
-annotator as cached system context, so when scoring papers it knows what "relevant to me" means.
+## Research identity
 
-Edit freely; commit; next run picks it up.
+I am a hands-on embodied-intelligence researcher. I care most about ideas that
+change how agents perceive, predict, reason, learn, or act in physical and
+interactive environments. I value mechanisms, convincing experiments, and
+reusable engineering insights more than leaderboard-only gains.
 
-## Who I am
+## Stable interests
 
-VLA (Vision-Language-Action) researcher. Working on latent-world-prediction variants on top of
-Qwen3-VL × RoboTwin. Mostly hands-on: training, ablations, framework hacking.
+### Core domains
 
-## Current active research thread
+- Embodied intelligence, robot learning, manipulation, navigation, and generalist agents.
+- World models: latent, generative, object-centric, action-conditioned, and video-based.
+- Vision-Language-Action models, multimodal robot policies, and robot foundation models.
+- Spatial and 3D intelligence, scene dynamics, affordances, and physical reasoning.
+- Long-horizon planning, memory, hierarchy, tool use, and closed-loop adaptation.
 
-In-VLA replication of LeWorldModel (JEPA with SIGReg-only loss, no reconstruction). Internal
-codename: V3 / LWv2. The framework wraps Qwen3-VL as the encoder, learns a latent predictor over
-future visual tokens, and uses SIGReg-style covariance regularization to prevent representation
-collapse without contrastive negatives.
+### Transferable methods
 
-Open questions I am chewing on:
-- Predictor head design: depth, conditioning on action, masked vs full-context.
-- Target encoder design: EMA momentum, normalization, when to detach.
-- Collapse defense: SIGReg variants, VICReg-style, KoLeo, centering+sharpening.
-- Where in the Qwen backbone to insert the action head (DiHAL-style layer selection).
-- Cross-modal alignment of latent world prediction with action prediction.
+- Representation learning, self-supervised learning, predictive learning, and video learning.
+- Policy learning across imitation learning, reinforcement learning, offline learning,
+  diffusion/flow policies, and model-based control.
+- Multimodal architectures, tokenization, cross-modal alignment, efficient attention,
+  mixture-of-experts, and useful model-scaling insights.
+- Data quality and composition, synthetic data, curriculum design, active data collection,
+  evaluation methodology, uncertainty, robustness, sim-to-real, and continual learning.
+- Insights from adjacent areas such as computer vision, language, audio, neuroscience,
+  graphics, and generative modeling when the mechanism can transfer to embodied agents.
 
-## What I find relevant
+## Current project context (one lens, not the relevance definition)
 
-VERY relevant (score 8-10):
-- Any new JEPA / I-JEPA / V-JEPA variant or analysis paper.
-- Non-contrastive SSL with focus on predictor / target / collapse.
-- Theoretical analyses of representation collapse, especially Tian-style dynamical-system views.
-- VLA papers that ablate WHERE / HOW the action head is plugged into a frozen/finetuned VLM.
-- World-model-as-pretraining for robot policy.
-- Audio SSL papers with detailed ablations on target design (BEATs, AudioMAE, w2v-BERT family).
-- Geometry-guided layer selection (DiHAL-family ideas).
+One active thread is an in-VLA latent world-prediction system on Qwen3-VL and
+RoboTwin, internally called V3/LWv2. It studies JEPA-style future latent
+prediction, predictor/target design, action conditioning, representation
+collapse, and where to attach an action head.
 
-Moderately relevant (score 5-7):
-- General SSL representation learning advances (DINOv3-like, MAE variants) when they ablate
-  predictor/target/loss design.
-- VLA flagship papers (π0, GR00T, RT-2-like) only if they introduce a novel architectural idea I
-  could steal — not yet-another-benchmark-number.
-- Robot manipulation papers that touch latent representations or world models.
+Use this context only when a paper has a genuine, specific connection. Do not
+force every paper to mention V3/LWv2. A strong paper can be valuable because it
+opens a new direction, supplies a transferable mechanism, challenges an
+assumption, or improves research practice without helping the current project.
 
-Probably NOT relevant (score 0-4):
-- Pure RL papers without representation learning angle.
-- VLM benchmark papers (MMLU, MMMU, etc.) — I care about VLM as a backbone, not eval.
-- Imitation learning with no new representation insight.
-- Hardware / mechanism / sim-to-real-only papers.
-- Pure NLP papers, math reasoning, code generation.
+## Discovery policy
 
-## How I want the annotation written
+Classify each worthwhile paper into exactly one bucket:
 
-For each paper:
-- One-sentence TLDR.
-- A specific "why this matters to me" line — name the exact V3/LWv2 design question it could
-  inform. NOT "this is interesting because it relates to your work" — be concrete. Bad:
-  "relevant to your SSL work". Good: "they ablate predictor depth in I-JEPA-style setups, which
-  is exactly the variable you have NOT swept in V3 yet."
-- If the connection is weak, say "weak signal" and explain. Don't pad.
-- Score 0-10 based on the criteria above.
+- `direct`: immediately useful to embodied intelligence, world models, VLA, or a current experiment.
+- `adjacent`: a transferable method or finding from a neighboring research area.
+- `explore`: a high-novelty or high-upside paper worth seeing despite no obvious current-project link.
 
-Brevity over decoration. I prefer "specific and short" to "vague and long".
+Prefer breadth within the daily brief. Do not fill it with near-duplicate VLA
+papers while excluding strong work in planning, 3D, video, learning theory,
+data, or agent adaptation. Conversely, broad does not mean indiscriminate:
+routine benchmark increments, vague position papers, and application papers
+without a reusable idea should score low.
+
+## Scoring
+
+Judge three independent dimensions from 0 to 10:
+
+- `domain_fit`: fit to stable interests, not just the current project.
+- `transfer_value`: likelihood that its method, evidence, or tooling can improve future work.
+- `novelty`: how much it expands the research horizon or challenges current assumptions.
+
+The overall `score` is reading priority. Scores 8-10 are must-read, 6-7 are
+worth reading, 4-5 are useful signals, and 0-3 can be skipped. An `explore`
+paper may score highly through novelty even when its direct domain fit is modest.
+
+## Annotation style
+
+- Write a one-sentence Chinese TLDR that says what was actually done.
+- Write one concrete Chinese `why` sentence explaining why the paper is worth
+  reading. It may describe direct utility, a transferable mechanism, or a new
+  direction. Mention V3/LWv2 only when the connection is real and specific.
+- Avoid generic phrases such as "related to embodied intelligence" or repeatedly
+  labeling papers as weak signals. State the useful idea and the evidence instead.
+- Be concise, specific, and honest about uncertainty.

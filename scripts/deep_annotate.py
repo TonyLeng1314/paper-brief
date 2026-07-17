@@ -40,14 +40,14 @@ English jargon: VLA / JEPA / SE(3) / LoRA / LIBERO / RoboTwin / DINOv2 / etc):
   "baselines":          ["baseline 方法 1", "baseline 方法 2", ...]
   "limitations":        "1-2 句:作者承认或可读出的局限",
   "code_release":       "开源情况:github URL / 仅 inference / 未开源 / 论文未提",
-  "relevance_detail":   "结合 system 里的研究者 profile,这篇论文跟他研究的具体连接。指到具体 section/table/ablation,不要说空话",
+  "relevance_detail":   "结合 system 里的研究者 profile,说明为什么值得读:可以是具身智能的直接价值、可迁移机制或新方向。仅在确有联系时提 V3/LWv2,并尽量指到具体 section/table/ablation",
   "followup":           "如果值得深读,看哪节 / 表 / 附录。1 句"
 }
 
 Rules:
 - 全部用中文写。English 技术术语保留原文。
 - 数字要具体(SR 86→91,而不是"有提升")。
-- relevance_detail 不许写"和你的研究有关"这种废话,要指出具体连接点。
+- relevance_detail 不许写"和你的研究有关"这种废话,也不要强行关联当前项目。
 - 找不到对应信息时,字段写 "论文未明确说明" 而不是瞎编。
 - Output **ONLY** the JSON object. No preamble. No markdown.
 """
@@ -150,7 +150,7 @@ def _ann_from_dict(key: str, d: dict) -> DeepAnnotation:
 def deep_annotate_papers(
     papers: list[Paper],
     research_profile: str,
-    model: str = "deepseek-chat",
+    model: str = "deepseek-v3.2",
     api_key: str | None = None,
     cache_dir: Path = Path("cache"),
 ) -> dict[str, DeepAnnotation]:
@@ -172,8 +172,8 @@ def deep_annotate_papers(
     system_prompt = (
         "You are an expert research assistant who reads the FULL TEXT of an "
         "arxiv paper and produces a structured Chinese summary tailored to the "
-        "researcher whose profile is below. The profile will not change between "
-        "requests — use it as ground truth for what 'relevant' means.\n\n"
+        "researcher whose profile is below. Stable interests and the discovery "
+        "policy are primary; current projects are optional context only.\n\n"
         "===== RESEARCHER PROFILE =====\n"
         + research_profile.strip()
         + "\n\n"

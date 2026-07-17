@@ -1,11 +1,13 @@
-# Paper Brief — personalized daily paper discovery config.
-# Edit this freely; the GitHub Action picks it up on next cron.
+# Paper Brief - personalized daily paper discovery config.
+# Edit this freely; the GitHub Action picks it up on the next run.
 
 # ---- Sources ----
 sources:
   arxiv:
     enabled: true
-    categories: [cs.RO, cs.CV, cs.LG, cs.AI]
+    # Core embodied-intelligence feeds plus adjacent language, 3D/graphics,
+    # and imaging sources where transferable ideas often appear first.
+    categories: [cs.RO, cs.CV, cs.LG, cs.AI, cs.CL, cs.GR, eess.IV]
     max_per_category: 60
   huggingface_papers:
     enabled: true
@@ -13,39 +15,75 @@ sources:
     enabled: true
     lookback_days: 7
 
-# ---- Relevance ----
+# ---- Relevance ranking ----
+# These keywords boost ranking. In broad mode they are not eligibility gates.
 keywords:
   high_priority:
-    # VLA 直接相关 —— 这是你研究的主战场
     - VLA
     - vision language action
-    - robot manipulation policy
-    - latent action
-    # JEPA / world model / SSL 表示学习
+    - embodied intelligence
+    - embodied agent
+    - robot learning
+    - robot manipulation
+    - generalist robot policy
+    - world model
+    - video world model
+    - action-conditioned prediction
+    - model-based control
+    - visuomotor policy
+    - robot foundation model
+    - spatial intelligence
+    - 3D reasoning
+  medium_priority:
     - JEPA
     - joint embedding predictive
-    - world model
     - latent world
+    - latent action
+    - video prediction
+    - future prediction
+    - representation learning
+    - self-supervised learning
+    - multimodal learning
+    - vision-language model
+    - video-language model
+    - policy learning
+    - imitation learning
+    - reinforcement learning
+    - diffusion policy
+    - flow matching policy
+    - planning
+    - long-horizon
+    - memory
+    - test-time adaptation
+    - sim-to-real
+    - synthetic data
+    - data mixture
+    - curriculum learning
+    - active learning
+    - uncertainty
+    - causal representation
+    - object-centric
+    - 3D reconstruction
+    - neural rendering
+    - egocentric video
+    - human-robot interaction
+  cross_domain:
     - predictor design
     - representation collapse
     - non-contrastive
     - self-supervised representation
     - SIGReg
     - VICReg
-  medium_priority:
-    - flow matching policy
-    - spatial reasoning
-    - RoboTwin
-    - LIBERO
     - layer selection
     - DINOv2
     - V-JEPA
-  cross_domain:
     - predictive coding
     - active inference
     - audio self-supervised
-    - BEATs
-    - w2v-BERT
+    - mixture of experts
+    - efficient attention
+    - token compression
+    - mechanistic interpretability
 
 authors:
   - Mahmoud Assran
@@ -59,24 +97,25 @@ authors:
 
 # ---- Filtering ----
 filter:
-  # "strict" = high precision, fewer papers. "loose" = more recall.
-  mode: loose
-  # How many top-prescored candidates we let the LLM look at per day.
-  # DeepSeek is cheap (~¥0.1-0.3/day at this size), so we go wide.
-  llm_cap: 100
-  # Min relevance score (0-10) to include after LLM annotation.
-  min_score: 3
-  max_papers_per_day: 30
+  # broad = keyword-ranked core plus a reserved zero-keyword exploration slice.
+  mode: broad
+  llm_cap: 180
+  explore_fraction: 0.30
+  # Successfully reviewed keys are persisted so old papers are not re-scored.
+  seen_path: src/data/seen_papers.json
+  min_score: 4
+  max_papers_per_day: 25
+  bucket_quotas:
+    direct: 10
+    adjacent: 9
+    explore: 6
 
 # ---- LLM annotation ----
-# Uses an OpenAI-compatible endpoint. Provide OPENAI_API_KEY and (optionally)
-# OPENAI_BASE_URL as env / GitHub secrets. Defaults to DeepSeek official API.
+# Uses an OpenAI-compatible endpoint. Provide OPENAI_API_KEY and optionally
+# OPENAI_BASE_URL as environment variables / GitHub secrets.
 llm:
   enabled: true
-  model: deepseek-v4-pro
-  # Papers per LLM request. Bigger = fewer system-prompt repeats (DeepSeek
-  # caches the system prefix anyway, but fewer round-trips still wins).
-  # Keep ≤15 so a single bad parse doesn't lose too many papers.
+  triage_model: deepseek-v3.2
+  deep_read_model: deepseek-v3.2
   batch_size: 10
-  # Where the user's research context lives (long-form, cached every day).
   research_profile_path: research_profile.md

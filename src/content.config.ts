@@ -8,12 +8,25 @@ const posts = defineCollection({
     kept: z.number(),
     reviewed: z.number(),
     min_score: z.number(),
+    funnel: z
+      .object({
+        fetched: z.number().default(0),
+        unseen: z.number().default(0),
+        llm_candidates: z.number().default(0),
+        annotated: z.number().default(0),
+      })
+      .optional(),
     papers: z.array(
       z.object({
         rank: z.number(),
+        key: z.string().optional().default(''),
         title: z.string(),
         title_zh: z.string().optional().default(''),
         score: z.number(),
+        bucket: z.enum(['direct', 'adjacent', 'explore']).optional().default('adjacent'),
+        domain_fit: z.number().optional().default(0),
+        transfer_value: z.number().optional().default(0),
+        novelty: z.number().optional().default(0),
         authors: z.array(z.string()),
         source: z.string(),
         arxiv_id: z.string().nullable(),

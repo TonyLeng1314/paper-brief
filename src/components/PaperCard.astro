@@ -16,9 +16,14 @@ interface Deep {
 }
 interface Paper {
   rank: number;
+  key?: string;
   title: string;
   title_zh?: string;
   score: number;
+  bucket?: 'direct' | 'adjacent' | 'explore';
+  domain_fit?: number;
+  transfer_value?: number;
+  novelty?: number;
   authors: string[];
   source: string;
   arxiv_id: string | null;
@@ -40,11 +45,27 @@ const authorsDisplay =
     : `${paper.authors.slice(0, 5).join(', ')}, … (+${paper.authors.length - 5})`;
 const d = paper.deep;
 const hasDeep = !!d && (d.problem || d.method || d.key_contributions.length > 0);
+const hasDiscoveryMetadata = Boolean(paper.key);
+const bucket = paper.bucket ?? 'adjacent';
+const bucketLabels = { direct: '直接', adjacent: '邻域', explore: '探索' };
 ---
-<article class="paper-card" data-score={paper.score}>
+<article class="paper-card" data-score={paper.score} data-bucket={bucket}>
   <header class="paper-head">
-    <span class="paper-rank">#{paper.rank.toString().padStart(2, '0')}</span>
-    <span class="score-badge">{paper.score}/10</span>
+    <div class="paper-rank-group">
+      <span class="paper-rank">#{paper.rank.toString().padStart(2, '0')}</span>
+      {hasDiscoveryMetadata && <span class="bucket-badge">{bucketLabels[bucket]}</span>}
+    </div>
+    <div class="paper-scores">
+      {hasDiscoveryMetadata && (
+        <span
+          class="score-dimensions"
+          title={`领域匹配 ${paper.domain_fit ?? 0} · 迁移价值 ${paper.transfer_value ?? 0} · 新颖度 ${paper.novelty ?? 0}`}
+        >
+          D{paper.domain_fit ?? 0} · T{paper.transfer_value ?? 0} · N{paper.novelty ?? 0}
+        </span>
+      )}
+      <span class="score-badge">{paper.score}/10</span>
+    </div>
   </header>
 
   <h2>{zh}</h2>
@@ -76,7 +97,7 @@ const hasDeep = !!d && (d.problem || d.method || d.key_contributions.length > 0)
 
   <div class="body">
     <p><strong>摘要.</strong>{paper.tldr}</p>
-    <p><strong>为什么相关.</strong>{paper.why}</p>
+    <p><strong>阅读价值.</strong>{paper.why}</p>
   </div>
 
   {hasDeep && d && (
@@ -116,7 +137,7 @@ const hasDeep = !!d && (d.problem || d.method || d.key_contributions.length > 0)
         {d.limitations && <><dt>局限</dt><dd>{d.limitations}</dd></>}
         {d.code_release && <><dt>开源情况</dt><dd>{d.code_release}</dd></>}
         {d.relevance_detail && (
-          <><dt>与你研究的连接</dt><dd>{d.relevance_detail}</dd></>
+          <><dt>研究价值</dt><dd>{d.relevance_detail}</dd></>
         )}
         {d.followup && <><dt>建议跟进</dt><dd>{d.followup}</dd></>}
       </dl>

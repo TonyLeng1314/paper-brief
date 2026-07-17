@@ -1,6 +1,7 @@
 """Cheap keyword pre-filter — runs before LLM annotation to cap token cost."""
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 
@@ -76,13 +77,45 @@ def select_for_llm(
     prescored: list[PreScore],
     mode: str = "strict",
     cap: int = 40,
+    explore_fraction: float = 0.25,
 ) -> list[PreScore]:
     """Pick the top candidates that are worth spending LLM tokens on.
 
     strict: require score >= 3 (at least one high-priority OR two medium hits).
     loose:  require score > 0  (any signal).
+    broad:  keywords rank the core slice, while a reserved exploration slice
+            admits papers with no configured keyword signal.
     """
-    threshold = 3.0 if mode == "strict" else 0.5
-    candidates = [c for c in prescored if c.score >= threshold]
-    candidates.sort(key=lambda c: c.score, reverse=True)
-    return candidates[:cap]
+    cap = max(0, cap)
+
+    def sort_key(candidate: PreScore) -> tuple:
+        published = candidate.paper.published
+        published_ord = published.toordinal() if published else 0
+        return (-candidate.score, -published_ord, candidate.paper.title.lower())
+
+    ranked = sorted(prescored, key=sort_key)
+    if mode == "strict":
+        return [c for c in ranked if c.score >= 3.0][:cap]
+    if mode == "loose":
+        return [c for c in ranked if c.score >= 0.5][:cap]
+    if mode != "broad":
+        raise ValueError(f"Unknown filter mode: {mode}")
+
+    signaled = [c for c in ranked if c.score >= 0.5]
+    un_signaled = [c for c in ranked if c.score < 0.5]
+    # Stable hashing gives the exploration slice topical variety while keeping
+    # reruns reproducible. Cross-day dedup advances through the remaining pool.
+    un_signaled.sort(
+        key=lambda candidate: hashlib.sha256(
+            candidate.paper.key().encode("utf-8")
+        ).digest()
+    )
+    fraction = max(0.0, min(1.0, explore_fraction))
+    explore_slots = min(len(un_signaled), round(cap * fraction))
+    core_slots = cap - explore_slots
+
+    selected = signaled[:core_slots]
+    selected.extend(un_signaled[: cap - len(selected)])
+    if len(selected) < cap:
+        selected.extend(signaled[core_slots : core_slots + cap - len(selected)])
+    return selected

@@ -17,6 +17,7 @@ def render_day(
     out_dir: Path,
     reviewed: int,
     min_score: int,
+    funnel: dict[str, int] | None = None,
 ) -> Path:
     """Write src/data/posts/YYYY-MM-DD.json and return its path.
 
@@ -28,9 +29,14 @@ def render_day(
     for i, (ps, a) in enumerate(kept, 1):
         entry: dict = {
             "rank": i,
+            "key": ps.paper.key(),
             "title": ps.paper.title,
             "title_zh": a.title_zh,
             "score": a.score,
+            "bucket": a.bucket,
+            "domain_fit": a.domain_fit,
+            "transfer_value": a.transfer_value,
+            "novelty": a.novelty,
             "authors": ps.paper.authors,
             "source": ps.paper.source,
             "arxiv_id": ps.paper.arxiv_id,
@@ -52,6 +58,7 @@ def render_day(
         "kept": len(kept),
         "reviewed": reviewed,
         "min_score": min_score,
+        "funnel": funnel or {},
         "papers": papers,
     }
 
