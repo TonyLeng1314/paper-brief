@@ -15,6 +15,7 @@ from typing import Any
 
 import openai
 
+from annotate import ModelUnavailableError, is_model_unavailable_error
 from deep_read import _safe_id, fetch_pdf_text
 from sources import Paper
 
@@ -150,9 +151,10 @@ def _ann_from_dict(key: str, d: dict) -> DeepAnnotation:
 def deep_annotate_papers(
     papers: list[Paper],
     research_profile: str,
-    model: str = "deepseek-v3.2",
+    model: str = "deepseek-v4-flash",
     api_key: str | None = None,
     cache_dir: Path = Path("cache"),
+    thinking: bool = True,
 ) -> dict[str, DeepAnnotation]:
     """For each paper with an arxiv_id: fetch PDF, full-text annotate, cache.
 
@@ -162,7 +164,7 @@ def deep_annotate_papers(
     if not papers:
         return {}
 
-    base_url = os.environ.get("OPENAI_BASE_URL") or "https://api.deepseek.com/v1"
+    base_url = os.environ.get("OPENAI_BASE_URL") or "https://api.deepseek.com"
     client = openai.OpenAI(
         api_key=api_key or os.environ.get("OPENAI_API_KEY"),
         base_url=base_url,
@@ -210,16 +212,26 @@ def deep_annotate_papers(
         )
 
         try:
-            resp = client.chat.completions.create(
-                model=model,
-                max_tokens=8000,
-                temperature=0.2,
-                messages=[
+            request: dict[str, Any] = {
+                "model": model,
+                "max_tokens": 8000,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_payload},
                 ],
-            )
+                "extra_body": {
+                    "thinking": {"type": "enabled" if thinking else "disabled"}
+                },
+            }
+            if not thinking:
+                request["temperature"] = 0.2
+            resp = client.chat.completions.create(**request)
         except Exception as e:
+            if is_model_unavailable_error(e):
+                raise ModelUnavailableError(
+                    f"Model {model!r} is unavailable at {base_url}; check the "
+                    "model ID and OPENAI_BASE_URL."
+                ) from e
             log.error("[deep %d/%d] %s — LLM call failed: %s",
                       i + 1, len(papers), p.arxiv_id, e)
             continue

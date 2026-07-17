@@ -29,7 +29,7 @@ Python 数据管道和 Astro 站完全解耦:Python 只产 JSON,Astro 通过 Con
 1. **Create the repo**: `paper-brief` (Public)。把这个目录推上去。
 2. **Add secrets**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - `OPENAI_API_KEY` — 你的 LLM 提供商的 API key(DeepSeek 官方 key 或中转站的 key)。
-   - `OPENAI_BASE_URL` —(可选)只在走中转站时填,例如 `https://www.micuapi.ai/v1`。走官方 DeepSeek 留空即可,默认 `https://api.deepseek.com/v1`。
+   - `OPENAI_BASE_URL` —(可选)走官方 DeepSeek 时删除该 secret 或设为 `https://api.deepseek.com`;只有使用中转站时才填写中转地址。
 3. **Enable Pages**: Settings → Pages → Source: `GitHub Actions`。
 4. **Edit your taste**:
    - `research_profile.md` —— 你是谁、你在研究什么、什么算 "relevant"。这段会被 LLM 缓存。
@@ -48,7 +48,7 @@ Python 数据管道和 Astro 站完全解耦:Python 只产 JSON,Astro 通过 Con
 ## Cost
 
 - arxiv / HF Papers / Semantic Scholar:免费。
-- LLM:初筛和深读默认 `deepseek-v3.2`; broad 模式最多初筛 180 篇,实际费用取决于服务商定价和当日新论文数。
+- LLM:初筛和深读默认官方 `deepseek-v4-flash`;初筛关闭 thinking,全文深读开启 thinking。broad 模式最多初筛 180 篇,实际费用取决于当日新论文数。
 - GitHub Actions:Public repo 免费额度足够。
 
 ## Local dev

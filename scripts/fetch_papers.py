@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from annotate import annotate_papers
+from annotate import ModelUnavailableError, annotate_papers
 from deep_annotate import deep_annotate_papers
 from filter import prescore, select_for_llm
 from render import render_day, update_index
@@ -236,15 +236,21 @@ def main() -> int:
         profile = profile_path.read_text(encoding="utf-8")
         llm_cfg = cfg.get("llm", {})
         triage_model = llm_cfg.get("triage_model") or llm_cfg.get(
-            "model", "deepseek-v3.2"
+            "model", "deepseek-v4-flash"
         )
         batch_size = llm_cfg.get("batch_size", 10)
-        annotations = annotate_papers(
-            [c.paper for c in candidates],
-            profile,
-            model=triage_model,
-            batch_size=batch_size,
-        )
+        triage_thinking = bool(llm_cfg.get("triage_thinking", False))
+        try:
+            annotations = annotate_papers(
+                [c.paper for c in candidates],
+                profile,
+                model=triage_model,
+                batch_size=batch_size,
+                thinking=triage_thinking,
+            )
+        except ModelUnavailableError as exc:
+            log.error("%s", exc)
+            return 3
         log.info("Annotated %d papers", len(annotations))
         if not annotations:
             log.error(
@@ -291,14 +297,20 @@ def main() -> int:
         log.info("Deep-reading %d papers (PDF + LLM)…", len(kept))
         llm_cfg = cfg.get("llm", {})
         deep_model = llm_cfg.get("deep_read_model") or llm_cfg.get(
-            "model", "deepseek-v3.2"
+            "model", "deepseek-v4-flash"
         )
-        deep_annotations = deep_annotate_papers(
-            [ps.paper for ps, _ in kept],
-            profile,
-            model=deep_model,
-            cache_dir=Path(args.cache_dir),
-        )
+        deep_thinking = bool(llm_cfg.get("deep_read_thinking", True))
+        try:
+            deep_annotations = deep_annotate_papers(
+                [ps.paper for ps, _ in kept],
+                profile,
+                model=deep_model,
+                cache_dir=Path(args.cache_dir),
+                thinking=deep_thinking,
+            )
+        except ModelUnavailableError as exc:
+            log.error("%s", exc)
+            return 3
         log.info("Deep-annotated %d/%d papers", len(deep_annotations), len(kept))
 
     fp = render_day(

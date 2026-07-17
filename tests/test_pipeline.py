@@ -6,13 +6,17 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from annotate import Annotation
+import annotate as annotate_module
+import deep_annotate as deep_annotate_module
+from annotate import Annotation, is_model_unavailable_error
 from fetch_papers import load_seen, save_seen, select_by_bucket
 from filter import PreScore, select_for_llm
 from render import render_day
@@ -78,7 +82,7 @@ class CandidateSelectionTests(unittest.TestCase):
 
 
 class ConfigurationTests(unittest.TestCase):
-    def test_broad_discovery_and_v32_models_are_enabled(self) -> None:
+    def test_broad_discovery_and_v4_flash_models_are_enabled(self) -> None:
         config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
 
         self.assertEqual(config["filter"]["mode"], "broad")
@@ -87,8 +91,83 @@ class ConfigurationTests(unittest.TestCase):
             sum(config["filter"]["bucket_quotas"].values()),
             config["filter"]["max_papers_per_day"],
         )
-        self.assertEqual(config["llm"]["triage_model"], "deepseek-v3.2")
-        self.assertEqual(config["llm"]["deep_read_model"], "deepseek-v3.2")
+        self.assertEqual(config["llm"]["triage_model"], "deepseek-v4-flash")
+        self.assertEqual(config["llm"]["deep_read_model"], "deepseek-v4-flash")
+        self.assertFalse(config["llm"]["triage_thinking"])
+        self.assertTrue(config["llm"]["deep_read_thinking"])
+
+    def test_unroutable_model_errors_are_fatal(self) -> None:
+        error = RuntimeError(
+            "No available channel for model deepseek-v3.2 "
+            "(code: model_not_found)"
+        )
+        self.assertTrue(is_model_unavailable_error(error))
+        self.assertFalse(is_model_unavailable_error(TimeoutError("request timed out")))
+
+
+class DeepSeekRequestTests(unittest.TestCase):
+    def test_triage_disables_thinking_and_keeps_temperature(self) -> None:
+        p = paper("Embodied world model", "2607.11111")
+        response_content = json.dumps(
+            [
+                {
+                    "key": p.key(),
+                    "title_zh": "具身世界模型",
+                    "tldr": "摘要",
+                    "why": "阅读价值",
+                    "bucket": "direct",
+                    "domain_fit": 9,
+                    "transfer_value": 8,
+                    "novelty": 7,
+                    "score": 8,
+                }
+            ],
+            ensure_ascii=False,
+        )
+        completions = Mock()
+        completions.create.return_value = SimpleNamespace(
+            usage=None,
+            choices=[SimpleNamespace(message=SimpleNamespace(content=response_content))],
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+
+        with patch.object(annotate_module.openai, "OpenAI", return_value=client):
+            result = annotate_module.annotate_papers(
+                [p], "profile", api_key="test", thinking=False
+            )
+
+        request = completions.create.call_args.kwargs
+        self.assertEqual(request["model"], "deepseek-v4-flash")
+        self.assertEqual(request["extra_body"]["thinking"]["type"], "disabled")
+        self.assertEqual(request["temperature"], 0.2)
+        self.assertIn(p.key(), result)
+
+    def test_deep_read_enables_thinking_without_temperature(self) -> None:
+        p = paper("Embodied world model", "2607.22222")
+        completions = Mock()
+        completions.create.return_value = SimpleNamespace(
+            usage=None,
+            choices=[SimpleNamespace(message=SimpleNamespace(content="{}"))],
+        )
+        client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                patch.object(deep_annotate_module.openai, "OpenAI", return_value=client),
+                patch.object(
+                    deep_annotate_module,
+                    "fetch_pdf_text",
+                    return_value="full paper text",
+                ),
+            ):
+                deep_annotate_module.deep_annotate_papers(
+                    [p], "profile", api_key="test", cache_dir=Path(tmp), thinking=True
+                )
+
+        request = completions.create.call_args.kwargs
+        self.assertEqual(request["model"], "deepseek-v4-flash")
+        self.assertEqual(request["extra_body"]["thinking"]["type"], "enabled")
+        self.assertNotIn("temperature", request)
 
 
 class SeenStateTests(unittest.TestCase):
