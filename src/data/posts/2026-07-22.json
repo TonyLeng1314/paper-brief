@@ -1,0 +1,188 @@
+{
+  "date": "2026-07-22",
+  "kept": 4,
+  "reviewed": 4,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 19,
+    "unseen": 4,
+    "llm_candidates": 4,
+    "annotated": 4
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2607.19343",
+      "title": "Masked Visual Actions for Unified World Modeling",
+      "title_zh": "Masked Visual Actions for Unified World Modeling",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.19343",
+      "url": "https://arxiv.org/abs/2607.19343",
+      "published": "2026-07-22",
+      "tldr": "提出一种通过掩码视觉动作（MVA）统一世界建模的方法，在视觉-语言-动作（VLA）框架下联合预测被掩码的视觉token和动作token。",
+      "why": "直接针对VLA中的世界建模问题，其掩码预测机制与JEPA风格未来潜在预测高度相关，可能为V3/LWv2中的预测器/目标设计提供新的对比方案。",
+      "hits": [
+        "H:world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "如何将机器人动作以与预训练视频模型自身视觉空间对齐的方式表达，从而使得单个视频模型既能充当前向动力学模型（给定机器人动作预测场景响应）又能充当逆模型（给定期望物体运动恢复机器人行为），且能跨不同机器人形态泛化。",
+        "method": "提出 Masked Visual Actions，将机器人动作表示为视频中部分揭示的像素掩码轨迹（masked trajectories）。基于预训练视频模型 Wan-Fun-Control 2.2 14B，通过 LoRA (rank 256) 微调，输入为初始帧 + 掩码视频（掩码区域设为灰色），输出完整视频。训练数据源自 DROID 和 Robocasa，构造掩码通过 SAM 分割或 URDF 渲染。推理时通过掩码不同实体（机器人或物体）实现前向/逆模型切换。",
+        "key_contributions": [
+          "提出像素空间的统一控制接口 Masked Visual Actions，将机器人动作直接嵌入视频模型的原生表示中，实现 embodiment-agnostic 的动作条件化。",
+          "证明单个视频模型通过掩码不同的实体（主动 vs 被动）可在无显式逆模型微调下同时进行前向预测和逆模型推理（zero-shot 逆建模）。",
+          "在仿真和真实机器人上验证了三个下游应用：策略评估（rollout 成功率与真实世界相关系数 r=0.982）、模型基规划（Best-of-N 提升多个任务成功率 7-26%）、以及动作提取（逆模型 + IDM 达到 90% 成功率，超过 DP 和 ACT）。"
+        ],
+        "sim_benchmarks": [
+          "Robocasa",
+          "BEHAVIOR-1K"
+        ],
+        "real_robot": "Franka Emika Panda 机器人（自定义 3D 打印末端执行器），真实世界任务包括 bagging orange / stacking blocks / placing towel / closing drawer，每任务 20 条演示用于策略评估。",
+        "datasets": "训练数据：DROID（~1000 条演示，约 15 小时）和 Robocasa（~4000 条示例）。测试还使用 BEHAVIOR-1K 及自采真实世界数据。",
+        "compute": "8 块 NVIDIA H200 GPU，batch size 4，LoRA rank 256，训练约 10,000 steps（4 天）。",
+        "results_headline": "视频生成质量：DROID 上 PSNR 23.74（Ctrl-World 18.15），BEHAVIOR-1K 上 PSNR 22.90（Ctrl-World 18.39）。策略评估相关系数 r=0.982；规划中 coffee setup mug 成功率从 81% 提升至 90%（+9%）；逆模型在 coffee setup mug 任务成功率 90%（DP 80%，ACT 85%，SmolVLA 50%）。",
+        "baselines": [
+          "Ctrl-World",
+          "Wan-Move",
+          "Wan2.2 I2V",
+          "End-effector visualization",
+          "Skeleton visualization",
+          "Diffusion Policy",
+          "ACT",
+          "SmolVLA"
+        ],
+        "limitations": "模型学习的是视觉相关性而非因果物理规律；受限于基模型（Wan 2.2 14B）的推理速度和表达能力，且逆模型需要额外训练一个 IDM 来提取低层动作。",
+        "code_release": "将开源：代码、模型权重；项目网页 https://masked-visual-actions.github.io",
+        "relevance_detail": "本文对具身智能与视频世界模型研究者有直接借鉴意义：1）提出一种 pixel-space 的动作接口，将 low-dimensional 动作升维到视频模型的原生表示，实现了 embodiment 无关的条件化，且仅需少量数据微调（15h），这对构建可泛化的世界模型非常实用；2）通过掩码不同实体实现前向/逆模型统一，避免了训练多个专用模型；3）在策略评估和规划中展示了 video rollouts 与真实执行的高相关性，为世界模型作为模拟器提供了有力证据。其动作表示的设计思路（将动作视觉化为掩码轨迹）可以启发类似 VLA 或 JEPA 世界模型中如何将动作融入 latent 预测。",
+        "followup": "建议重点阅读第4节（数据集构建和训练细节）以及第5节实验（尤其是5.1中的跨 embodiment 泛化 ablation Table 2 和5.2的规划、评估、逆模型应用）。附录中的 VLM 评估协议（Gemini 3.1 Pro 打分）也可参考。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2607.17599",
+      "title": "ConsiSpace: Learning Geometric Consistency Matters for Video Spatial Reasoning",
+      "title_zh": "ConsiSpace: 学习几何一致性对视频空间推理至关重要",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.17599",
+      "url": "https://arxiv.org/abs/2607.17599",
+      "published": "2026-07-22",
+      "tldr": "提出ConsiSpace框架，通过强制视频帧间的几何一致性约束来提升模型的空间推理能力。",
+      "why": "几何一致性是机器人感知和世界模型的关键先验，该方法可直接用于改进VLA中视频预测的3D空间理解。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "视频空间推理中，多模态大模型（MLLMs）侧重语义而忽略几何一致性，导致冗余证据造成效率低下和跨视角推理不稳定。",
+        "method": "提出ConsiSpace框架，构建几何一致性记忆（GCM），包含隐式证据令牌和显式位姿/深度线索，通过几何门控写入、几何一致性融合和几何过滤检索来组织紧凑证据。进一步提出统一一致性自监督强化学习（UC-SSRL），使用答案一致性、度量一致性和拓扑一致性奖励在SFT后优化跨视角稳定性。",
+        "key_contributions": [
+          "提出ConsiSpace，将几何一致性作为证据组织原则和显式学习信号用于视频空间推理。",
+          "引入几何一致性记忆（GCM）和统一一致性自监督强化学习（UC-SSRL），提升效率和跨视角鲁棒性。",
+          "在VSI-Bench、OSI-Bench和MMSI-Video-Bench上平均提升12.6分，显著超过最强基线。"
+        ],
+        "sim_benchmarks": [
+          "VSI-Bench",
+          "OSI-Bench",
+          "MMSI-Video-Bench"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "SFT使用VSI-590K（室内）和nuScenes-10K（室外自构建）；UC-SSRL复用相同训练池",
+        "compute": "8×A100 80GB GPU；基于Qwen3-VL-8B-Instruct，冻结视觉和几何编码器，仅更新LoRA参数（rank 16）；SFT和UC-SSRL各200步",
+        "results_headline": "ConsiSpace (UC-SSRL) 在VSI-Bench平均76.6（超SpaceMind 69.6 +7.0，超Qwen3-VL-8B 57.4 +19.2）；OSI-Bench平均53.0（超VLM-3R 40.3 +12.7）；MMSI-Video-Bench Sufficient-Coverage 57.5（超VLM-3R 42.6 +14.9），Uniform-50 58.1（超VLM-3R 43.1 +15.0）",
+        "baselines": [
+          "Qwen3-VL-8B-Instruct",
+          "VLM-3R",
+          "SpaceMind",
+          "GeoThinker",
+          "Cambrian-S-7B",
+          "ViLaSR",
+          "Spacer",
+          "Spatial-MLLM",
+          "Map2Thought"
+        ],
+        "limitations": "依赖预测的深度和位姿，运动模糊/反射/无纹理区域可能影响GCM质量；写入门限和融合阈值目前为固定值，自适应策略可能进一步改善鲁棒性",
+        "code_release": "项目页面 https://believeht029.github.io/ConsiSpace/ 可能含代码，论文正文未明确开源",
+        "relevance_detail": "对具身智能中的空间感知和导航任务有直接价值：GCM的几何门控写入/融合与UC-SSRL的跨视角一致性训练可迁移至机器人长期记忆管理和多视角动作策略，提升对场景几何的鲁棒理解。机制简洁且实验充分（Tab 6-11、Fig 4-7），与V3/LWv2中的世界预测一致性要求有共同思路。",
+        "followup": "建议重点阅读Sec 4.5效率分析（Tab 4）和Sec 4.7消融（Tab 6-11）了解GCM各组件贡献；UC-SSRL奖励消融（Tab 7）和三重奖励互补性对设计后训练目标有参考价值。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2607.19344",
+      "title": "Appearance Pointers -- Multimodal Region Control of Diffusion Transformers",
+      "title_zh": "Appearance Pointers -- 扩散Transformer的多模态区域控制",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.19344",
+      "url": "https://arxiv.org/abs/2607.19344",
+      "published": "2026-07-22",
+      "tldr": "提出Appearance Pointers方法，通过多模态区域控制实现扩散Transformer中生成内容的细粒度外观编辑。",
+      "why": "多模态区域控制机制可迁移至机器人策略中的局部视觉条件化或场景编辑，提升VLA模型对细粒度视觉输入的操控能力。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "扩散Transformer（DiT）缺乏将多模态条件（文本/图像）精准定位到用户指定空间区域的能力，现有方法多为单模态或推理时干预，难以同时支持图像+文本、多区域、单次去噪。",
+        "method": "提出Appearance Pointers：先通过Region Correspondence Transformer将每个区域的掩码、图像/文本条件编码并跨模态对齐，再通过Region Aggregation Transformer沿空间位置聚合多区域信息生成紧凑的指针token，与原始图像/文本token一起注入DiT（基于Flux Kontext，LoRA微调），同时引入区域轮廓图提升边界精度。",
+        "key_contributions": [
+          "首次实现DiT上统一的多模态区域控制（图像+文本+掩码），支持生成、插入、姿态控制等全功能（Table 1）。",
+          "Region Correspondence + Aggregation模块仅增加3.33%参数，单次推理计算一次，token量可控。",
+          "提出AppearancePointers-37K合成数据集，含区域文本描述、多视角图像、材质编辑，并用VLM清洗。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "AppearancePointers-37K（自建合成数据集，含区域描述、外观图像、编辑对）",
+        "compute": "8×A100 GPU训练3天，LoRA rank 128，模型总参数约400M（相对Flux增加3.33%）",
+        "results_headline": "文本区域生成：CLIP-I 90.40, DINO-I 56.09, CLIP-IQA 95.02；图像区域生成：CLIP-I 93.29, DINO-I 69.31, MIoU 40.97，均超越MSDiffusion、DreamRenderer、Seg2Any等基线。",
+        "baselines": [
+          "InstanceDiffusion",
+          "DreamRenderer",
+          "Seg2Any",
+          "MSDiffusion",
+          "InsertAnything"
+        ],
+        "limitations": "对细小区域和人脸身份细节偶有丢失；当区域数超过10个时区域跟随能力下降。",
+        "code_release": "论文未明确开源",
+        "relevance_detail": "该工作展示了一种轻量级、模态无关的方法将空间条件注入DiT，其**区域对应+聚合机制**对于具身智能中多模态条件（如视觉观测+语言指令）的精确空间注入有直接借鉴价值。在VLA中，若需将视觉特征与语言指令关联到特定动作空间或目标区域，类似pointer token的设计可避免token爆炸并保持空间拓扑。此外，合成数据+自动化清洗流程对机器人领域的数据生成有参考意义。",
+        "followup": "重点关注Section 3.1（Region-Prompt Linking和Region Aggregation的详细架构）以及Appendix A.2（位置编码重采样策略）和Table 4（消融实验）。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2607.18955",
+      "title": "H^2SD: Hybrid Hindsight Self-Distillation",
+      "title_zh": "H^2SD: 混合事后自我蒸馏",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.18955",
+      "url": "https://arxiv.org/abs/2607.18955",
+      "published": "2026-07-22",
+      "tldr": "提出一种混合事后自我蒸馏方法，结合事后经验回放和自我蒸馏来提升强化学习样本效率。",
+      "why": "自我蒸馏与事后重放的结合为离线策略学习提供了新视角，可迁移至机器人模仿学习和模型预测控制中的经验利用。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    }
+  ]
+}
