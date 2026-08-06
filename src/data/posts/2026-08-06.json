@@ -1,0 +1,614 @@
+{
+  "date": "2026-08-06",
+  "kept": 12,
+  "reviewed": 13,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 28,
+    "unseen": 13,
+    "llm_candidates": 13,
+    "annotated": 13
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2608.04574",
+      "title": "When Memory Lies: An Empirical Study of Spatial Memory Staleness in VLM Agents",
+      "title_zh": "当记忆说谎:VLM智能体空间记忆陈旧性的实证研究",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04574",
+      "url": "https://arxiv.org/abs/2608.04574",
+      "published": "2026-08-06",
+      "tldr": "该论文实证研究了VLM智能体在导航任务中空间记忆随时间陈旧化的问题及其影响。",
+      "why": "空间记忆陈旧性是embodied navigation中的关键挑战，其发现和缓解策略可直接应用于VLA的长期记忆设计。",
+      "hits": [
+        "M:memory",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "记忆增强的 VLM 智能体在环境变化后会持有过期的空间记忆（如某格已从冰面变成洞），当前观测与记忆冲突时智能体可能自信地走向致死格子。论文系统研究：模型能否识别过期记忆、文本/视觉模态的审计能力差异、以及未经审计的过期记忆对下游导航安全造成的代价。",
+        "method": "构建 SpatialSTALE 动态 FrozenLake 测试台（8×8，每格一条自然语言记忆，50 个共享 seed，三种变化机制 L1 散点/L2 聚类/L3 在线增量）。先做逐条 stale 检测（文本列表或 384×384 渲染图两种观测），再用同一实例做导航，比较 NoMemory/NoFilter/SelfVerify/OMCD 四种记忆策略。OMCD 是核心干预：按 batch B=10 做二分 is_stale 审计并删除预测过期的条目（推理调用减少 9×，F1 仅损失 2.7pp），L3 下在每次环境事件后事件触发式重新审计。",
+        "key_contributions": [
+          "成对的记忆过期实证研究：在 6 个 VLM（3 闭源 + 3 开源）上把逐条文本/视觉审计与安全敏感导航因果链接，共 1,800 次检测与 12,000 次文本导航 episode",
+          "发现文本可解不蕴含视觉接地：同一网格上视觉 F1 从 Qwen 的 0.887 跌到 GLM 的 0.067，GLM 的流畅推理是记忆主导、对图像内容不敏感的伪审计",
+          "量化过期记忆的“安全税”：GPT-4o L2 下信任原始记忆的致死率 74.4% 是无记忆（28.0%）的 2.7 倍，OMCD 过滤把死亡降到 31.6%",
+          "定位残余瓶颈：检测 F1 与导航成功近乎不相关（r∈[+0.005,+0.060]），Oracle 标签也无显著增益，问题转向“在过滤后的记忆上做动作选择”"
+        ],
+        "sim_benchmarks": [
+          "FrozenLake（Gymnasium 动态 8×8 变体）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明（自生成 FrozenLake 网格：初始约 25% 洞，50 个确定性 seed 地图；记忆由 20 次随机游走 + 补全生成，每格一条，N=64）",
+        "compute": "闭源模型走官方 API；开源模型 GLM-5.1/InternVL3-2B/InternVL3-8B 在单机 2×NVIDIA H20（96GB）+ vLLM 0.6.3 本地推理，未训练/微调任何权重；训练算力未说明",
+        "results_headline": "GPT-4o L2 文本导航：NoFilter 死亡率 74.4% vs NoMemory 28.0%，OMCD 降到 31.6% 且成功率 32.8%（四种策略最优）；文本检测闭源三模型 + GLM 均 F1>0.88，视觉 F1 跨模型从 0.067 到 0.887 相差 13 倍；Oracle vs OMCD 无显著差异（|∆|≤0.02，p>0.2）",
+        "baselines": [
+          "NoMemory（无记忆）",
+          "NoFilter（原始全量记忆）",
+          "SelfVerify（单次全量自检）",
+          "Oracle（ground-truth stale 标签）"
+        ],
+        "limitations": "作者明确：8×8 FrozenLake 全可观测 + 符号化变化，数字是干净设置下的下界而非现场估计；机制分析（Oracle、轨迹分解、F1-成功相关）主要在 GPT-4o 上，视觉导航只是 10 seed 探索性预览；不声称 OMCD 普遍优于无记忆推理，模型特定的视觉不对称性不保证泛化",
+        "code_release": "论文宣称开源 code、50 seed 地图集、全模型轨迹与复现管线（文中未给出具体 URL）",
+        "relevance_detail": "对具身智能的直接价值：记忆-观测冲突与 read-time 过滤是持久记忆/地图类 agent（如 Voyager、MemGPT 风格）的安全关键机制，OMCD 的批式二分审计（9× 调用减少仅 2.7pp F1 代价）和轨迹形状诊断（NoFilter 死亡 8.5 步 vs 成功 14.5 步的 rush-into-hole 特征）都是可直接复用的评估/干预工具。与 V3/LWv2 有真实但间接的联系：Section 5.4 与 Appendix H.3 发现检测 F1 与下游导航成功解耦（r≈0）、Oracle 标签不再提升、瓶颈转移到动作选择，这与 latent world model 中“预测损失不等于下游策略质量”的问题同构；附录 J 中 GLM 记忆主导的流畅伪审计（flag 率对图像内容完全平坦，5.0% vs 4.5%）也是 latent 预测 collapse（预测忽略新观测）的具象类比。",
+        "followup": "值得深读 Section 5.4（过滤可靠后瓶颈转移到 action selection）与 Appendix H.3（F1-成功解耦散点图）、Appendix E（batch size 消融）、Appendix J（GLM 伪审计的 verbatim 案例）"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2608.05131",
+      "title": "OPD-V: Visual On-Policy Self-Distillation with Modality Balance",
+      "title_zh": "OPD-V:带模态平衡的视觉在策略自蒸馏",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.05131",
+      "url": "https://arxiv.org/abs/2608.05131",
+      "published": "2026-08-06",
+      "tldr": "该论文提出视觉在策略自蒸馏方法，通过模态平衡机制提升视觉策略的泛化能力。",
+      "why": "模态平衡的自蒸馏机制可改善VLA中视觉与语言模态的对齐，减少模态偏差对策略性能的影响。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "MLLM 的 On-Policy Self-Distillation (OPSD) 后训练中,现有方法构造特权信息(文本答案、证据裁剪图等)时忽略了 Modality Imbalance——模型过度依赖文本先验、未充分整合视觉输入,导致精心设计的教师特权信息被浪费,蒸馏有效性受限。",
+        "method": "提出 OPD-V:对同一条学生轨迹,Positive Teacher 用 Zoom-In Image(证据区域放大)、Negative Teacher 用 Mask Image(随机矩形遮挡),二者与 student 共享 textual query 和 on-policy prefix;按 token 计算 Modality-Balance Logits Margin δ=log q+(yt) − log q−(yt),正 margin 的 token 构成 Modality-Balance Trust Region,只在该区域内以 Jensen–Shannon 散度把 Positive Teacher 分布蒸馏给学生,并用 margin 加权;teacher 用 EMA 更新,logit 蒸馏采用 top-K=100 + tail 概率修正以省显存。",
+        "key_contributions": [
+          "识别 Modality Imbalance 会限制 MLLM OPSD 中特权信息的利用率,并证明 Modality Balance 本身可作为蒸馏用特权信息。",
+          "提出 Positive/Negative 双 teacher(Zoom-In vs Mask)与 Modality-Balance Trust Region 的 token 级选择机制,双 teacher 互补(+5.39pp 优于单 Positive teacher)。",
+          "在 6 个 benchmark、4 个 backbone、5 种后训练方法上一致提升:Qwen3.5-4B 平均 64.30→80.01(+15.71pp),同时 step 延迟降 24.7%–31.8%。"
+        ],
+        "sim_benchmarks": [
+          "V* Bench",
+          "ZoomBench",
+          "HR-Bench (4K/8K)",
+          "MME-RealWorld (EN/CN)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "主训练集:Vision-OPD 提供的 6241 个精选视觉推理样本,含 Original 图、textual query、verified target 与 bbox_images 字段(作为 Zoom-In 图);未用 OXE/DROID 等大规模预训练集。",
+        "compute": "1 节点 4×H200;batch 48;每 prompt 8 条 on-policy rollout;max response 1024 token;训练 1 epoch;EMA τ=0.05;top-K=100。总体 GPU·hours 未明确给出。",
+        "results_headline": "Qwen3.5-4B 六项平均从 64.30% 提到 80.01%(+15.71pp),超过最强后训练 baseline Vision-OPD(77.10)2.91pp,并反超 397B Qwen3.5(77.44)与 1T Kimi-K2.6(72.81);平均 step 时间 4B 352→240s(−31.8%)、9B 451→340s(−24.7%),最终响应长度较 OPSD 少 74.5%。",
+        "baselines": [
+          "SFT",
+          "GRPO",
+          "OPSD",
+          "Vision-OPD",
+          "VA-OPD",
+          "GPT-5.2",
+          "Gemini-3.1-Pro",
+          "Qwen3.5",
+          "Kimi-K2.6"
+        ],
+        "limitations": "论文未单列 limitation;可读出的局限:Zoom-In 依赖带 bbox 注释的证据裁剪(训练数据需较强标注),Negative teacher 用随机矩形 mask,选择规则较简单;训练仅 6.2K 合成样本、1 epoch,且只在视觉推理 benchmark 上验证,未涉及开放域或具身/真机场景。",
+        "code_release": "作者块提到 GitHub 发布(cubeQwen3-VL-8B / cubeQwen3-VL-4B / cubeQwen3.5-9B / cubeQwen3.5-4B),但正文未给完整 URL。",
+        "relevance_detail": "虽是 MLLM 视觉推理后训练而非具身/世界模型直接工作,但其核心机制可迁移:用正/负双 teacher 的 logits margin 定义 trust region、只选 margin>0 的 token 做蒸馏,而不是按置信度全量蒸馏——这种 teacher 对比式信号选择器可直接借鉴到 VLA 或潜在预测的 target/训练位置设计,尤其与 V3/LWv2 关心的 predictor/target 设计与表征坍缩有真实对应:margin 给出的正负对比可作为防坍缩的监督选择信号;top-K+tail 的 logit 蒸馏对大模型后训练省显存也有工程价值。§4.4 消融证明双 teacher 互补(80.01 vs 单 Positive 74.62 / 单 Negative 71.98),机制可信度高。",
+        "followup": "精读 §3.3–3.4(Modality-Balance Trust Region 定义与目标函数)与 §4.4/Figure 6(双 teacher 与图像操作消融),附录 B.1 讲清了 top-K 蒸馏实现;若迁移到 VLA 蒸馏,可对照 Figure 3 的 entropy/trust-region 训练动力学。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2608.04349",
+      "title": "Poly-OPD: Heterogeneous Multi-Teacher On-Policy Distillation for Capability-Selectable Flow Models",
+      "title_zh": "Poly-OPD:用于能力可选流模型的异构多教师在策略蒸馏",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04349",
+      "url": "https://arxiv.org/abs/2608.04349",
+      "published": "2026-08-06",
+      "tldr": "该论文提出异构多教师在策略蒸馏方法，使流模型能够按需选择不同教师的能力。",
+      "why": "多教师蒸馏与能力选择机制为VLA中的技能组合和模块化策略提供了新的训练范式。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "领先的开源文生图模型往往能力互补：FLUX.1-dev 擅长偏好对齐的美学质量，Z-Image 更忠实于组合指令（计数、空间关系、颜色、属性绑定），但两者使用不同的 autoencoder 和 noise schedule，latent 空间互不兼容，现有 score/velocity/trajectory 蒸馏要求共享坐标系，按构造无法适用。论文要解决的核心问题：把异构、latent 不兼容的多个 teacher 的能力蒸馏进单个紧凑 flow-matching student，能力互不干扰、推理时可低成本切换。",
+        "method": "Poly-OPD 的核心是异构 on-policy 蒸馏：(1) 像素桥——student 自采样图像 decode 到像素（异构模型唯一共享的坐标系），用 teacher 的 encoder 重编码，按噪声幅度（而非 timestep 索引）对齐 re-noise 后由 frozen teacher 精炼 r 步，得到对 student 自身输出的 on-policy 修正目标；(2) 在 frozen DINOv2 CLS 空间用余弦损失监督，避免直接在学生 latent 坐标匹配（MSE 会 collapse）；(3) capability-selectable adapters——用梯度兼容性诊断（Fig.3 显示 attention LoRA 梯度跨模式对齐、FFN 梯度冲突）决定共享 attention LoRA、隔离每能力 FFN adapter；(4) gap-aware 自适应采样，按 teacher-student 剩余 margin 而非原始难度分配组合类别训练预算。训练为 500 步 warm start + 800 步 OPD。",
+        "key_contributions": [
+          "首次形式化 multi-capability consolidation：把 latent 不兼容的异构 teacher 蒸馏进单一可选择能力的 flow-matching student（现有 latent-space 蒸馏按构造不可用）",
+          "像素桥 + 噪声幅度对齐 + DINOv2 语义空间监督让 on-policy 蒸馏跨越异构 latent 空间成立；refinement depth r 连续插值 off-policy 模仿与 on-policy 修正",
+          "用梯度兼容性测量（而非惯例）决定 adapter 共享-隔离边界：共享 attention LoRA、隔离 FFN adapter，能力切换只花一次 adapter swap 成本",
+          "2.5B SD3.5-Medium student 蒸馏 FLUX.1-dev(12B) 和 Z-Image(6B) 后 GenEval 67.3→73.3（超过两个更大的 teacher），DrawBench HPSv3 9.34→11.35"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验（本文为文生图任务）",
+        "datasets": "Pick-a-Pic 偏好 prompt（preference 模式）+ GenEval-style 的 Flow-GRPO split（composition 模式）",
+        "compute": "未明确说明 GPU 总量；student 为 2.5B SD3.5-Medium，两个 teacher 分别为 12B FLUX.1-dev 和 6B Z-Image，训练 500 步 warm start + 800 步 OPD（20 步 student Euler sampler，refinement 深度 r∈[15,20]）",
+        "results_headline": "单 2.5B student 的 GenEval 从 67.3 升至 73.3（超 Z-Image 69.4 与 FLUX 65.2），DrawBench HPSv3 9.341→11.354、ImageReward 0.922→1.168；two-object 组合 +14.93、属性绑定 +8.25、位置 +7.20，且属性绑定 67.0 超过两个 teacher（52.8/44.3）",
+        "baselines": [
+          "FLUX.1-dev (teacher 参考)",
+          "Z-Image (teacher 参考)",
+          "SD3.5-Medium (基础 student)",
+          "w/o CSA（共享 adapter）",
+          "w/o gap-aware（均匀采样）",
+          "w/o warm start（直接 OPD）",
+          "ConvNeXt / SigLIP / student latent MSE 作为感知特征空间"
+        ],
+        "limitations": "论文无明确局限章节；可读出：(1) 仅验证两个 teacher/两种能力，模式增多时 FFN adapter 数量与梯度诊断的扩展性未测；(2) OPD 每步需一次无梯度 student rollout + r 步 teacher 精炼 + 反向重算尾部，训练成本明显高于纯 warm-start；(3) 评估局限在 512×512 与 DrawBench/GenEval/DPG-Bench，未测更复杂真实场景。",
+        "code_release": "论文未提开源",
+        "relevance_detail": "虽是文生图论文，但三个机制对具身/VLA 研究有真实可迁移价值：(1) 像素桥 + frozen DINOv2 语义空间监督解决了『预测器与目标 latent 空间不兼容』的问题，Table 6 显示直接 student latent MSE 完全 collapse、而 DINOv2 CLS 空间最佳——这正是 JEPA 式 latent 世界预测（V3/LWv2 的 predictor/target 设计与 representation collapse）同构的设计问题；(2) Fig.3 的梯度兼容性诊断（attention 梯度跨能力对齐、FFN 冲突）可迁移到多任务/多能力 VLA adapter 的共享-隔离边界决策；按剩余 margin 而非难度分配预算的 gap-aware 采样可迁移到数据 curriculum 与 replay buffer 设计。",
+        "followup": "重点读 Sec 3.2 公式 (2)-(4)（像素桥与噪声幅度对齐）、Table 6（特征空间消融，latent MSE collapse vs DINOv2）、Fig.3 与 Sec 4.3（梯度诊断 + w/o CSA 的 -11.0 GenEval 代价）、Table 5（高噪声精炼 [15,20] 对布局/组合类更好）。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2608.04701",
+      "title": "UniWorld-View: Large-Baseline View Synthesis via Video Diffusion Models",
+      "title_zh": "UniWorld-View：基于视频扩散模型的大基线视角合成",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04701",
+      "url": "https://arxiv.org/abs/2608.04701",
+      "published": "2026-08-06",
+      "tldr": "利用视频扩散模型实现大基线条件下的新视角合成，扩展了世界模型在空间推理中的应用。",
+      "why": "大基线视角合成是3D场景理解与空间推理的关键能力，其视频扩散机制可直接迁移到具身智能的世界模型与场景预测中。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "单目图像或视频在稀疏输入、大相机基线的条件下做新视角合成时,重建类方法(NeRF/3DGS)会严重退化,生成类方法又缺少显式几何对齐导致相机控制不精确、出现遮挡伪影和几何失真。本文要解决的是如何同时做到精确相机控制与几何一致的任意大基线新视角生成。",
+        "method": "先用前馈几何模型(VideoDepthAnything / VGGT / Stream3R)把单目视频提升为动态点云,再提出 occlusion-aware 点云渲染:通过 triple-reprojection 累积 visibility mask 消除前后景撕裂,并用法线朝向过滤剔除背面误投影,得到几何干净的目标视角渲染。随后用基于 VACE(WAN2.1-14B)的双流条件视频扩散模型:点云渲染与 validity mask 走 Context Blocks 提供强几何约束,源视频外观经新增的 Ref-DiT block 的 cross-attention(Q=视角 token,K/V=源视频 token)注入以补全遮挡与纹理;训练采用两阶段策略,先固定 backbone 与 reference branch 在自监督动态视频对上学习几何鲁棒性,再固定 Context Blocks 训练 Ref-DiT 学习外观幻觉。",
+        "key_contributions": [
+          "提出 triple-reprojection + 法线过滤的 occlusion-aware 点云渲染,显式解决大基线渲染的前后景撕裂与背面误投影,为扩散模型提供一致几何条件",
+          "提出双流条件视频扩散架构(几何 Context Blocks + Ref-DiT cross-attention),解耦'对齐但残缺的几何'与'完整但不对齐的外观'两种条件",
+          "提出混合数据策略:用 triple-reprojection 自监督构造 100K 动态单目对 + 静态多视图 triplet,并通过两阶段训练先学几何后学外观",
+          "提出从单目视频生成同步多视角视频并用于动态 3DGS 重建的两阶段方案(静态 anchor + 迭代遮挡更新)"
+        ],
+        "sim_benchmarks": [
+          "WorldScore",
+          "RealEstate10K",
+          "CO3D",
+          "DL3DV"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练:OpenVid-1M(动态单目视频,100K 自监督对)、DL3DV 与 RealEstate10K(静态多视图,100K triplet);评测:RealEstate10K、CO3D、DL3DV、WorldScore。深度/几何估计用 VideoDepthAnything、VGGT、Stream3R。",
+        "compute": "基于 VACE(WAN2.1-14B)微调,视频 480×832、81 帧;两阶段各 10K 迭代,mini-batch 8,32 张 GPU,学习率 1e-5 / 5e-6;论文未给出总 GPU·days。",
+        "results_headline": "WorldScore-Static 85.53 排名第一,三项 Controllability 指标全场最高(Camera Control 97.72);zero-shot NVS 在 RealEstate10K、CO3D、DL3DV 上 PSNR/SSIM 均最优(如 RealEstate10K PSNR 21.73 vs Uni3C 21.54),LPIPS 在 CO3D 最优、DL3DV 第二;WorldScore-Dynamic 76.09 为第二。",
+        "baselines": [
+          "WorldScape-0.2 (MoE)",
+          "World Dreamer",
+          "EvoPhys-World",
+          "Inspatio-World",
+          "EonWorld",
+          "FantasyWorld-1.0",
+          "TeleWorld",
+          "Voyager",
+          "See3D",
+          "GEN3C",
+          "Uni3C",
+          "SEVA"
+        ],
+        "limitations": "作者未明确列出局限;可读出的有:WorldScore-Dynamic 仍非第一,动态场景需要两阶段生成(reference video + trajectory),且整个 pipeline 依赖多个前馈几何估计器估算深度与位姿,其误差会逐级传导;零样本 NVS 的 LPIPS 在 RealEstate10K 上不是最优。",
+        "code_release": "开源:GitHub https://github.com/PKU-YuanGroup/UniWorld-View,项目页 https://zhouhyocean.github.io/uniworld-view/",
+        "relevance_detail": "对做具身/世界模型的研究者,这篇的核心机制不是刷榜而是'如何把显式几何渲染干净地喂给视频扩散':triple-reprojection 累积 visibility mask + 法线过滤(Algorithm 1, Sec 3.2)给出了几何条件注入时消除遮挡歧义的具体工程方案,任何用点云/深度渲染做条件的世界模型都会遇到同类问题;双流 conditioning(Sec 3.3.1)把'对齐但残缺的几何'与'完整但不对齐的外观'分开处理,并用两阶段训练先固定 backbone 学几何鲁棒、再放开 reference branch 学外观(Sec 3.3.3),这种设计思路对 V3/LWv2 中 latent 预测与观测特征如何融合、如何避免表示坍塌有参考价值,尤其是几何 mask 的有效性判定环节。",
+        "followup": "重点读 Sec 3.2 的 Algorithm 1 与 Fig 3/4(occlusion disambiguation 与 normal filtering),以及 Sec 3.3.3 两阶段训练和 Table 1/2 的指标;若关注生成数据用于 agent 训练,再看 Sec 3.4 的多视角视频生成与 4DGS 重建流程。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2608.03632",
+      "title": "When Teachers Mislead: Spurious-Signal-Aware On-Policy Distillation",
+      "title_zh": "当教师误导时：伪信号感知的在线策略蒸馏",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.03632",
+      "url": "https://arxiv.org/abs/2608.03632",
+      "published": "2026-08-06",
+      "tldr": "提出一种伪信号感知的在线策略蒸馏方法，解决教师模型误导学生模型的问题。",
+      "why": "蒸馏中的伪信号问题与VLA训练中的表示崩溃和预测目标设计高度相关，其机制对改进当前项目的latent预测器有直接参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "On-Policy Distillation (OPD) 中,teacher 的 token 级监督可能由与输入无关的语言先验、格式惯例或模板化推理模式驱动,产生大幅值但缺乏 task-improving 方向的 spurious gradients,导致学生继承 teacher 的输入无关偏见;现有 selective OPD 方法只衡量信号的 confidence/divergence/learnability,无法识别这种 failure mode。",
+        "method": "SA-OPD 对 student 采样的每个 rollout token 计算两种 teacher–student divergence:完整输入下的 A^full_t,以及移除任务输入、保留同一生成前缀的 residual no-prompt 上下文下的 A^res_t,两者绝对差 (Input-Grounding Gap, ΔIG_t) 作为 input-groundedness 的轻量代理。过滤同时满足 low input-groundedness 与 high |A^full_t| 的 token (Bottom_{p1}(ΔIG_t) ∩ Top_{p2}(|A^full_t|)),并引入动态 FLMR (filtered loss-mass ratio) 约束 β 自适应调整过滤比例,最后仅在保留 token 上优化 reverse-KL 目标。",
+        "key_contributions": [
+          "形式化并识别 OPD 中此前未被探索的 failure mode——高影响但弱输入依赖的 spurious signals,并用 gradient SNR 分解与 parameter drift 定理 (Theorem 1/2) 说明其危害",
+          "提出无需外部验证标签的实用过滤框架 SA-OPD:残差 no-prompt 上下文对比作为 input-groundedness 代理,双条件 (低 groundedness × 高 impact) 过滤 + FLMR 动态预算控制",
+          "在 LLM 数学推理与 VLM 视觉理解/推理共 11 个 benchmark 上一致超过 Vanilla OPD 及 TIP、FiRe-OPD 等 selective OPD baseline,并在 4 组 teacher–student 规模下验证鲁棒性"
+        ],
+        "sim_benchmarks": [
+          "EvoChart",
+          "MMIFEval",
+          "CountQA",
+          "MathVision",
+          "Geo3K",
+          "MathVista",
+          "Math500",
+          "AMC 2023",
+          "AIME 2024",
+          "AIME 2025",
+          "MinervaMATH"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "数学推理:DeepMath (过滤后约 7K 条,难度≥6);VLM 视觉理解:VERO-600K 的 Captioning & IF / Grounding / Counting & Search 子集 (各采 10%);视觉推理:MMRL30k (采 10%)",
+        "compute": "8×NVIDIA H20 (PyTorch 2.10, verl 框架);主实验 Qwen3-4B-Instruct→Qwen3-1.7B 与 Qwen3.5-35B-A3B→Qwen3.5-2B,训练步数 160–700,单任务耗时 1.9–5.5 小时;相较 Vanilla OPD 额外开销 +2.64%–7.53% (无新增可训练参数)",
+        "results_headline": "VLM 下视觉理解 avg 50.5→54.0、视觉推理 avg 60.4→63.5 (CountQA +7.2、Geo3K +5.0 vs Vanilla OPD);LLM 数学 avg 28.5→30.4 (Math500 较最强 prior baseline +3.0),且在所有 11 个 benchmark 上取得最佳或并列最佳",
+        "baselines": [
+          "Vanilla OPD",
+          "ExOPD",
+          "TIP",
+          "FiRe-OPD"
+        ],
+        "limitations": "过滤 token 中 69.9% 是实义词而非纯格式伪影,视觉理解任务上过度过滤有误伤有效感知信息的风险,需手动调动态 FLMR 阈值 β (文中最优 β=1.8);额外开销来自 teacher/student 在 no-prompt 上下文下的二次评分;数学推理增益相对有限 (avg +1.9);附录中的 SNR/parameter drift 理论为说明性分析而非严格保证。",
+        "code_release": "已开源:https://github.com/jjjyinuo/SA-OPD",
+        "relevance_detail": "这篇 selective OPD 论文的可迁移机制很具体:用'残差 no-prompt 上下文'对比度量逐 token 监督的 input-groundedness,并只过滤'低输入依赖 × 高优化影响'的 token——对任何稠密 token 级训练信号 (VLA 动作头监督、world model 的 future-latent prediction loss) 都成立,因为这类 loss 同样会被模板、语言先验或平凡可预测模式污染。这个双条件筛选 + FLMR 动态预算可直接借用到 latent world prediction 中判断哪些未来隐状态目标真正由观测/动作驱动、哪些只是 prior 可预测的平凡模式,也可作为一种防表示塌缩的监督筛选策略;此外 OPD 本身也是 VLA post-training 的常用范式,Table 4 的双条件 ablation 与 Figure 4(b) 的熵分布分析 (过滤 token 不限于高熵区) 提供了与现有 entropy-based 选择互补的证据。",
+        "followup": "重点读 Section 4.3 的 Table 4 (双条件必要性)、Section 4.4 的 FLMR 动态阈值与 filtered-token 统计 (Figure 3/4、Table 5),以及 Appendix D 的开销分解和 Appendix E 的 token 可视化示例。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2608.05000",
+      "title": "Towards Physics of Multimodal Pretraining: Knowledge Flow, Modality Synergy, Early Unification, and Recipes",
+      "title_zh": "迈向多模态预训练的物理:知识流动、模态协同、早期统一与配方",
+      "score": 8,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.05000",
+      "url": "https://arxiv.org/abs/2608.05000",
+      "published": "2026-08-06",
+      "tldr": "该论文系统研究多模态预训练中的知识流动、模态协同和早期统一机制，并提出训练配方。",
+      "why": "多模态预训练的物理机制分析可为VLA的架构设计和训练策略提供理论指导。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "统一多模态预训练(语言+视觉理解+视觉生成)的设计空间巨大且长期靠启发式:三种能力之间的知识如何流动、何时引入视觉、参数怎么共享、数据怎么配比,都缺乏系统性的机理理解。",
+        "method": "基于 Transfusion 框架训练 decoder-only Llama-3 结构:文本用离散 next-token prediction,视觉生成在 SigLIP-2 RAE 潜在空间用 rectified flow(x-prediction)做连续生成;默认 1.5B backbone(2.3B 参数)带模态分离 FFN。通过语言/理解/生成数据的比例扫描、CLEVR 合成数据上的概念剔除(concept ablation)因果实验、以及 dense / split_ffn / split_ffn_attn / split_ffn_norm / split_all 五种参数共享结构的对比,系统拆解多模态交互机制。",
+        "key_contributions": [
+          "知识流不对称:语言是视觉理解与生成的通用助推器,视觉理解是生成的强先验,而视觉生成对语言和理解近乎中性;合成实验进一步显示迁移是概念依赖的(低级属性 color/shape 零样本双向都不迁移,结构概念 relation/size/count 理解→生成可迁移)",
+          "生成目标虽零样本不反哺理解,却为低级视觉概念的理解提供强 latent prior:微调恢复速度显著加快(Δmean acc +0.133~+0.273),而理解对生成的先验很弱,解释了'生成促进空间/几何推理但不促进语义分类'的矛盾",
+          "任务复杂度决定协同还是竞争:简单视觉/语言任务互相促进(背景图使语言 ppl 降 0.211),复杂真实分布(SSTK/video)产生容量竞争(ppl +0.052/+0.075);架构上共享 attention 与 norm 促协同、分离 FFN 隔离竞争,且该结论在 RAE / Raw Pixels / CLIP+VAE / AR(UniTok)四种视觉 tokenizer 下一致",
+          "早期统一+联合训练优于晚期对齐/顺序训练,发现 'vision laziness'(晚期集成让模型依赖语言先验、视觉分量欠优化);据此给出非对称数据配比+MoE+早期统一的 recipe,用 5% 算力取得强生成性能,并在 13.5B MoE / 2T tokens 上验证可扩展"
+        ],
+        "sim_benchmarks": [
+          "CLEVR(合成概念剔除测试床)",
+          "GenEval / DPG-Bench(文生图)",
+          "VQA 组 16 项(MMMU / TextVQA / MMBench / MathVista 等)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "预训练:DCLM(语言)+ Shutterstock-Image(SSTK,约 3.5 亿图文对,同时作为理解与生成数据源);SFT:Cambrian-7M;合成域:CLEVR(扩展形状库,五类概念:color/shape/relation/size/count)",
+        "compute": "受控实验:1.5B backbone(2.3B 参数,16 层 hidden 2048),训练预算 100B 到 2T tokens;规模验证:13.5B MoE 在 2T tokens 上训练;具体 GPU 数与训练天数未说明",
+        "results_headline": "分离 FFN+共享 attention/norm 把语言 ppl 从 dense 全共享的恶化(+0.272)转为超越单模态基线(-0.211);简单语言/背景图在四种 tokenizer 下都产生跨模态协同(如 Raw Pixels 上语言 ppl 降 0.266);recipes 以 5% 算力达到强生成性能并在 13.5B MoE 规模验证",
+        "baselines": [
+          "dense(全共享参数)",
+          "split_ffn_attn(注意力也分离)",
+          "split_ffn_norm(norm 也分离)",
+          "split_all(完全隔离)",
+          "单模态语言/视觉基线",
+          "CLEVR 零暴露 control(概念从两个流都剔除)"
+        ],
+        "limitations": "真实数据上的知识流结论仍属相关性,因果结论依赖 CLEVR 合成域,外推到开放域/机器人数据需验证;受控实验只用单一数据源(SSTK+DCLM);正文在 §5.3 截断,§6 recipes 与 13.5B MoE 的详细数字在文中未完整可见。",
+        "code_release": "论文正文未明确说明开源;有项目主页 https://junlinhan.github.io/projects/physics_of_mm_pretrain/",
+        "relevance_detail": "直接可迁移到 VLA / world model 训练设计:§5.3 的 'vision laziness' 定量证明,视觉能力若是晚期接入/用语言先验兜底,模型会系统性低估视觉分量,这正是 V3/LWv2 这类 latent world prediction 中要警惕的表示坍缩与语言捷径风险;§4.2 证明'共享 attention/norm + 分离 FFN'是促协同、隔离竞争的最优结构,直接指导 VLA 骨干里视觉 token、文本 token 与 action head 的接入位置与路由设计;§3.2 的 CLEVR 概念剔除协议是一套可复用的因果评估方法,可用来检验世界模型是否真的学到了视觉概念而不只是拟合语言先验。",
+        "followup": "重点读 §5(early unification 与 vision laziness 的量化证据)和 §6(数据配比与 scaling recipe);附录 B 看四种 vision tokenizer 下知识流一致性,C/D 看 CLEVR 生成与评估细节。"
+      }
+    },
+    {
+      "rank": 7,
+      "key": "arxiv:2608.05139",
+      "title": "Toward Skill-Native LLMs: Skill Entropy for Benchmarking and Training Long-Horizon Reasoning",
+      "title_zh": "迈向技能原生LLM:用于长时程推理基准测试与训练的技能熵",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.05139",
+      "url": "https://arxiv.org/abs/2608.05139",
+      "published": "2026-08-06",
+      "tldr": "该论文提出技能熵作为度量，用于基准测试和训练长时程推理中的技能分解与组合能力。",
+      "why": "技能熵为长时程规划中的技能分解提供了可量化的训练信号，可能改善VLA中动作序列的结构化学习。",
+      "hits": [
+        "M:long-horizon",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "长程推理要求模型在一条推理链内连续切换不同技能(如先做数学推导、再用结果规划日程),但现有 benchmark 只评估单技能,缺乏一个原则性指标来度量'技能切换'这一正交于领域能力的能力。论文要同时解决如何度量技能切换难度,以及如何把它变成训练信号来提升 LLM 长程推理。",
+        "method": "提出 Skill Entropy(式3):在以 Claude-opus-4.7 为固定参考模型下,两技能链式准确率与各自单技能准确率的平滑比值,是有方向性的成对难度度量;任务级熵取技能序列上相邻切换的平均,据此构建 Skill2-Bench(558 技能、9 域、按熵分低/中/高三档)。训练侧提出 Skill-Entropy RL:GRPO 下模型每步先输出 <skill> 标签再给答案,reward = 0.7*r_ans + 0.3*r_ent,其中 r_ent 用 embedding 相似度把预测技能序列映射到技能库后,比较其任务级熵秩与金标熵秩的接近度(式5-6)。",
+        "key_contributions": [
+          "形式化 cross-skill long-horizon task,并提出 Skill Entropy——一个方向性的、度量从技能 A 切到技能 B 难度的标量,以及任务级聚合方式",
+          "发布 Skill2-Bench:558 技能、9 个可验证/开放域、300 个测试任务;评测 8 个 frontier + 4 个开源模型发现单技能→跨技能准确率掉 4~13%,失败主因是后期步复用上一步的技能与答案模态",
+          "提出 Skill-Entropy RL:把技能熵从评测尺度变成训练奖励,Qwen3-4B 的 Skill2-Bench 分数从 34.4% 提到 68.4%、Qwen3-1.7B 从 14.6% 提到 40.1%,并可直接套用到 OpenR1-Math 等现成数据(+1.9% 平均优于 GRPO)"
+        ],
+        "sim_benchmarks": [
+          "Skill2-Bench (300 测试任务,9 域)",
+          "MuSR",
+          "LongBench-MuSiQue",
+          "GPQA-Diamond",
+          "MMLU",
+          "IFEval"
+        ],
+        "real_robot": "未做真机实验(本文是 LLM 长程推理工作,不涉及机器人)",
+        "datasets": "种子数据:OpenR1-Math、MMLU-Pro、LiveCodeBench、ZebraLogicBench、WikiTable、WebSRC、NaturalPlan,开放域由 LLM 生成 question-rubric;RL 训练用 Skill2-Bench 管线合成的 9K 跨技能任务(3K SFT + 6K RL),并另在 OpenR1-Math 的 6K 标注子集上验证即插即用",
+        "compute": "模型:Qwen3-4B-Instruct / Qwen3-1.7B(SFT 4 epochs, lr=1e-5;GRPO group size=8, lr=1e-6, KL=1e-3, λ_ans=0.7, λ_ent=0.3),RL 用 8×H100;GPU·days 未明确说明",
+        "results_headline": "Skill2-Bench 分数:Qwen3-4B 34.4%→68.4%、Qwen3-1.7B 14.6%→40.1%,分别比 GRPO +9.6/+7.9、比最强 skill-aware baseline STAT +7.0/+7.1;套到 OpenR1-Math 上 6 个数学 benchmark 平均比 GRPO +1.9%",
+        "baselines": [
+          "Base model (无微调)",
+          "SFT (同一批 3K traces)",
+          "GRPO (仅 answer reward,即去掉 skill-entropy reward 的消融)",
+          "Skill-Distill",
+          "SkillRL",
+          "STAT"
+        ],
+        "limitations": "Skill Entropy 的难度标定依赖参考模型 Claude-opus-4.7,且技能粒度靠 embedding 聚类+人工审查,规模受限;RL 只在 6 个可验证域训练,3 个开放域仅用于评测;跨技能任务由 LLM proposer 改写并用 verifier 过滤,仍可能有改写/验证噪声;小模型绝对分数仍低(1.7B 仅 40.1%)。",
+        "code_release": "已开源:https://github.com/Gen-Verse/Skill-Entropy-RL",
+        "relevance_detail": "这篇属于可迁移机制类论文(adjacent):核心证据是长程任务的瓶颈在'技能切换'而非单技能能力,且让模型每步显式输出一个结构标签(技能),再用序列对齐的辅助 reward 训练,带来 +9.6pp(GRPO 消融)的实质增益并可迁移到未见过的开放域。这个'对中间结构施加对齐监督、而非只监督最终输出'的机制与 V3/LWv2 的 JEPA 式 latent 预测目标同构——可作为 VLA 中对预测 future latent 加辅助对齐奖励的有力正面证据;其失败模式分析(后期步复用上一步技能与答案模态)也提示了长程 VLA rollout 中 action-mode 持续性的可能来源。值得读 3.3 的失败模式量化和 4.1 的 reward 设计。",
+        "followup": "重点看 4.1 的 reward 定义(式 5-6)与 D.7 的 λ_ans/λ_ent 权重消融、D.4 的 embedding 技能匹配实现,以及 3.3 的失败模式量化(错误技能选择使准确率约减半)。"
+      }
+    },
+    {
+      "rank": 8,
+      "key": "arxiv:2607.28048",
+      "title": "SKILL-KD: Contrastive Skill Distillation for LLM Agents",
+      "title_zh": "SKILL-KD:用于LLM智能体的对比技能蒸馏",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.28048",
+      "url": "https://arxiv.org/abs/2607.28048",
+      "published": "2026-08-06",
+      "tldr": "该论文提出对比技能蒸馏方法，将专家技能从LLM教师蒸馏到学生智能体。",
+      "why": "对比技能蒸馏为VLA中的技能迁移和知识压缩提供了新思路，可能提升策略的样本效率。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 LLM agent 技能获取方法要么从学生自身失败轨迹反思、要么直接总结教师成功演示,但弱学生失败时轨迹缺乏缺失知识/策略的证据,教师轨迹又太隐式,难以被学生内化为可复用指导;核心矛盾是如何把行为证据转化为目标 agent 真正能用的程序性技能,并防止技能库随局部更新发生漂移。",
+        "method": "提出 SKILL-KD,把技能视为教师-学生之间的显式蒸馏介质:同一任务上对比学生失败轨迹与教师轨迹,将 teacher-student 行为差异蒸馏为文本技能补丁;在 patched 技能库上重跑学生来验证并迭代修正补丁(最多 n=3 轮),只有被学生成功行为验证的补丁才写入技能库。consolidation agent 维护带 trace 链接的编辑历史 H,通过 trace-link 工具按需检索历史轨迹,再决定 add/modify/delete/skip 操作,即 Drift-Aware Skill Consolidation,保持技能库紧凑并抑制局部编辑导致的技能漂移。",
+        "key_contributions": [
+          "首次将技能形式化为冻结 LLM agent 之间知识蒸馏的介质,以教师-学生行为对比作为可迁移学习信号,不更新学生权重",
+          "提出 Adaptive Skill Distillation:在文本技能空间做迭代搜索,用学生重跑验证候选补丁是否真正改变行为,而非一次性总结",
+          "提出 Drift-Aware Skill Consolidation:基于 trace 链接编辑历史做 add/modify/delete/skip,抑制 case-specific drift、skill-bloat drift、destructive-update drift 三类漂移",
+          "在 5 个 benchmark、同族/跨族两组教师-学生设置上均超越 SkillOpt 等基线,且技能库更紧凑(SKILL-KD 38 条规则 vs Student-only 96 条)"
+        ],
+        "sim_benchmarks": [
+          "ALFWorld",
+          "SearchQA",
+          "SpreadsheetBench",
+          "DocVQA",
+          "LiveMath"
+        ],
+        "real_robot": "未做真机实验;唯一具身相关评测是文本交互仿真环境 ALFWorld(测试集 134 个未见环境,每 episode 最多 50 步)",
+        "datasets": "五个 benchmark 的官方/自建 train 划分:ALFWorld 39、SpreadsheetBench 80、SearchQA 400、LiveMath 35、DocVQA 107 条训练实例;无外部预训练数据",
+        "compute": "学生模型在 4×NVIDIA A100 80GB 本地推理,教师与 consolidation agent 走官方 API;模型规模:Qwen3.5-4B、Qwen3.7-plus、Qwen3.6-35B-A3B、ChatGPT-5.5",
+        "results_headline": "Group1(Qwen3.5-4B←Qwen3.7-plus)五任务平均 43.5→66.8,其中 ALFWorld 30.6→86.6(+56.0);Group2(Qwen3.6-35B-A3B←ChatGPT-5.5)平均 57.9→74.6,ALFWorld 59.7→96.3;两项均高于最强基线 SkillOpt(63.5/68.6)",
+        "baselines": [
+          "No Skill",
+          "EvoSkill",
+          "Trace2Skill",
+          "SkillGen",
+          "SkillOpt"
+        ],
+        "limitations": "每 benchmark 单独构建技能库、未做跨库迁移,且训练实例很少(ALFWorld 仅 39 条、LiveMath 35 条);推理时把整个技能文件放进 prompt,未学检索/路由;自适应轮数封顶 n=3,且教师失败时补丁接受率明显下降(45.3%→23.2%,但仍有 38.5% 被接受补丁来自教师失败轨迹);每组结果只跑一次完整测试集、无方差报告。",
+        "code_release": "论文未提及开源。",
+        "relevance_detail": "值得读:它把'技能'从经验总结重定义为教师-学生间的蒸馏介质,并给出三个可迁移机制——对比 teacher-student 差异而非单方面总结、用学生重跑做行为级验证、用 trace 链接编辑历史做防漂移技能库整合(§4.3 三类漂移 case study 很具体)。对具身智能的直接价值是 ALFWorld 未见环境上 +56.0 的提升,说明行为验证过的技能库可以泛化到新环境;对 VLA/技能库工程,其'教师更强轨迹+更丰富证据都不够,必须回到目标策略上验证'的消融(Table 2:Teacher-only 58.3、Pairwise 59.0 vs 完整 66.8)与你在 predictor 目标设计里'只堆监督信号、不检查预测行为是否被下游使用'的陷阱是同类方法论教训。与 V3/LWv2 无直接技术重叠,但 drift-aware consolidation 的编辑决策范式可借鉴到长期技能/记忆累积场景。",
+        "followup": "重点读'Effect of Adaptive Skill Distillation'(Table 2)、'Effect of Drift-Aware Consolidation'与 Case Study(Table 3 及三类漂移分析)、Table 4(教师失败时补丁接受率),以及 Appendix B 的 consolidation agent prompt 与 tool schema(get_original_trajectories / submit_ops),后者是可直接复用的工程细节。"
+      }
+    },
+    {
+      "rank": 9,
+      "key": "arxiv:2608.04570",
+      "title": "The Personalization Mirage: How LLMs Fabricate User Profiles, and Why Self-Monitoring Misleads",
+      "title_zh": "个性化幻象:LLM如何捏造用户画像以及为何自我监控会误导",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04570",
+      "url": "https://arxiv.org/abs/2608.04570",
+      "published": "2026-08-06",
+      "tldr": "该论文揭示LLM在个性化任务中会捏造用户画像，并指出自我监控机制可能加剧这一问题。",
+      "why": "对LLM幻觉的深入分析可迁移到VLA中的不确定性估计和错误检测，提升策略的鲁棒性。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "个性化 LLM 依靠持久记忆生成关于用户的内容时，大量输出属性超出用户实际透露的证据（over-inference, OI），且模型自以为知道这些属性；论文要首次系统量化这一现象，并检验自我审计（self-audit）能否作为可靠的安全防线。",
+        "method": "构造 MirageBench：150 个 persona（stereotypical / counter-stereotypical / neutral 各 50），每个 persona 只暴露 3 条自述事实 E，配 6 个沿 groundability 梯度设计的个性化任务（gift → dating profile → itinerary → stress → rec letter → apartment）。用固定独立 judge 模型 (Claude-Opus-4-7) 将每条 claim 分为 Grounded / Reasonable / Stereotype / Fabricated 四类（后两类合为 OI），并用 Probe / Task / Accum 三阶段分别测显式推断、隐式生成和多轮记忆累积，最后对比模型 self-audit 的 OI 与 judge 测得的 OI。",
+        "key_contributions": [
+          "首个 over-inference 基准 MirageBench，含四类忠实度 taxonomy 与独立 judge 流程，400 条人工验证 κ=0.863（四类）/0.900（二类）",
+          "大规模跨模型量化：12 个模型 OI 率全部落在 35%–49%（跨模型均值 41.6%，claim 加权 41.8%），且沿任务 groundability 梯度从 27% 到 59% 显著变化",
+          "发现 Self-Monitoring Inversion：跨模型层面上模型自报 OI 与 judge 测得 OI 负相关 (ρ=−0.60, p=0.044)，但同一模型内部 self-audit 仍能较好排序自身 claims（AUROC 0.58–0.83）",
+          "多轮 pilot 显示最强者会以 5–15 个新属性/轮近似线性累积推断 (R²>0.90)，且几乎不修订（移除率仅 0.4–5%），构成静默记忆污染"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "persona 来自 8 个手写种子 + 70 个 PersonaMem-v2 采样 + 72 个 LLM 约束生成（共 150）；评估语料为 12 模型 × 150 persona × 6 任务的 143,616 条 judged claims。",
+        "compute": "未说明训练算力；被测模型包括 GPT-5.5 / GPT-5.4-nano / GPT-4o-mini / Claude-Opus-4-6 / Gemini-3.1-pro / Gemini-3-flash / DeepSeek-v4-pro / DeepSeek-v4-flash / Qwen3.6-plus / Qwen3-8B / GLM-5.1 / Kimi-K2.5，论文未逐一给出参数量。",
+        "results_headline": "12 个模型 OI 率全部在 35%–49%（均值 41.6%），仅 24%–31% 的 claims 有证据支撑；自我报告 OI 与外部 judge OI 呈负相关 (ρ=−0.60, p=0.044)，即自报越安全的模型实际捏造越多。",
+        "baselines": [
+          "self-audit（模型自评 OI）作为与外部 judge 对比的内部信号",
+          "12 个模型横向对比（GPT-5.5 / Claude-Opus-4-6 / Gemini-3.1-pro / Qwen3-8B / Kimi-K2.5 等）"
+        ],
+        "limitations": "OI 指标依赖单一 judge 且仅一位人工标注者做验证；Self-Monitoring Inversion 只有 n=12 个相关模型家族、bootstrap CI 含零 [−0.90,+0.06]，属探索性发现；Accum pilot 仅用 2 个 persona 且 memory prompt 偏向保留而非修剪，绝对数值不可当精确结论；论文未实现或评测任何具体缓解方案。",
+        "code_release": "论文称将完整发布 MirageBench，但未提供 URL",
+        "relevance_detail": "这篇是 NLP 个性化记忆论文，对具身智能研究者属于 adjacent 但信号很强：(1) 评估方法论——用外部独立 judge 而非模型自报来衡量事实性，Self-Monitoring Inversion（Table 2）提醒在模型选择或跨配置对比时 self-reported confidence 是误导信号，这点对 VLA/latent world prediction 的评估同样成立，外部锚点 metric 比自信度更可靠；(2) 记忆累积污染——Table 4 / Appendix F 显示强模型多轮推断线性累积且几乎不修订，对 memory-augmented agent 的 write-time filtering、provenance tracking 和长期 closed-loop 稳定性有直接设计含义；(3) 任务设计——groundability 梯度（Table 3）与 counter-stereotypical persona 压力测试（Appendix E，7.8pp gap）可迁移到机器人任务难度标定和评估集构建。",
+        "followup": "先读 §5 主结果（Table 1/2/3）和 §6.2 的 Self-Monitoring Inversion 机制解释，再读 Appendix F（Accum 回归与移除率细节）和 Appendix G.2（Judge prompt，可直接复用的外部评估指令设计）。"
+      }
+    },
+    {
+      "rank": 10,
+      "key": "arxiv:2608.04436",
+      "title": "ToolArtist: Tool-Using Unified Multimodal Models for Agentic Image Generation",
+      "title_zh": "ToolArtist:用于智能体图像生成的工具使用统一多模态模型",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04436",
+      "url": "https://arxiv.org/abs/2608.04436",
+      "published": "2026-08-06",
+      "tldr": "该论文提出统一多模态模型，使智能体能够使用外部工具进行图像生成。",
+      "why": "工具使用与多模态生成的结合为VLA中的工具调用和视觉生成提供了新的交互范式。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 11,
+      "key": "arxiv:2608.04397",
+      "title": "NOLLI: A Difficulty-Calibrated Puzzle Benchmark for Diagnosing the English-Korean Performance Gap",
+      "title_zh": "NOLLI:用于诊断英韩性能差距的难度校准谜题基准",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 5,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.04397",
+      "url": "https://arxiv.org/abs/2608.04397",
+      "published": "2026-08-06",
+      "tldr": "该论文构建了一个难度校准的谜题基准，用于诊断多语言模型在英语和韩语之间的性能差异。",
+      "why": "多语言性能差距的诊断方法可迁移到embodied agent的多模态评估，帮助识别跨语言泛化瓶颈。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM 在韩语上的表现普遍低于英语,但现有静态翻译类基准无法定位失败来源:究竟是表层语言差异、书写系统(Hangul jamo 子音节)还是韩国特有知识造成的。本文构建可程序化生成、行为难度校准的英韩谜题基准 NOLLI,把'性能差距'拆解到具体处理环节。",
+        "method": "NOLLI 含 15 类谜题(25 个任务、7,500 实例),按三层谱系组织:L1 直接翻译(同生成器同参数,估计表层语言效应)、L2 Script Adaptation(韩语版改为基于 Hangul jamo 的运算,如 Cipher/Cryptarithmetic)、L3 韩语独有任务(文化或正字法,如 Kinship、Jamo Composition)。难度不按结构规模定义,而是行为校准:以 Gemini 3 Flash(medium reasoning)为参考模型,调生成器难度杠杆直至 Easy/Medium/Hard 准确率落入 75±10/50±10/25±10 band 且相邻档差≥10pp。所有实例 seed 可重生成、唯一解确定性验证、精确匹配评分,全流程无 LLM judge。",
+        "key_contributions": [
+          "发布 NOLLI:25 任务/7,500 实例的英韩谜题基准,含生成器、实例与确定性 evaluator,seed 可重生成且唯一解已验证。",
+          "行为难度校准协议:用参考模型准确率 band 反调生成器参数,层级排序迁移到 12 个非地板模型(85% 的 model–task 对保持 Easy>Medium>Hard)。",
+          "诊断性差距分析:直接翻译的英韩差距在 ±10pp 等价区间(TOST);Korean Cipher 差距最大 68.7pp,而同为 jamo 的 Cryptarithmetic 无系统惩罚,Jamo Composition 预测 Korean Cipher 准确率 R²=0.91。",
+          "难度来源分类:提出 size scaling、约束/信息结构、distractor 密度、过程深度四类机制,并证明显性规模指标在 7/15 类任务上不随经验难度单调增长。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(本论文为 NLP 推理基准,不涉及机器人)。",
+        "datasets": "不适用:本论文发布的是评估基准(7,500 个生成实例),不涉及预训练数据;所有模型用 HRET 框架统一评测。",
+        "compute": "论文未说明训练/评测算力;被评模型规模从 8B 到 397B 不等(MoE 激活参数从 5B 到 17B)。",
+        "results_headline": "直接翻译的英韩差距全部落在 ±10pp 等价区间内(−2.7~+5.0pp,TOST),GPT-5.5 宏平均 84.9% 最高;真正瓶颈在书写系统:Korean Cipher 最大差距 68.7pp(DeepSeek-V4-Flash 74.3%→5.7%),而 Cryptarithmetic 无系统惩罚;Kinship 缺口在全部 12 个非地板模型为正(Gemini 3.1 仅 +4.7pp,GPT-5.5 达 +36.7pp)。",
+        "baselines": [
+          "GPT-5.5 (frontier API)",
+          "Claude Opus 4.8",
+          "Gemini 3.1 Pro",
+          "Qwen3.5-397B-A17B / Qwen3.5-27B / Qwen3.5-9B",
+          "Gemma-4-31B",
+          "gpt-oss-120b",
+          "DeepSeek-V4-Flash",
+          "Llama-4-Maverick",
+          "EXAONE-4.0 / EXAONE-3.5",
+          "Solar-100B",
+          "Mi:dm-2.0",
+          "Llama-3.1-8B"
+        ],
+        "limitations": "难度 tier 仅对一个参考模型(Gemini 3 Flash)单一 reasoning-effort 设置定义,绝对 band 未必外推到其他模型;英韩模板语义等价只是假设;Korean Cipher 的 jamo 机制证据是相关性(12 个模型)且无英语字符级对照组,无法排除一般性 subword 操作弱点;Korean-only 对比存在任务族/上下文长度混淆,结论是诊断性而非因果性;评测限于精确匹配、单一语言对与 ±10pp 等价裕度。",
+        "code_release": "开源:论文首页标注 GitHub 与 HuggingFace 链接(正文未给出完整 URL);基准的生成器、实例与 evaluator 均随附发布。",
+        "relevance_detail": "这是 NLP 评测论文,与具身智能无直接任务重合,但评测方法论可迁移:§3.5/Figure 2 的'行为难度校准'协议(用参考模型准确率 band 75/50/25±10 反调生成器参数,而非按结构规模定难度)可直接用于机器人任务生成与课程设计;Table 3/§5.3 用反例证明显性规模指标在 7/15 类谜题上与经验难度背离(如 Kinship 跳数变少反而更难),对以'步数/物体数'定义难度的 VLA 基准(LIBERO/RoboTwin 类)是直接警示;§3.2 的三层诊断结构(匹配翻译→脚本改编→领域独有)与 §5.4 的 Levenshtein 错误分解是'把端到端成功率差距拆到具体处理环节'的模板,可类比用于区分 VLA 失败源于语言指令、感知符号还是动作知识,而非只报总体成功率。",
+        "followup": "重点读 §3.5(校准协议与 Figure 2)、§5.3/Table 3(难度杠杆与反例)、§5.4(Cipher 失败模式分析)与 Appendix D(重生成稳定性检查,24 个 cell 中 20 个留在 band 内)。"
+      }
+    },
+    {
+      "rank": 12,
+      "key": "arxiv:2608.05070",
+      "title": "HelloWorld: Enabling Socially Interactive Characters in Video World Models",
+      "title_zh": "HelloWorld:在视频世界模型中实现社交互动角色",
+      "score": 7,
+      "bucket": "explore",
+      "domain_fit": 6,
+      "transfer_value": 6,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.05070",
+      "url": "https://arxiv.org/abs/2608.05070",
+      "published": "2026-08-06",
+      "tldr": "该论文提出在视频世界模型中引入可交互的社交角色，使生成的世界模型能够支持多智能体社交互动。",
+      "why": "将社交互动引入世界模型是扩展embodied agent能力的新方向，其机制可能为VLA中的多智能体交互预测提供参考。",
+      "hits": [
+        "H:world model",
+        "H:video world model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频世界模型已支持相机控制和事件触发，但用户无法与画面内角色进行社会互动（角色不会看向镜头、回应问候等）。论文要解决如何让世界模型中的角色在用户指定的时间窗口内，按照文本指令向观看者做出自然、有向、时序准确的社交互动。",
+        "method": "提出自蒸馏pipeline：用基础视频生成模型LTX-2.3合成包含社交互动与相机运动的视频，用Pi3X恢复首帧点云和每帧相机位姿，重新渲染成warp video作为历史条件token注入DiT，用rank-32 LoRA在flow matching损失下微调（156段自生成视频、2000步、lr 1e-4）。推理时提出training-free的temporal cross-attention mask，令互动相关文本token只attend到F按钮按压窗口内的视频/音频帧，从而精确定位互动发生的时间。",
+        "key_contributions": [
+          "首个支持用户-角色社会互动的视频世界模型HelloWorld，通过自蒸馏+warp video相机条件实现，无需外部数据收集或人工标注。",
+          "构建HelloWorldBench，首个面向世界模型社交互动的benchmark：400样本、264个角色实例、101种互动类型，并提出ActAcc（做什么）、TimeAcc（何时做）、GazeDev（是否看向观众）三个解耦评估指标。",
+          "提出training-free的temporal cross-attention mask，将互动时间控制从随机水平（TimeAcc≈30-40%）提升到81.7%。",
+          "全面实验表明HelloWorld在互动质量上大幅超越五个近期世界模型baseline，同时保持SOTA画质（Aesthetic 5.27）、背景一致性（BgCons 96.9）和相机跟随（CamCtrl 82.9）。"
+        ],
+        "sim_benchmarks": [
+          "HelloWorldBench（自建）"
+        ],
+        "real_robot": "未做真机实验（纯视频世界模型生成任务）。",
+        "datasets": "训练数据：156段由LTX-2.3自生成、Pi3X自动标注相机轨迹的合成视频；benchmark图片来自Unsplash（120张）。预训练数据未说明。",
+        "compute": "训练与测试均在单张NVIDIA H200；LoRA rank-32，2000步；10秒片推理约60.2s（1280×704/24fps/241帧），FLOPs 9.4×10^15，比基础模型LTX-2.3增加约36%；模型总参数量未说明。",
+        "results_headline": "HelloWorldBench上TimeAcc 81.7%（baseline仅30.9-52.6，接近随机猜测33.3%）、GazeDev 40.2°（最低）、Aesthetic 5.27与CamCtrl 82.9均最优；ActAcc 41.4略低于LingBot-World的50.5但显著高于其余baseline；30人用户研究中在动作自然度、互动感、场景质量三项上偏好率均>66%，最高达90.9%。",
+        "baselines": [
+          "LTX-2.3",
+          "WorldPlay",
+          "Matrix-Game 3.0",
+          "LingBot-World",
+          "SANA-WM",
+          "Warp-as-History"
+        ],
+        "limitations": "作者明确：不支持实时交互（生成10秒视频需60.2s），世界生成依赖预指定相机轨迹与互动脚本；角色身份一致性、长视频与多轮持续互动尚未解决。",
+        "code_release": "论文提供项目页 https://github.com/AlayaLab/HelloWorld ；正文未明确代码是否已开源。",
+        "relevance_detail": "这篇论文把世界模型从“可探索场景”推进到“可与角色社交互动”，对world model研究是直接方向。两个机制值得迁移：一是self-distillation（Table 2）用模型自身生成数据+几何伪标注（Pi3X）微调，仅156视频/2000步/单卡就把互动能力注入生成模型，这种低成本数据自举思路可用于VLA/世界模型的数据闭环；二是training-free temporal cross-attention mask（Table 3）以attention masking而非改权重的方式控制事件时序（TimeAcc 35→81.7，SpeechInWin 52.5→69.1），可作为“几何条件（warp视频）与语义事件时间控制解耦”的设计参考。与V3/LWv2的latent JEPA预测路径不完全同构，但其时序条件控制与自蒸馏数据策略有具体借鉴价值。",
+        "followup": "重点读Sec 3.2-3.3的自蒸馏训练细节与temporal mask公式（Eq.4），以及Table 2/3的ablation——前者证明数据来源决定“是否面向观众”（GazeDev 51.3→40.2），后者证明mask对时序控制的精确作用。"
+      }
+    }
+  ]
+}
