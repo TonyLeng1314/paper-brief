@@ -1,0 +1,1101 @@
+{
+  "date": "2026-08-12",
+  "kept": 25,
+  "reviewed": 38,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 53,
+    "unseen": 38,
+    "llm_candidates": 38,
+    "annotated": 38
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2608.09853",
+      "title": "RynnValue: Scaling Robotic Value Foundation Models with Temporal Distance",
+      "title_zh": "RynnValue: 利用时间距离扩展机器人价值基础模型",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09853",
+      "url": "https://arxiv.org/abs/2608.09853",
+      "published": "2026-08-12",
+      "tldr": "提出了一种名为 RynnValue 的方法，通过时间距离（temporal distance）来扩展机器人价值基础模型的规模。",
+      "why": "该工作直接针对机器人学习中的价值函数建模，其时间距离机制可能为长时程任务和奖励设计提供新思路。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "通用机器人 reward 模型逐渐成为 robot learning 扩展的瓶颈，但现有监督依赖 preference 或 normalized progress 这类任务内部锚点，难以跨 embodiment 和数据源迁移。本文提出用 temporal distance（从观测到语言目标的有向 cost-to-go）作为可扩展的 value 监督目标，并训练一个开源 value foundation model RynnValue。",
+        "method": "RynnValue 基于 RynnBrain 多模态 LLM：输入语言指令 + K=8 个观测，为每个观测插入 N=8 个重复的绝对 <value> 查询组、相邻观测间插入相对 <relative_value> 查询组；两个分布头分别将绝对剩余时间（[0,512]s）和带符号相对位移（[-256,256]s）离散成 256 个 symlog bin 做 two-hot distributional regression，同时保留 LM head 做视频描述、指令匹配和成功预测。训练时用随机时间采样、temporal-order shuffling 和 value-isolation attention 抑制 shortcut，并用 10% instruction-mismatch augmentation 增强语言-视觉对齐，联合优化 L_abs + L_rel + 2·L_lang。推理时把预测 temporal distance 取负作为 potential Φ=-v，再通过 potential-based shaping 转成稠密 reward。",
+        "key_contributions": [
+          "把 reward modeling 重新定义为以 temporal distance 为目标的 value foundation model，标签只来自 timestamp + completion cutoff，无需 preference 对或 progress 归一化，可在 7,000+ 小时异质数据上扩展。",
+          "提出 grouped temporal queries + dual distributional heads（absolute/relative temporal value）的架构，并设计 value-isolation attention、随机时间采样和时间顺序 shuffle 来抑制时序 shortcut。",
+          "RynnValue-8B 在 RBM-EVAL-OOD 上平均 Kendall's τa=0.675，超过 fully preference-supervised 的 Robometer（0.655）和 progress-only baseline（0.292），并通过 potential-based shaping 提升真机 online/offline RL 成功率。"
+        ],
+        "sim_benchmarks": [
+          "RBM-EVAL-OOD（轨迹排序 benchmark）",
+          "RoboTwin（训练数据/仿真 benchmark）"
+        ],
+        "real_robot": "双臂 Franka 平台 + 双腕部相机 + 两个第三人称相机；4 个真机任务：Bread Basket Placement、Steak Serving with a Spatula、Box-in-Drawer Placement、Bimanual Box Transfer；每个策略测 20 trials；离线 RL 用 IQL 基于 π0.5 混合专家数据，在线 RL 用 DSRL 从 SFT/离线 checkpoint 初始化；reward model 零样本、无 target-domain fine-tuning。",
+        "datasets": "7,000+ 小时混合数据：AgiBot、EgoDex、Galaxea Open-World、InternData-A1、Open X-Embodiment、RDT、RoboCOIN、RoboMIND、RoboTwin、Soft-FOLD；1.67M 原始 episodes 经 subtask segmentation 和 cutoff relabeling 后得到约 3M instruction-conditioned clips；描述文本由 Qwen3-VL-27B 生成。",
+        "compute": "RynnValue-4B/8B（基于 RynnBrain）；bf16 + FSDP hybrid sharding，per-device batch size 2，lr 1e-6，gradient clip 100；具体 GPU·days 论文未明确说明。",
+        "results_headline": "RynnValue-8B 在 RBM-EVAL-OOD 平均 Kendall's τa=0.675，超过 preference-supervised SOTA Robometer（0.655）并远超 progress-only（0.292）；真机 online RL 平均成功率从 52.5% 提升到 72.5%，offline RL 从 63.8% 提升到 82.5%，Bimanual Box Transfer 在线比 Robometer 高 35pp。",
+        "baselines": [
+          "Robometer (RBM-1M)",
+          "Robometer (Progress only)",
+          "RoboReward-4B/8B",
+          "VLAC-2B/8B",
+          "GVL",
+          "Dopamine-GRM-2.0-8B-Preview",
+          "Sparse Reward",
+          "SFT"
+        ],
+        "limitations": "当前只用短窗口 8 帧采样，未支持流式/长时序推理；temporal distance 假设近似 minimum-time 目标，未纳入 energy/safety/precision 等任务代价；仅靠第三人称 RGB 在视觉歧义的精度敏感任务（如 Box-in-Drawer）上 online 提升有限。",
+        "code_release": "开源：GitHub (https://github.com/alibaba-damo-academy/RynnValue) + HuggingFace/ModelScope 权重 + 项目页 (https://alibaba-damo-academy.github.io/RynnValue.github.io)。",
+        "relevance_detail": "直接相关：它把 value/reward 学习从 preference 或 progress 换成 temporal distance，提供了一个可跨 embodiment/数据集统一的监督接口，可作为 VLA world-model 和 latent prediction 的 target 设计参考。对 V3/LWv2 尤其具体的是其防 shortcut 机制：value-isolation attention 防止 value query 从其他观测的 value token 外推（类似 latent predictor 中切断 target 信息泄漏），随机时间采样和 temporal-order shuffling 迫使预测依赖视觉证据而非序列位置；Table 3 显示去掉 shuffle 后 τa 从 0.675 掉到 0.189，去掉 isolation 掉到 0.482，量化了每个组件对 representation quality 的贡献。potential-based shaping 把 value 输出转成稠密 reward 的接口也可直接用于闭环策略学习。",
+        "followup": "重点读 Section 3.2 的训练配方和 Table 3 的完整消融（shuffle / isolation / language / uniform sampling / relative），以及 Figure 4 的 scaling 分析（episode volume 早饱和 vs task diversity 单调提升）。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2608.09888",
+      "title": "BDH-CQ: In-Context Learning with Recurrent Latent Reasoning",
+      "title_zh": "BDH-CQ：带循环潜在推理的上下文学习",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09888",
+      "url": "https://arxiv.org/abs/2608.09888",
+      "published": "2026-08-12",
+      "tldr": "提出BDH-CQ方法，将循环潜在推理引入上下文学习，提升长序列推理能力。",
+      "why": "循环潜在推理机制与JEPA式潜在预测有共通之处，对具身智能体的潜在状态推理与长期预测具有直接借鉴价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "大模型推理通常依赖 token 化的中间思考(CoT),token 消耗、延迟与推理成本随推理链增长;而已有的递归 latent 求解器(如 HRM/TRM)又依赖任务专属优化,无法在推断时仅凭示范习得未见过的视觉变换。论文要把 in-context learning(示范更新循环记忆)与 recurrent latent reasoning(高维 latent 空间迭代计算、不输出中间 token)统一到同一系统 BDH-CQ。",
+        "method": "BDH-CQ 基于 Dragon Hatchling(BDH)架构(高维正激活、ReLU-low-rank 变换、linear attention 式循环联想记忆)。示范对按顺序输入,通过 S_t = U_θ(S_{t-1}, D_t) 持续更新循环记忆;查询经 E_θ(x*, S_K) 编码进结构化 latent workspace,执行 R 步迭代 H_{r+1} = F_θ(H_r, S_K),最后 G_θ(H_R) 直接解码输出网格,中间推理状态不解码成语言。训练目标为用前序示范预测精确目标网格,数据为 ARC-AGI-1 训练集、RE-ARC、ConceptARC、ARC-Heavy、ARC-GEN100K 加私有数据与增广;150M 参数主配置,推理按 LOW/MEDIUM/HIGH 三档 latent reasoning effort。",
+        "key_contributions": [
+          "提出 BDH-CQ,首次将 in-context learning 与 recurrent latent reasoning 结合:示范写进循环记忆,推理在独立的多向量 latent workspace 中迭代,避免 token 序列化中间状态",
+          "150M 参数在公开 ARC-AGI-1 达到 29.5% pass@2、每任务 $0.00070(约 0.85 H200 GPU-秒),突破此前报告的 cost-accuracy Pareto 前沿",
+          "用 ConceptARC 与冻结后的受控 ARC-like 生成任务刻画能力剖面:传播/复制可外推,排序与嵌套暴露不同失败签名,演示覆盖度决定外推成败(Table 3),组合能力依赖操作表示(旋转+移位 72/72、反射+移位 47/72、颜色交换+移位 0/72)",
+          "附录用 16 种 mechanic 分层生成集与确定性 ladder 定位局限:条件规则选择 -43.3 点、参数未在示范中出现时 30%→0%、面板贴合 vs 对角 3/40 vs 26/40"
+        ],
+        "sim_benchmarks": [
+          "ARC-AGI-1",
+          "ConceptARC"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练混合:ARC-AGI-1 训练集、RE-ARC、ConceptARC、ARC-Heavy、ARC-GEN100K 加私有数据并做增广;评估用公开 ARC-AGI-1(400 任务)与 ConceptARC(160 任务)",
+        "compute": "150M 参数模型;推理约 0.85 H200 GPU-秒/任务($3/H200 小时计 $0.00070/任务);训练算力与完整配方未公开(proprietary),仅称早期 1B–600B 预训练符合 Transformer 类 scaling law",
+        "results_headline": "ARC-AGI-1 29.5% pass@2、$0.00070/任务,比 ARC Prize 榜单上 GPT 5.6 Luna (Low)(34.2%, $0.040)便宜约 57x(计入 OpenAI 2026/7/30 的 80% 降价后约 11x);ConceptARC 严格任务 pass@2 59.38%、test-pair 77.92%,LOW/MEDIUM/HIGH 推理力度分别 21%/27%/29.5%。",
+        "baselines": [
+          "GPT 5.6 Luna (Low)",
+          "HRM",
+          "TRM",
+          "Coconut",
+          "Abstract-CoT",
+          "Recurrent-depth / looped Transformer 系列"
+        ],
+        "limitations": "中间推理完全在 latent 空间、无可解释轨迹,失败时只能看到错误网格而无法定位出错的规则;同任务内规则应用不一致(ConceptARC 160 任务中 52 个仅部分 test pair 正确);排序长度 8 与嵌套深度 5 外推显著下降;颜色交换等操作在部分表示下难以习得与组合;latent 维度、更新规则、训练配方未公开,独立复现受限;作者也承认生成集存在任务构造偏差(如手写 gravity 80–100% vs 生成 2.9%)。",
+        "code_release": "论文未提开源,并明确说明部分维度、更新规则与训练配方为 proprietary",
+        "relevance_detail": "这是 latent reasoning/continuous-thought 邻域的高质量工作,对做 latent 空间迭代预测的具身研究者有两点可迁移价值。(1)机制设计:记忆 S 与推理 workspace H 分离——示范写进循环记忆、查询在独立 latent workspace 中迭代,F_θ(H_r, S_K) 的迭代计算方式与 JEPA-style latent predictor 的迭代预测同构,可类比 VLA 内 latent world prediction 中 predictor/target 的组织与 action conditioning 方式。(2)评估方法论更值得借鉴:第 6.2 节 Table 3 的'演示覆盖度决定外推成败'(深度 5 嵌套 19/24→24/24)、6.4 节用 pair 准确率与严格任务准确率的 18.5 点 gap 区分'猜对个别输入'与'一致应用所学规则'、7 节 reasoning-effort 消融,正是评估 latent 预测器是否发生 representation collapse 或规则不一致时可直接采用的诊断范式。注意它做的是 ARC 视觉推理而非机器人策略,属 adjacent;若要迁移到 V3/LWv2,重点看其'记忆与计算分离 + 覆盖度消融'这两点。",
+        "followup": "精读第 6 节受控实验(6.2 外推曲线与 Table 3、6.3 组合实验 Table 4)、第 7 节 reasoning-effort 的 Table 5,以及附录 A.3 三个受控 ladder(条件规则选择、未示范参数值、panel 贴合/分离)与 A.4 失败结构表 9。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2608.09819",
+      "title": "Macaron-V1: Towards Open Continual Learning with Self-Improvement and Mixture-of-LoRA",
+      "title_zh": "Macaron-V1: 迈向具有自我改进和 Mixture-of-LoRA 的开放持续学习",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09819",
+      "url": "https://arxiv.org/abs/2608.09819",
+      "published": "2026-08-12",
+      "tldr": "本文提出了一个开放持续学习框架，结合自我改进机制和 Mixture-of-LoRA 技术来应对不断变化的任务分布。",
+      "why": "该工作将 Mixture-of-LoRA 与持续学习结合，其参数高效适应和灾难性遗忘缓解策略对机器人策略的持续学习有直接参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "集中式后训练把模型绑定在训练时的任务/环境分布上,发布后难以把真实环境积累的执行经验持续转化为改进;同时异构任务在共享参数上联合后训练会产生跨任务干扰。Macaron-V1 试图用『冻结底座 + 可扩展 LoRA 专家 + 模型-管线协同设计』实现开放持续学习(self-improvement)与模块化协作。",
+        "method": "核心是 Mixture-of-LoRA(MoL):冻结 744B GLM-5.2 底座,叠加 Chat(L0)/Agent(L1)/Coding(L2)/GenUI(L3)四个 LoRA 专家,由入口专家 L0 在 24-token 约束解码预算内每轮自推理选出一个专家,Proxy 执行 Route→Answer→Summary 三段生命周期,并靠确定性 own-view 重构实现跨适配器前缀 KV 复用。适应侧采用 Model–Harness Co-design(UI4A 组件原生 GenUI 管线、REPL 可执行组合 + 已验证复用、HCP 版本化 TOML 运行契约)与 MindForge 递归自我改进循环(任务发现/轨迹扩展/模型-配置联动更新),用 GRPO 在冻结稀疏底座上只更新 LoRA 参数。",
+        "key_contributions": [
+          "MoL 架构:冻结底座 + 每轮由 L0 自推理路由的单适配器选择,新增能力通过注册 LoRA 而非重训底座实现,serving harness 已开源",
+          "Model–Harness Co-design:把 UI4A/REPL/HCP 等管线当作一等优化目标,训练与 serving 共享显式契约以消除 train–serve 漂移",
+          "递归自我改进的实证:固定模型下自适应配置搜索覆盖 122/122 个 base-failure 任务,而最强的全集单配置扫描仅 11/122",
+          "MoL 部署优势:单底座多专家约 774.8B 逻辑参数,较 replicated-base 四副本(2.976T)减少约 74% 存储,并实测 900K token 长上下文 TTFT/TPOT"
+        ],
+        "sim_benchmarks": [
+          "Macaron ChatBench",
+          "Macaron LivingBench",
+          "UI4A-Bench",
+          "Vita delivery",
+          "TerminalBench(仅提及)"
+        ],
+        "real_robot": "未做真机实验(本文为 LLM agent / GenUI 系统,不涉及实体机器人)",
+        "datasets": "未说明主训练数据;基于 GLM-5.2 / Qwen3.6 底座做后训练,路由诊断使用 6,448 样本的 LoRA 训练 trace(非独立留出集)",
+        "compute": "未说明 GPU·days 与训练算力;模型规模:Venti = 744B 底座 + 4×约 7.69B LoRA(rank16,发布标签 748B),Tall = Qwen3.6-35B-A3B + 4×约 3.78B LoRA(rank64,合计约 50.1B);训练超参见附录 B.6",
+        "results_headline": "L0 路由准确率 99.12%(Venti)/ 99.04%(Tall)且 100% 规范标签合规;路由+摘要两跳约占三轮总延迟 32%;Vita 任务上路由 KV-reuse on/off 与直接单适配器无检测到质量差(0.632/0.650 vs 0.636);配置搜索覆盖率 122/122 vs 11/122。",
+        "baselines": [
+          "Direct L1 直接单适配器",
+          "replicated-base 四副本部署",
+          "full-set 单配置扫描(两套)",
+          "GLM-5.1 旧底座后端对照",
+          "六个前沿对比模型(论文未具名)"
+        ],
+        "limitations": "论文只隔离了 RSI 的 Expansion 阶段(模型冻结、无优化器更新),未验证完整训练循环的累积提升;路由 trace 非独立留出集,不估计泛化;缺少预算匹配的 single-LoRA 对比,跨任务干扰只是设计动机而非实证;每 turn 单意图路由是刻意简化;多代持续学习与跨团队/跨用户集体智能仍是开放问题。",
+        "code_release": "MoL serving harness 开源于 MindLab-Research/Mixture-of-LoRA-Harness;模型权重发布在 huggingface.co/collections/mindlab-research/macaron-v1;完整训练代码论文未提及",
+        "relevance_detail": "对具身智能研究者,MoL 提供了『冻结底座 + 可插拔 LoRA 专家 + 每轮可审计路由』的可迁移持续学习机制:在 VLA 后训练中可用它隔离动作头与共享权重,避免后续专门化覆盖基础能力,且『入口模型自推理做路由、不训独立 router』和『确定性 own-view 前缀复用』是可直接复用的工程机制。Model–Harness Co-design 把动作基板/工具面/提示词当作训练目标,122/122 vs 11/122 的配置搜索证据表明自适应搜索远胜固定全集扫描,可迁移到机器人数据采集与课程设计。若 V3/LWv2 担心 predictor 分支与 action head 在共享参数上互相干扰或表征坍缩,MoL 的专家隔离 + 路由可作为对照实验设计。",
+        "followup": "深读 §2.3–2.5(路由循环/own-view/KV 复用)、§3.2.5 自适应配置搜索、§6.2 主结果与 Table 3 的 Vita 三臂对比,以及附录 B.6 训练超参与附录 C 的部署成本细节。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2608.06065",
+      "title": "The Next Screenshot Knows: Gated Hindsight Distillation for Mobile GUI Agents",
+      "title_zh": "下一张截图会知道: 移动GUI智能体的门控事后蒸馏",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.06065",
+      "url": "https://arxiv.org/abs/2608.06065",
+      "published": "2026-08-12",
+      "tldr": "该论文提出了门控事后蒸馏方法，利用后续截图信息来改进移动GUI智能体的决策和动作预测。",
+      "why": "事后蒸馏机制为VLA中的未来预测和动作条件设计提供了新思路，门控机制可借鉴到世界模型预测器的目标设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "离线训练的移动 GUI agent 通常将成功轨迹分解为 prefix-action 对，丢弃动作后的下一帧截图，导致许多动作的合理性证据（例如点击某菜单后才会出现的选项）在训练输入中不可见，模型难以学到 grounded 的动作推理。",
+        "method": "提出 Gated Hindsight Distillation (GHD)：训练时用参数共享的 teacher 额外观察下一帧截图 o_{t+1}，对学生的 on-policy rollout 做逐 token 重打分；仅当学生失败（R(y) < τ_succ）且 teacher 的 position-wise top-1 动作能匹配示范动作时，才用 generalized Jensen–Shannon divergence (α=0.5, top-K=100) 做蒸馏，损失为 L = L_GRPO + 0.1·L_GHD。同时引入动态采样（最多 3 次 rollout-group 尝试）提高有效 hindsight 监督密度；推理时只保留 prefix-only student。",
+        "key_contributions": [
+          "识别出 GUI agent 离线训练中的未来依赖监督缺口：动作证据常只出现在下一帧，标准 imitation 无法提供可学习的 rationale",
+          "提出 next screenshot 作为 privileged 训练信息、参数共享 teacher 蒸馏的 GHD 框架，推理时零额外开销",
+          "设计 hindsight-correction gating，用 step verifier 与 teacher 动作匹配过滤不可靠蒸馏目标",
+          "在 AndroidWorld 与 AndroidLab 上相对 SFT/GRPO 取得一致提升，且逐项消融证明下一帧信息是主要增益来源"
+        ],
+        "sim_benchmarks": [
+          "AndroidWorld",
+          "AndroidLab"
+        ],
+        "real_robot": "未做真机实验；在 AndroidWorld 与 AndroidLab 移动端仿真/模拟 benchmark 上评估",
+        "datasets": "OpenMobile 训练轨迹；过滤 SFT 模型一次尝试即可解决的样本后，Qwen2.5-VL-7B 剩 6,968 条、Qwen3-VL-8B 剩 5,982 条",
+        "compute": "4×NVIDIA A100 或 RTX PRO 6000，GRPO rollout group G=8，训练 200 优化步；模型为 Qwen2.5-VL-7B 与 Qwen3-VL-8B，截图分辨率 420×896",
+        "results_headline": "GHD-7B 在 AndroidWorld Pass@1 达 52.73、AndroidLab 43.10，较 GRPO 分别 +5.60 和 +11.17；GHD-8B 达 AndroidWorld 66.47、AndroidLab 54.11，较 GRPO 分别 +5.12 和 +16.68，且为 open-data 方法中平均 Pass@1 最高",
+        "baselines": [
+          "SFT",
+          "GRPO",
+          "OpenMobile",
+          "STaR",
+          "GUI-Shift-style auxiliary task",
+          "UI-Venus",
+          "Step-GUI",
+          "ScaleCUA"
+        ],
+        "limitations": "论文未单列 limitations 小节。可读出的局限：仅验证 Android 移动 GUI 两个 benchmark，未覆盖网页/桌面 agent；teacher 只用下一帧截图，未建模多步未来信息；依赖 OpenMobile 合成轨迹与手工 verifier（type/value/format），verifier 或门控匹配规则可能引入噪声；动态采样上限 3 次，训练 wall-clock 对比非受控实验。",
+        "code_release": "论文称 code and checkpoints will be made available，未给具体 URL",
+        "relevance_detail": "对具身/世界模型研究有直接可迁移价值：它把‘下一帧观测’当作 privileged 训练信号，用参数共享、stop-gradient 的 teacher 沿学生自身 rollout 逐 token 蒸馏，这与 V3/LWv2 中未来 latent 预测、predictor/target 设计的核心困境（如何在不塌缩的前提下用未来信息监督当前表示）高度同构；其 gating 设计（学生失败且 teacher 可纠正才蒸馏，Eq.9）对防止伪监督和表示坍缩是一个具体的、可借鉴的机制。证据集中在 Table 4（下一帧贡献 +5.62 vs. 只给 action/reasoning 的 +1.29）和 Figure 3（distribution distillation 一致优于 STaR 式 off-policy MLE）。",
+        "followup": "重点读 Method 的 Gating 部分（Eq.8-9）与 Table 4、Figure 3 的 privileged-information 与蒸馏机制消融，以及 Table 5 动态采样的效率分析。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2608.08285",
+      "title": "Ego-OSCAR: Egocentric Open source Stereo CAptuRe System",
+      "title_zh": "Ego-OSCAR: 开源第一人称立体视觉采集系统",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08285",
+      "url": "https://arxiv.org/abs/2608.08285",
+      "published": "2026-08-12",
+      "tldr": "本文介绍了一个开源的第一人称立体视觉数据采集系统，用于获取 egocentric 视觉数据。",
+      "why": "该系统为获取高质量第一人称视觉数据提供了开源工具，对机器人学习和具身智能的数据采集环节有直接帮助。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "VLA 与 world model 的数据需求快速增长,但自我中心(egocentric)数据采集缺少一个低成本、可大规模复制、且带硬件级立体+惯性同步的开源硬件方案:研究级设备(Project Aria)封闭不可复制,消费级单目方案(GoPro)缺乏同步惯性与标定几何。",
+        "method": "构建开源头戴式立体惯性采集设备 Ego-OSCAR:硬件上采用 Dexcin 全局快门硬同步双目(1280×720@30FPS,基线 42mm)+ Radxa Rock 5C (RK3588,硬件 MJPEG 解码/H.264 编码)+ ICM-20948 IMU(120Hz)+ ESP32-S3 微控制器(通过相机 SoE 信号做跨时钟域时间同步、心跳 watchdog 与 LED 用户反馈)。软件上提供硬件加速录制管道、IMU 采样守护进程、离线每会话标定与视觉-惯性时间同步工具,并采集发布约 550 小时/每相机的 Ego-OSCAR-550h 数据集,附带密集自由形式动作标注与 WiLoR 3D 手重建。",
+        "key_contributions": [
+          "约 USD 200 的完全开源采集硬件:CAD、BoM、接线与组装文档齐全,仅用商用部件 + 3D 打印外壳,无定制 PCB,可被社区自行复现与改造",
+          "完整采集软件栈:硬件加速 ffmpeg 编码管道、ESP32 固件(SoE 中断处理、IMU 采样、UART 组帧、LED 锚点、watchdog),离线时间同步后残差仅 700µs",
+          "Ego-OSCAR-550h 数据集:1,462 个立体会话(≈550h/每相机),每会话带标定,209,315 个覆盖约 100% 时间线的自由形式动作片段 + 逐帧 3D 手重建,动作词表形成真实长尾(top-20 仅占 1.5%)",
+          "分布式部署验证:6 个月、25 名贡献者、13 台设备、40+ 环境,端到端 96% 可用会话率,并公开了三种主要失效模式与修复方式"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验;论文明确说明不演示策略训练的端到端收益,并将机器人策略评估列为未来工作",
+        "datasets": "自采数据集 Ego-OSCAR-550h(1,462 个立体会话,每相机约 550h,含动作标注、WiLoR 手重建、标定与同步 IMU);与 Ego4D、Ego-Exo4D、EPIC-KITCHENS、Nymeria 做特征对比",
+        "compute": "论文未明确说明训练算力;设备端为 Rockchip RK3588(2GB RAM)单板计算机,硬件加速编码可支持无丢帧的 30FPS 双目录制",
+        "results_headline": "传感器级结果:每相机重投影误差 <0.03px、校正后极线误差 0.4px、视觉-惯性同步残差 700µs、WiLoR 手检测覆盖率 94%、96% 端到端可用会话率;VINS-Fusion 立体惯性里程计在 20 段留出序列中 12 段轨迹稳定(RealSense 对比为 15/20)",
+        "baselines": [
+          "Project Aria(研究级封闭平台)",
+          "GoPro(UMI 使用的单目卷帘快门方案)",
+          "MobileEgo Anywhere(智能手机低成本采集,无硬件级立体同步)"
+        ],
+        "limitations": "论文自认未证明基于 Ego-OSCAR 数据训练的策略优于现有语料;无轨迹 ground truth,故只报告 VIO 收敛率而不报告 ATE/RPE;语料集中于印度 25 名贡献者与家庭场景(厨房为主);消费级 IMU 是主要位姿误差来源,且设备仅采集、无法实时拒绝坏会话。",
+        "code_release": "全部开源(硬件 CAD/BoM、ESP32 固件、采集与上传软件栈、标定与时间同步工具、数据集),采用宽松许可;论文未给出具体 GitHub URL",
+        "relevance_detail": "对具身智能研究者的直接价值在于:它把真实人类自我中心数据的规模化采集成本从研究级设备(数千美元、封闭)降到 ≈USD 200 且完全开源,并自带每会话标定、硬件同步立体和 120Hz IMU——这正好命中 VLA/world-model 数据瓶颈;论文引用的 EgoHumanoid(RSS 2026)已证明人类自我中心示范经对齐管道可让 humanoid loco-manipulation 比 robot-only 提升 51%,是这条数据路线价值的最强间接证据。对 V3/LWv2 的潜在联系在 Appendix A.2/A.3:若未来要引入真实人类视频做预训练或 latent prediction 对比,该数据集的密集时间线级自由形式动作标注(med 94 段/会话)、57,104 个 verb-object 组合和 192,509 个有序任务转换提供了现成的时序监督,而非粗粒度 clip 标签。注意论文本身未做任何策略/世界模型训练实验,其硬件与数据管道是可复用工程资产,而非算法结论。",
+        "followup": "重点读 Section 3.2(CD3 的 SoE 触发 + LED 锚点时间同步方案)和 Section 4.3(数据效用:立体深度、VIO 12/20 收敛率及其诚实边界),以及 Appendix A.3–A.5 的标注层统计与长尾结构。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2608.06296",
+      "title": "On-Policy Self-Distillation without Any Supervision",
+      "title_zh": "无监督的在线自蒸馏",
+      "score": 8,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.06296",
+      "url": "https://arxiv.org/abs/2608.06296",
+      "published": "2026-08-12",
+      "tldr": "提出了一种无需任何监督信号的在线自蒸馏方法，通过模型自身的预测进行学习。",
+      "why": "这种自监督蒸馏机制可能为机器人策略学习或世界模型训练提供新的无监督学习思路。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 on-policy self-distillation (OPSD) 等方法在 LLM 后训练中仍依赖外部监督(GT 答案、环境反馈或更强模型),无法扩展到无标注数据。本文要解决:能否仅用模型自身生成与内部一致性实现真正的无监督 self-distillation。",
+        "method": "提出 U-OPSD:对每个无标注问题采样 G 个独立 rollout,用 majority vote 得到 pseudo-answer,并设 self-consistency 阈值 τ=0.5;投票通过时选最长的 agree rollout 作为 pseudo-solution,作为 teacher 的 privileged context,在不一致 (disagreeing) rollout 的 prefix 上做 forward KL token-level 蒸馏(teacher π_sg[θ](·|x,y⁺,y⁻<t) → student π_θ(·|x,y⁻<t)),训练只落在模型自信但错误的位置。实现细节:teacher 冻结在初始策略、LoRA rank 64、全词表 forward KL + per-token pointwise clipping,150 步训练。",
+        "key_contributions": [
+          "首次实现完全无外部监督的 on-policy self-distillation——用模型自身 majority vote 构建 pseudo-solution 替代 GT 作为 privileged context",
+          "证明 consensus 作为 token-level 蒸馏的 teacher 上下文远比作为 scalar reward 有效:非 thinking 模式下比 TTRL/RENT/Intuitor 等 label-free RL 平均高 7.0-11.3%",
+          "仅用 OpenThoughts 30k 子集的问题语句,在 Qwen3-4B/8B 非 thinking 模式分别超过有 GT 监督的 OPSD 3.2%/2.3%,thinking 模式持平并超过 GRPO 0.7%/1.1%",
+          "消融揭示 teacher 需条件于完整推理轨迹而非仅伪答案(label-only 参考降低 10.3-15.8%),且 full-vocabulary KL 蒸馏在 pseudo-label 监督下优势更大,top-k 截断可作为实用优化"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "OpenThoughts 30k 子集(仅用问题语句,不用解答字段);评估 AIME24/AIME25/HMMT25/MATH500/AMC23",
+        "compute": "论文未明确说明训练算力;模型为 Qwen3-4B/8B/30B-A3B,LoRA rank 64,150 步、每 25 步存档",
+        "results_headline": "Qwen3-4B 非 thinking 平均 40.96→49.49(+8.5%),8B 43.57→54.31(+10.7%),均超过 SFT/GRPO/OPSD;thinking 模式下 4B/8B 平均约 77,与 OPSD 持平",
+        "baselines": [
+          "SFT",
+          "GRPO",
+          "OPSD",
+          "TTRL",
+          "RENT",
+          "Intuitor"
+        ],
+        "limitations": "仅在竞赛数学、需要可提取可规范化答案的领域验证,voting 机制难以直接迁移到开放生成;thinking 模式收益小(基础模型已强且 rollout 长,150 步预算内完整投票少);majority vote 受限于基础模型最常见答案的准确率,域内探测到 13.3% pseudo-label 为错",
+        "code_release": "https://github.com/williamium3000/u-opsd",
+        "relevance_detail": "与 V3/LWv2 的 JEPA 式隐状态预测存在真实机制性共鸣:它用 rollout 间一致性构建伪标签、只在模型自信但错误的位置做成对的 teacher/student 条件蒸馏,而非压成 scalar reward——这正是 latent world model 训练中'何时信任自身预测、在哪纠正'的样本选择与训练信号设计。对 V3/LWv2 最可迁移的结论来自 Sec 4.3 图 5:teacher 条件于完整推理轨迹比仅条件于离散答案高 10.3-15.8%,提示隐状态预测的 teacher 应带完整轨迹上下文而非压缩后的单一信号;Table 4 则说明全分布蒸馏在伪监督下比 sampled-token 强 13.7%,与 OPSD 路径上的 divergence 选择经验一致。",
+        "followup": "重点读 Sec 4.3:图 4(τ / G / EMA teacher 更新的消融)与图 5(teacher reference vs distillation target 交叉设计),以及 Table 4 的 divergence 计算策略对比。"
+      }
+    },
+    {
+      "rank": 7,
+      "key": "arxiv:2608.05136",
+      "title": "The Loss Does Not See the Basis, but Adam Does",
+      "title_zh": "损失函数看不到基，但Adam能看到",
+      "score": 8,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.05136",
+      "url": "https://arxiv.org/abs/2608.05136",
+      "published": "2026-08-12",
+      "tldr": "该论文揭示了Adam优化器对参数基变换的敏感性，表明其更新方向依赖于坐标系选择，而损失函数本身不变。",
+      "why": "对优化器基依赖性的理论分析直接影响VLA和世界模型训练中的参数化选择，理解Adam的坐标敏感性有助于设计更稳定的训练策略。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "解释为什么 Adam 等自适应优化器在分解模型 W=UV^T 上丢失了梯度下降固有的低秩隐式偏置，并把机制定位到损失的规范对称性（gauge symmetry，即 (U,V)→(UQ,VQ), Q∈O(k)）与优化器是否规范等变（gauge-equivariant）上，从而给出一个能对九种优化器排序的判据。",
+        "method": "定义优化器的 gauge equivariance，证明无记忆等变更新规则恰好是 Gram 矩阵决定的左预条件子 Φ(G)=H(GG^T)G（Theorem 4.5），并给出共享标量预条件流等价于重标定时间下的 gradient flow 的转移定理（Theorem 4.6）。构造 Adam-p 旋钮：在逐坐标分母 √v̂ (p=1) 与共享标量分母 s̄ (p=0) 之间连续插值，只改变分母各向异性；在矩阵感知、注意力头双胞胎（gauge/noise/A=I 三胞胎）和超光谱图像补全上验证。",
+        "key_contributions": [
+          "把九种优化器按规范等变性分成两类：GD、momentum、shared-scalar Adam、Muon、Shampoo 等变；Adam、RMSProp、signum、Lion、Adafactor 非等变；矩阵感知恢复误差等变类 ≤0.286 vs 逐坐标类 ≥0.42，中间留下空档",
+          "结构定理：memoryless 等变更新规则恰好是 Gram-determined left preconditioner Φ(G)=H(GG^T)G；等变性不等于 balancedness（Muon、Shampoo 都破坏 balancedness 但保持偏置）",
+          "Adam-p 旋钮单调复现低秩偏置，隔离出逐坐标分母的各向异性（而非自适应或动量）是破坏低秩吸引子的原因",
+          "注意力头的 W_Q^T W_K 与分解模型共享同一规范对称性：Adam 双胞胎第一步就分裂（logit 距离 3.6×10^-3，比噪声双胞胎高 4 个数量级），最终 per-head 不变量相对 Frobenius 距离达 56%，等变优化器停留在浮点精度；提出 gauge/noise/A=I 三胞胎作为等变性诊断协议",
+          "谱调度（spectral schedule）相图：目标尾部能量约 4% 为边界，之上 Muon 的 equal-rate 调度失效、GD 的 greedy 调度胜出，调和了 Muon 精确恢复与‘移除简单性偏置’两个矛盾报道"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "合成矩阵感知任务（planted X*，rank 3 / rank 5）；两个超光谱图像补全数据集；modular addition mod 47/97；tiny-Shakespeare 字符级语言模型（Karpathy, 2015）",
+        "compute": "未明确说明（矩阵传感 n=40/60/256，小规模 transformer d=64/128/256，CPU 与 GPU float64 实验）",
+        "results_headline": "矩阵感知插值下等变类恢复误差 0.00–0.29 vs 逐坐标类 0.42–0.57（Muon 近精确恢复 6.8×10^-6）；Adam 双胞胎最终 W_Q^T W_K 不变量相差 56%；超光谱上 GD 比 Adam 留出误差低 43–44%，有效秩也更低。",
+        "baselines": [
+          "Adam",
+          "RMSProp",
+          "Adafactor",
+          "Lion",
+          "signum (signSGD with momentum)",
+          "Shampoo",
+          "Muon",
+          "scalar-Adam (p=0, 控制组)",
+          "min-nuclear-norm 凸参考解"
+        ],
+        "limitations": "作者明确不推荐特定优化器、不承诺 benchmark 提升；偏置温和，仅在最优显式正则化本身温和且方向一致时胜过调参正则化；转移定理只传递路径/极限点结论，不传递收敛率等时间相关结论；非等变方法在更长预算下也能以其它路径到达低秩解（Appendix D.10 的 long-anneal signum），等变性既不充分也不必要。",
+        "code_release": "论文未给出明确 GitHub URL；正文引用了 experiments/nuclear_norm_reference.py、experiments/zoo_size_check.py 等脚本路径，推测代码随论文发布",
+        "relevance_detail": "这是一篇优化器机制的 adjacent 工作，值得读因为它给出了一个可迁移的判据和实验协议：任何用 Adam 训练的 transformer（包括 VLA 主干）都隐式选择了与坐标系相关的插值解，注意力头内 W_Q^T W_K 不变量可在两个规范等价初始化之间相差 56%，这是模型合并和可复现性问题的根源。对 V3/LWv2 这类在 Qwen3-VL 上做 latent world prediction 的训练，实用价值有三：(1) §6 的 gauge/noise/A=I 三胞胎诊断可直接用于判断 VLA 表示差异是结构性的还是初始化基选择造成的，适合用来排查 latent predictor 训练中 Adam 带来的不可复现性；(2) §7 的 Adam-p 共享标量分母是一个改动极小（只改分母为标量 RMS）的等变替代，可用来检验逐坐标自适应是否在损害表示一致性；(3) §8 的 spectral schedule 相图提示，若未来用 Muon 类等变优化器训练世界模型，需关注目标频谱尾部能量是否超过约 4% 的边界。",
+        "followup": "深读 §4（Theorem 4.5/4.6 的结构分类与转移定理）、§6 与 Table 3（注意力头三胞胎协议与数值）、§7（Adam-p 旋钮，Algorithm 1）、§8（谱调度相图与 Proposition 8.1），以及 Appendix D（调度、初始化、种子控制）。"
+      }
+    },
+    {
+      "rank": 8,
+      "key": "arxiv:2608.07169",
+      "title": "Agent Memory Distillation: Empowering Small LLM Agents with Hierarchical Teacher Memory",
+      "title_zh": "Agent Memory Distillation：用分层教师记忆增强小型LLM智能体",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.07169",
+      "url": "https://arxiv.org/abs/2608.07169",
+      "published": "2026-08-12",
+      "tldr": "通过将大型教师智能体的分层记忆蒸馏到小型学生智能体，提升其长程任务中的记忆与推理能力。",
+      "why": "记忆蒸馏为资源受限的具身智能体提供了一种可迁移的轻量化记忆增强机制，对长期任务中的记忆管理有直接借鉴价值。",
+      "hits": [
+        "M:memory",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "小模型 LLM agent(4B-8B)自身成功率低,自建记忆库中成功轨迹稀缺,记忆利用收益有限;而把大教师模型的经验直接迁移又会因 teacher-student capability gap 导致学生无法理解与执行。论文要解决如何把教师 agent 的成功经验以学生可消化理解的形式蒸馏给弱小 agent。",
+        "method": "AMD 是 training-free 框架:先用 GPT-5-mini 在成功轨迹上构建三层记忆——Workflow memory(任务级策略洞察,自然语言 + typed placeholder 抽象)、Subtask memory(中间粒度行为片段,简短描述 + 可执行代码示例)、Function memory(函数级调用范例,按函数名索引)。推理时 Workflow 与 Subtask 记忆在任务开始时 proactive 注入 system prompt(基于 embedding 余弦相似度检索),Function 记忆在工具调用报错时 reactive 检索注入作为纠错提示。",
+        "key_contributions": [
+          "提出首个系统的 training-free 教师→学生 agent 记忆蒸馏框架,用任务/子任务/函数三层粒度弥合师生能力差距",
+          "在 AppWorld、BFCL V3、ToolSandbox 三个工具调用基准上相对 zero-shot 平均提升 27.2/11.2/3.4 个百分点,部分 4B-8B 学生超过教师 GPT-5-mini",
+          "通过消融揭示关键设计规律:Subtask 记忆贡献最大(Table 2)、教师有效性同时取决于 teacher capability 与 student compatibility(Table 3)、k=1 检索最优(Figure 5)、高层规划用自然语言而底层执行用具体代码表示最优(Table 4)",
+          "用 disjoint evaluation(交叉划分 7:3 + self-excluded retrieval)证明增益来自记忆的真实泛化而非同任务数据泄漏(Appendix B.3)"
+        ],
+        "sim_benchmarks": [
+          "AppWorld",
+          "BFCL V3",
+          "ToolSandbox"
+        ],
+        "real_robot": "未做真机实验(纯文本工具调用 agent 基准,无物理环境)。",
+        "datasets": "论文未明确说明预训练/主训练数据,使用 benchmark 任务集:AppWorld test_normal 168 任务、BFCL V3 multi-turn base 200 任务、ToolSandbox base 129 场景。",
+        "compute": "论文未明确说明训练算力;AMD 本身 training-free,教师为 GPT-5-mini,学生为 Qwen3-4B/8B、Gemma4-E4B、Llama3.1-8B,embedding 用 OpenAI text-embedding-3-small,每实验重复 2 次取平均。",
+        "results_headline": "Qwen3-4B 在 AppWorld 从 14.88%→49.40%(+34.52p)、BFCL V3 从 15.50%→38.50%,Gemma4-E4B 在 AppWorld 达 54.17% 超过教师 GPT-5-mini 的 50.00%,且交互轮数从零样本的 23.8 降至 14.9。",
+        "baselines": [
+          "Zero-shot",
+          "ReasoningBank",
+          "MemP",
+          "SASM",
+          "Student Memory(用学生自建记忆替代教师记忆)"
+        ],
+        "limitations": "仅在 Python API/结构化函数调用的文本工具基准上验证,未覆盖多模态视觉 grounding 和开放式代码生成等非结构环境;记忆离线生成且推理时冻结,无法吸收学生自身的测试时成败,也不能适应分布偏移;依赖教师轨迹质量,强教师对弱学生不一定最优(Table 3 中 GPT-5.5 给 Qwen3-4B 的收益反而低于 GPT-5-mini)。",
+        "code_release": "论文未给出具体 GitHub 链接,但有项目主页 https://agent-memory-distillation.github.io/ (具体代码是否公开未在正文说明)。",
+        "relevance_detail": "值得读是因为它给出了 agent 记忆蒸馏的完整实证机制:三层记忆的粒度划分、proactive/reactive 注入策略、以及\"高层策略用自然语言、低层执行用具体代码\"的表示消融(Table 4),都是可迁移到机器人经验库/技能记忆设计的复用性方法论;k=1 最优以及\"学生自建记忆几乎不涨点\"的发现(Table 2、Figure 5)对\"给 agent 注入结构化先验 vs 让其自己积累经验\"这一设计选择有直接启发。与 V3/LWv2 的联系是间接的但具体:该文证明任务级结构化先验对小模型远比自生成经验有效,提示在 VLA latent 预测中任务级 prior 的表示格式(文本/代码/向量)本身可能比单纯扩大模型更关键,其 Table 4 的格式消融思路可直接借鉴用于设计先验注入的形式。",
+        "followup": "重点读 Section 5.1-5.5(Table 2/3/4 与 Figure 5)理解各记忆组分的边际贡献、教师选择与表示格式设计,并看 Appendix B.3 的 disjoint evaluation 确认记忆增益的真实泛化性。"
+      }
+    },
+    {
+      "rank": 9,
+      "key": "arxiv:2608.02508",
+      "title": "RoMeRL: Balancing Feedback Coverage and the Memory-Reward Trap in Self-Evolving Agent Memory via Reduced-Order Utility States",
+      "title_zh": "RoMeRL：通过降阶效用状态平衡自进化智能体记忆中的反馈覆盖与记忆-奖励陷阱",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.02508",
+      "url": "https://arxiv.org/abs/2608.02508",
+      "published": "2026-08-12",
+      "tldr": "提出降阶效用状态方法，在自进化智能体记忆中平衡反馈覆盖与记忆-奖励陷阱问题。",
+      "why": "记忆-奖励陷阱的识别与降阶效用状态设计对具身智能体的自进化与奖励设计具有直接参考价值。",
+      "hits": [
+        "M:memory",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "自进化 LLM agent 的 learning-based 记忆系统面临两个耦合问题：trajectory-indexed 效用状态随交互历史无限增长，把有限反馈稀释到不断扩张的状态空间；同时轨迹级 reward 被共同分配给 co-retrieved 记忆，导致无因果贡献的记忆（Memory-Reward Trap, MRT）被错误强化。",
+        "method": "RoMeRL 用一个固定 2×2 语义坐标状态替代不断增长的逐轨迹效用空间：按 outcome polarity（+/-）× memory dynamics（Consolidated/Adaptive）划分为 PCC、PAC、NCC、NAC 四个坐标，每坐标只保留一个代表性记忆及其 Q 值，新经验通过 warm-start 继承 + 在线 Q update（Q←Q+α(r−Q)）更新或替换坐标内容。检索按 score=(1−ωQ)·cos(语义)+ωQ·Q 排序。理论上证明状态降维把平均效用估计方差从 O(σ²Nt/kT) 降至 O(4σ²/kT)，并给出错误坐标稳态占用上界 d·γ/(γ+λ)。",
+        "key_contributions": [
+          "形式化 Memory-Reward Trap 并给出 gap-variance 分解（Theorem 1）：观测奖励只会更精确地逼近 raw-return，永远无法消除任务基线 v0 与归因偏差 ai 带来的 credit gap；探索只能降方差、不能去偏差",
+          "提出 RoMeRL 降阶记忆状态：每任务仅 4 个持久语义坐标（PCC/PAC/NCC/NAC），通过替换/晋升机制把反馈集中在有界 support，并用 Theorem 3 与 Proposition 1 分别刻画反馈密度与错误坐标稳态占用",
+          "在 LAB/ALFWorld/AppWorld 十个评估单元上取得最高宏平均 0.753，并将 Cold-Q 比降 80%、反馈密度提升约 6×、记忆库减 84.4%、LLM 调用减 21.1%"
+        ],
+        "sim_benchmarks": [
+          "LifelongAgentBench (OS/DB)",
+          "ALFWorld",
+          "AppWorld"
+        ],
+        "real_robot": "未做真机实验（在文本交互环境评估：ALFWorld 是文本化具身 household 规划环境，非物理机器人）",
+        "datasets": "未说明预训练数据；评估数据为 LifelongAgentBench OS/DB 各 500 任务（7:3 划分，seed 42）、ALFWorld 3,553 训练任务、AppWorld 105 train/60 dev",
+        "compute": "未明确说明；推理用封闭 API 模型 DS-V4-flash（LAB）、GPT-5.4-mini（ALFWorld）、GPT-5.6-luna（AppWorld），嵌入用 Text-Embedding-3-Large，temperature=0",
+        "results_headline": "三 benchmark 十单元宏平均 0.753，超最强 baseline MemRL 的 0.724（+2.9pp）；AppWorld SGC 0.286→0.326；MRT 压测中噪声更新 3.7→2.4、最终噪声比 1.02%→0.15%、SR 达 82.0%",
+        "baselines": [
+          "No Memory",
+          "RAG",
+          "Mem0",
+          "MemP",
+          "MemRL",
+          "MemRL+UCB",
+          "Pass@10"
+        ],
+        "limitations": "仍使用束级 outcome reward，未真正解决因果 credit assignment（作者明说）；Proposition 1 中 γ/λ 的估计需要坐标级反事实标签或等价归因；未在开放、更长 horizon 场景验证。",
+        "code_release": "已开源：https://github.com/YOUNG-fnxm/RoMeRL",
+        "relevance_detail": "对 agent 记忆与持续适应有直接价值：Theorem 1-2 的 gap-variance 分解量化了‘轨迹级 reward 学到的只是 raw-return 而非边际贡献’，这是任何把稀疏任务 reward 回传到 latent/记忆单元的具身系统都该警惕的机制；固定 2×2 语义坐标 + warm-start 替换是一种可迁移的抗稀释/抗坍缩设计——对 V3/LWv2 这类做 latent 价值/效用状态维护的系统，可用有限语义原型吸收轨迹级 feedback，避免 unbounded 状态导致反馈分散与 Cold-Q 式表示坍缩（见附录 B.6：RoMeRL 仅 5.0% 记忆停在初始 Q，baseline 为 47.8%）。",
+        "followup": "深读 §4-§5 的 MRT 定义与 Theorem 1-3 / Proposition 1（证明见附录 A）、§6.2 坐标消融（图 4-5），以及附录 B.6-B.7 的 Q 值分层与高 Q 失败记忆组成分析。"
+      }
+    },
+    {
+      "rank": 10,
+      "key": "arxiv:2608.07463",
+      "title": "MirrorWorld: Taming Video Diffusion Models for Mirror Reflection Generation",
+      "title_zh": "MirrorWorld: 驯服视频扩散模型生成镜面反射",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.07463",
+      "url": "https://arxiv.org/abs/2608.07463",
+      "published": "2026-08-12",
+      "tldr": "本文提出了一种方法，利用视频扩散模型生成物理上合理的镜面反射效果。",
+      "why": "该工作探索了视频生成模型在物理现象模拟中的应用，其生成物理一致内容的技术对世界模型和视频预测研究有启发。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频扩散模型(VDM)生成镜面反射时,反射内容常与可见场景不一致:包含错误物体、空间排布不合理,且跨帧不稳定。作者将问题归结为两个互补的子问题:该反射什么场景内容(what),以及这些内容在镜面区域内如何空间排布(how)。",
+        "method": "MirrorWorld 以 Wan2.1-VACE-14B 为 backbone 做 mask-conditioned 视频 inpainting,用 rank-32 LoRA 微调。Semantic Relation Distillation (SRD) 用冻结的 VideoMAEv2-Base 从原视频提取 reference features,在镜内/镜外 token 间构造 pairwise cosine relation matrix,蒸馏到 diffusion 特征,约束“反射内容与可见场景语义关联”;Geometric Transformation Alignment (GTA) 用轻量 transformation regressor 从局部时间窗口(K=5)预测 affine 变换,把可见区特征 warp 到镜面区域,约束“反射内容的空间排布”。总损失为 diffusion loss + λ_SRD·L_SRD + λ_GTA·L_GTA,推理时去掉两个辅助分支,无额外开销。",
+        "key_contributions": [
+          "提出 what-to-reflect / how-to-arrange 的问题分解,并设计 SRD(语义关系蒸馏)与 GTA(几何变换对齐)两个互补的辅助训练目标",
+          "把四个现有视频镜像检测/分割数据集(VMD-D、ZOOM、MMD、DVMD-D)重构成统一的视频镜像反射重建 benchmark,共 1,242 个 clips、45,373 帧,并按 source video 级划分 train/test 防止泄漏",
+          "实验显示在镜面区域内重建质量全面超过 MirrorFusion/MirrorVerse/VideoPainter/VACE 等 baseline,且训练时不改动 backbone、推理时无额外分支开销"
+        ],
+        "sim_benchmarks": [
+          "视频镜像反射重建 benchmark(由 VMD-D、ZOOM、MMD、DVMD-D 构成)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "微调数据为构建的 benchmark:VMD-D / DVMD-D / MMD / ZOOM,共 1,142 训练 clips + 100 测试 clips。预训练 backbone 为 Wan2.1-VACE-14B。",
+        "compute": "4×NVIDIA A100 80GB,global batch size 4,LoRA rank 32,学习率 1e-4;未说明 GPU·days",
+        "results_headline": "MirrorWorld 在 mirror 区域内 PSNR 14.005 / SSIM 0.504 / LPIPS 0.488 / FVD 184.868,全面优于 VACE backbone baseline(13.537 / 0.489 / 0.493 / 191.617),镜面区域光流 warp 误差 E_warp 0.025 也最低",
+        "baselines": [
+          "MirrorFusion",
+          "MirrorVerse",
+          "VideoPainter",
+          "VACE (Wan2.1-VACE-14B)"
+        ],
+        "limitations": "方法假设反射相关的内容至少在可见区域内部分可见;当镜子反射的是镜头外内容(如相机后方的人)时,只能依赖先验合成,无法恢复真实内容。另外 GTA 目前只建模 feature-space 的 affine 变换,对更复杂的反射几何(如曲面镜)处理能力有限。",
+        "code_release": "论文未明确说明是否开源代码;有项目主页 https://youjunzhao.github.io/MirrorWorld/",
+        "relevance_detail": "这篇对具身/世界模型研究有价值,主要不在“镜子”本身,而在两个可迁移机制:一是 SRD 用冻结视觉基础模型的 pairwise relation matrix 作为 auxiliary loss 约束生成模型的 latent 表征(REPA/VideoREPA 一系),这对 V3/LWv2 的 JEPA-style future latent prediction 有真实参考价值——它不是把预测 latent 拉向单一 target,而是保持 scene↔prediction 之间的相对关系结构,是抑制 representation collapse 的一种直接可选方案;二是 GTA 用轻量 affine 变换 + 局部时间窗口给视频 latent 加空间一致性,说明没有显式 3D 监督时也能约束特征的空间排列。Ablation(Table 2/3/4/5 和附录 token sampling)提供了具体的失效模式和设计权衡,值得细看。",
+        "followup": "建议深读 Method 的 SRD/GTA 公式(式 2 与式 6)和 Ablation 表 2/3/4/5,重点看 token sampling、temporal window K=5 以及 VideoMAEv2 vs DINOv3 的选择;再看 Failure Case Analysis 一节理解方法边界。"
+      }
+    },
+    {
+      "rank": 11,
+      "key": "arxiv:2608.08097",
+      "title": "OasisKV: Scaling In-Decode KV Cache Beyond HBM with Lookahead Sparse Prefetching",
+      "title_zh": "OasisKV: 利用前瞻稀疏预取将解码中 KV 缓存扩展到 HBM 之外",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08097",
+      "url": "https://arxiv.org/abs/2608.08097",
+      "published": "2026-08-12",
+      "tldr": "提出了一种名为 OasisKV 的方法，通过前瞻稀疏预取技术，将解码过程中的 KV 缓存扩展到高带宽内存（HBM）之外，以支持更长的上下文。",
+      "why": "该技术解决了长上下文推理中的内存瓶颈，对需要处理长序列的模型（如视频或世界模型）具有直接的工程价值。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 12,
+      "key": "arxiv:2608.08021",
+      "title": "Evidence-RL: Towards Evidence-intensive Visual Reasoning",
+      "title_zh": "Evidence-RL: 面向证据密集型视觉推理的强化学习",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08021",
+      "url": "https://arxiv.org/abs/2608.08021",
+      "published": "2026-08-12",
+      "tldr": "本文提出了一种强化学习方法，用于提升视觉语言模型在需要证据支持的复杂视觉推理任务中的表现。",
+      "why": "该方法将强化学习应用于视觉推理，其训练机制和奖励设计思路对 VLA 模型的推理能力提升有潜在借鉴价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "VLM 的正确答案可能来自语言先验、数据集捷径或无关视觉上下文,而非真正支撑答案的局部视觉证据。现有 perception-aware 后训练(PAPO/VPPO)只测全局图像敏感度或 attention 代理,无法判断采样答案是否因果依赖于支撑它的证据区域。",
+        "method": "提出 CED(Counterfactual Evidence Disentanglement):对每个采样响应,用弱监督的 object-level proposal 指定一个 Evidence Region,并采样 K 个面积匹配的非证据区域;在 spatial merging 后用均值替换干预对应 visual tokens,计算答案在该区域上的反事实 log-likelihood drop,再与 non-evidence 区域的 drop 分布做对比得到证据 margin m。将 m 与答案正确性组合进 GRPO:R_train = R_ans·g(m)+ε_tie·m,正确性主导梯度,CED 只对同样正确的 rollout 按证据依赖度重排序;默认用 Answer-CED(只对最终答案 span 打分)以避免 CoT 变体的 chain 长度 hack。",
+        "key_contributions": [
+          "区别于 coarse visual dependence,形式化 counterfactual evidence dependence,并用结构因果图刻画 evidence 路径与 shortcut/nuisance 路径,证明 text-only self-evolution 是 evidence-closed 的(条件独立导致 grounding 不可辨识)。",
+          "提出 CED:一个无需问题级区域标注、只在训练期使用的反事实证据审计,用均值替换做干净的特征空间干预,并以 matched non-evidence Regions 作为局部 null 分布。",
+          "将 CED 接入 GRPO 构成 EVIDENCE-RL,使同组内同样正确但靠先验的 rollout 与靠证据的 rollout 产生 7× 奖励差,从而选择 grounded 轨迹。",
+          "在四个 backbone(3B/7B/8B/9B)和九个 benchmark 上验证:Qwen2.5-VL-7B 平均 +5.94,是所有 RL baseline 中唯一在九个 benchmark 上 Δ 全非负的方法。"
+        ],
+        "sim_benchmarks": [
+          "CountBench",
+          "SpatialEval",
+          "HallusionBench",
+          "VLMsAreBlind",
+          "FREAK",
+          "MathVista",
+          "MMBench",
+          "MMMU",
+          "ScienceQA"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练数据由 COCO val2017 派生并经质量过滤,RL 在线训练 15,314 样本(attribute 6,562 / counting 2,188 / spatial 6,564);评估图像与训练图像无重叠。",
+        "compute": "在 Qwen2.5-VL-3B/7B、Qwen3-VL-8B、Qwen3.5-9B 上用 LoRA 只训练最后 4 层,2,000 steps、GRPO group_size 32、bf16;未说明 GPU 卡时与总算力。",
+        "results_headline": "Qwen2.5-VL-7B 上平均 67.13 vs 基座 61.19(+5.94),超过 PAPO(+2.61)、SophiaVL-R1(+2.80)、VPPO(+2.28);FREAK +14.22、VLMsAreBlind +7.58、MMMU +6.84;受控对比中 Answer-CED 在 Qwen3.5-9B 上平均 +11.34,而 correctness-only 为 −1.24。",
+        "baselines": [
+          "PAPO",
+          "VPPO",
+          "Perception-R1",
+          "VLM-R1",
+          "SophiaVL-R1",
+          "VAPO-Thinker",
+          "correctness-only (λ=0)",
+          "CoT-CED"
+        ],
+        "limitations": "Evidence Region 依赖 COCO 物体级 box,是弱空间先验而非问题级证据标注,对属性/关系类证据只给出扩展思路;在空白图 ScienceQA 上模型输出'无法确定'会被 benchmark 判错,压制了 ScienceQA 增益。CoT 变体可通过缩短低 margin 的 chain 来 hack per-token margin,故默认用 Answer-CED。",
+        "code_release": "未开源(论文未提及)",
+        "relevance_detail": "核心机制值得读:在特征空间对局部视觉证据做均值替换反事实探测、并用对比 margin 作为训练奖励,这种 grounding 审计不依赖问题级标注,可直接迁移到 VLA/世界模型的 latent 预测诊断——例如对预测的未来 latent 中支撑动作的证据 token 做同类干预,检验动作是否因果依赖该 latent 而非 shortcut。Section 5 的 evidence-closed self-evolution 形式化也解释了为何只看正确性/文本奖励无法区分 grounded 与 shortcut 轨迹,对 V3/LWv2 设计奖励或诊断信号有具体参考价值。",
+        "followup": "重点读 Section 3.1 的特征空间干预与 Section 4.3.3 的 proposal 鲁棒性;若关注奖励设计,再读 Appendix A.5 的干预类型消融(AUC 对比)和 Section A.12 的 evidence-closed 形式化论证。"
+      }
+    },
+    {
+      "rank": 13,
+      "key": "arxiv:2608.09873",
+      "title": "Sci-VBench: Evaluating Knowledge- and Reasoning-Intensive Video Generation in Science Domains",
+      "title_zh": "Sci-VBench: 评估科学领域的知识和推理密集型视频生成",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09873",
+      "url": "https://arxiv.org/abs/2608.09873",
+      "published": "2026-08-12",
+      "tldr": "提出了一个名为 Sci-VBench 的基准，用于评估在科学领域中进行知识和推理密集型视频生成的能力。",
+      "why": "该基准为视频生成模型在科学推理场景下的表现提供了评估工具，对世界模型和视频预测研究有参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有视频生成评测主要关注感知质量与 prompt 对齐,缺少能检验科学领域知识推理与因果机制保真度的评测手段;本文构建 Sci-VBench,专门评估 T2V 模型在自然科学、医疗、人文社科和工程等 60 个学科上的'世界模拟器'能力,区分'看起来像'与'机制正确'。",
+        "method": "Sci-VBench 含 1,253 条专家标注任务,每条由最小化 prompt(只给初始设置与干预,隐藏预期机制)+ 专家编写的评估规范(reference guide 注明目标概念与阶段化现象,1–5 分 rubric 定义每维度评分锚点)组成。自动评测用 VBench 六项指标合成 Low-level Perceptual Fidelity(VT 分数),其余三个维度用 rubric 条件的 MLLM-as-Judge(Qwen3.5-397B-A17B,每维度只看对应 rubirc、单独打分、三次取均值)。构建流程为教材引导的 prompt 标注、独立二评质量控制和 200 例交叉 rubric 审计。",
+        "key_contributions": [
+          "首个跨 60 个学科、四大学科(Natural Science 45.3% / Healthcare 23.9% / Engineering 22.6% / Humanities & Social 8.2%)的 knowledge/reasoning-intensive 视频生成评测集,61 名领域专家参与,每例附带可复用的 reference guide 与 1–5 分 rubric",
+          "验证 rubric 化评测协议的可移植性:非专家拿到评估规范后与专家一致性从 avg 74.0 升至 82.5(Pearson 相关),最佳 MLLM judge(Qwen3.5-397B-A17B)达 63.4,全面优于 VideoScore/VideoScore2/VideoReward/ETVA",
+          "评测 16 个前沿闭源/开源 T2V 模型:感知质量代理几乎持平(VT 3.79–4.12),而 Scientific and Causal Correctness 差异巨大(自动 1.24–3.34),闭源—开源差距集中在推理维度而非一致性",
+          "prompt 重写消融显示重写主要提升 SCC(+23.3%/+51.7%)与 PG(+12.4%/+26.7%),对 Spatiotemporal Consistency 提升最小(+7.5%/+16.5%),说明时域一致性瓶颈在生成器本身而非指令不完备"
+        ],
+        "sim_benchmarks": [
+          "Sci-VBench 本身(full 1,253 例 / testmini 150 例固定子集)",
+          "VBench(作为 LPF 自动指标)",
+          "VideoScore / VideoScore2 / VideoReward / ETVA(自动评测方法对比)"
+        ],
+        "real_robot": "未做真机实验(纯文本到视频生成评测,无机器人任务)",
+        "datasets": "自建专家标注数据:1,253 条 prompt 由 61 名专家(11 本科/45 研究生/5 作者)从教材与课程核心概念中筛选产出;未使用 OXE/DROID/Ego4D 等公开数据集",
+        "compute": "未说明(评测类论文;16 个模型经 API/开源权重推理,未给出训练算力或参数量训练成本)",
+        "results_headline": "感知质量饱和而机制正确性分化:VT 仅 3.79–4.12,自动 SCC 从 1.24 到 3.34;Gemini-Omni-Flash 综合最优(自动 3.38/人工 3.18),开源最佳 MiniMax-H3 自动 2.68 且 SCC 仅 1.63(约为闭源最佳的一半);prompt 重写使 SCC 最高 +51.7% 而 SC 仅 +16.5%。",
+        "baselines": [
+          "16 个 T2V 模型:Sora-2、Veo-3.1/3.1-Fast、Kling-2.6、Wan-2.6、HappyHorse-1.1、Seedance-2.0、Gemini-Omni-Flash、HunyuanVideo-1.5、LTX-2/2.3、Wan2.2-5B、CogVideoX1.5-5B、LongCat-Video、Cosmos3-Nano、MiniMax-H3",
+          "自动评测方法:VideoScore、VideoScore2、VideoReward、ETVA"
+        ],
+        "limitations": "LPF 的自动代理 VT 在现有模型上接近饱和,难以区分感知质量差异(人工 LPF 2.66–3.76 分布更宽);MLLM-as-Judge 在 LPF(53.5)和 Spatiotemporal Consistency(54.5)上与专家相关性明显弱于两个推理维度。闭源模型因 API 成本只在 testmini(150 例)评测;benchmark 只纳入能由视频证据验证的现象,不含纯符号或不可见机制。",
+        "code_release": "论文声称会发布 Sci-VBench 数据集(含 full/testmini 两 split 与每例评估规范),但正文未给出 GitHub URL",
+        "relevance_detail": "对具身智能/世界模型方向的价值在评测方法论:§4 的 rubric 条件 MLLM-as-judge + 每例 reference guide 协议把专家知识外化成可复用评分锚点(非专家相关 82.5,大模型 63.4),可直接迁移到视频预测或 VLA 生成结果的自动化评估;§5.4 的消融显示 prompt 重写几乎不改善 Spatiotemporal Consistency(+7.5%/+16.5%),提示时域一致性是生成器架构层面的瓶颈而非指令问题——对 V3/LWv2 这类 latent 预测器,这支持把'内容/因果正确性'与'时域一致性'分开评测,后者可能需要架构级约束(如 predictor/target 的时序对齐设计)而非仅靠数据或提示工程。",
+        "followup": "重点读 §4.3 的评测可靠性分析(Table 3:非专家/MLLM/旧方法与专家的相关对比)与 §5.4 的 prompt 重写消融(Figure 4);若想复用其 rubric 流程,看 Appendix A.2 的 200 例交叉 rubric 审计设计(quadratic κ=0.73–0.79)和 Appendix C.2 的错误分类。"
+      }
+    },
+    {
+      "rank": 14,
+      "key": "arxiv:2608.07886",
+      "title": "Vision-Language Grounding as Bidirectional Concept Correspondence",
+      "title_zh": "视觉-语言接地作为双向概念对应",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 7,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.07886",
+      "url": "https://arxiv.org/abs/2608.07886",
+      "published": "2026-08-12",
+      "tldr": "该论文将视觉-语言接地问题重新定义为双向概念对应学习，提出了一种新的对齐框架。",
+      "why": "双向概念对应框架为多模态对齐提供了新视角，其机制可迁移到VLA中视觉特征与语言指令的跨模态对齐设计。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 15,
+      "key": "arxiv:2608.09867",
+      "title": "Stealing Reasoning Traces from Proprietary LLM APIs",
+      "title_zh": "从专有LLM API中窃取推理轨迹",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09867",
+      "url": "https://arxiv.org/abs/2608.09867",
+      "published": "2026-08-12",
+      "tldr": "该论文提出了一种从专有LLM API中提取隐藏推理轨迹的攻击方法，利用输出分布差异来重建模型的内部推理过程。",
+      "why": "对于研究VLA和世界模型中的推理可解释性，理解推理轨迹如何被泄露和提取有助于设计更稳健的模型架构，防止内部推理被外部窃取。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "大型 LLM API 提供商(Anthropic、OpenAI、Google)将模型的 chain-of-thought 以客户端持有的加密块(AEAD envelope / signature)返回,并要求客户端在后续请求中回传以维持无状态服务;但这些加密块在同一提供商生态内可跨会话、跨用户、跨模型互通,构成一个可利用的架构漏洞,使隐藏推理可被第三方大规模解密提取。",
+        "method": "核心攻击是'加密思想注入'式 decryption jailbreak:先让强模型(如 Claude Opus 4.8)生成加密 reasoning 块,再将其注入同供应商家族中防护更弱的廉价模型(Claude Haiku 4.5 / GPT-5.6 Luna / Gemini Robotics 1.6),用固定转录提示(如要求输出到 <thinking-copy> 标签)迫使弱模型逐 token 解码出明文推理,全程不直接 jailbreak 强模型;保真度用'解码 token 数 vs API 报告的 thinking token 数'的比值来验证。",
+        "key_contributions": [
+          "发现并利用'弱模型充当解密 oracle'的架构漏洞:同一供应商的加密 reasoning 块跨模型完全兼容,可在 Claude/GPT/Gemini 三家实现可扩展的逐字推理提取",
+          "给出四个攻击向量:绕过 anti-distillation 的推理蒸馏、大规模 secret/PII 提取、隐藏 prompt injection 投毒长程 agentic 轨迹、经隐藏推理通道获取被最终输出过滤掉的有害信息",
+          "大规模实证:从 6,708 条公开 agent 轨迹中解码 315,320 个 reasoning 块,恢复 367 个 PII 与 182 个凭据(含 62 个 API key、33 个密码),且 64 个敏感 artifact 完全不出现在可见对话中",
+          "提出服务端存储、AEAD 上下文绑定(MAC 哈希会话/用户/提示上下文)、跨模型隔离、弱模型拒绝训练等分层缓解方案"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验。相关 agent 实验:在 Claude Code 脚手架中用 Opus 4.7 运行 PostTrainBench 长程任务,验证注入的加密 reasoning 块会诱导模型持续把研究日志上传到攻击者服务器。",
+        "datasets": "解码对象:从 GitHub/Hugging Face 爬取的 6,708 条公开 Claude/GPT/Gemini agent 会话轨迹;受控评测题目来自 AIME 2025、Codeforces(Open-R1 子集)、Humanity's Last Exam、HarmBench、ClawBench、PostTrainBench。",
+        "compute": "论文未说明训练算力;仅给出攻击成本估算:按 Claude Haiku 4.5 标准 API 价格,解码 10k 条(12k-token 输入/输出窗口)的 traces 约 $720。",
+        "results_headline": "315,320 个公开 reasoning 块中 0.3%(1,028)含隐私泄露,6,708 条会话中 4.9%(328 条)至少泄露一项敏感信息;120 道 Codeforces 题上解码 token 数与 API 报告的 thinking token 数高度吻合(GPT 系列可达 1:1)。",
+        "baselines": [
+          "直接 jailbreak 强模型(需同时绕过模型级对齐与系统级过滤,成本与难度更高)",
+          "answer-only 蒸馏(无 reasoning 的序列级蒸馏,能力窃取效率更低)",
+          "API 官方返回的 thinking summary(保真度存疑,Figure 8 显示可能是事后合理化而非真实推理)"
+        ],
+        "limitations": "作者承认:结果局限于 2026 年 7 月初的特定 API 版本与闭源密码学实现,供应商可随时更改而失效;无明文 ground-truth,无法完全逐 token 验证解码保真度;公开轨迹扫描非穷尽;负责任披露后原攻击路径已无法复现。",
+        "code_release": "论文未明确说明代码/工具是否开源;文首给出关联项目网站 stolen-thoughts.com",
+        "relevance_detail": "这是 AI 安全论文,不涉及世界模型/VLA 本体,但对具身 agent 研究有两点真实迁移价值:(1) Section 4.2 证明'长程 agent 轨迹中用户不可读的加密中间态可被投毒并跨用户/跨模型传播'——任何会发布或复用会话日志的 agentic 工作流(含机器人任务规划)都应对 reasoning/隐藏状态块做敏感载荷处理;(2) Section 5.6 + Figure 8 的 summary 不忠实发现——API 返回的 thinking summary 可能是事后合理化而非真实推理过程——直接对应 latent-prediction 的验证问题:当无法对照 ground-truth 时,需像 Figure 1 那样用可测的外部代理(token 计数对齐)来校验预测/摘要的保真度,这正是 V3/LWv2 评估 future latent 预测质量时可迁移的度量思路。此外,攻击选中的 Gemini 解码器恰好是 Gemini Robotics 1.6,说明机器人侧模型也可能成为'最弱一环'。",
+        "followup": "重点读 Section 2.4(三家提取流程与保真度验证)和 Section 5.6 / Figure 8(摘要保真度与 reasoning 是否该加密的讨论);想评估蒸馏收益再看其引用的 Zhang et al. (2026a) MATH500 68.4→76.0 结果;缓解方案细节见 Appendix A。"
+      }
+    },
+    {
+      "rank": 16,
+      "key": "arxiv:2608.08156",
+      "title": "A Hybrid Nested Harness for Decoupling Structure and Parameters in LLM-Driven Optimization",
+      "title_zh": "一种用于LLM驱动优化的混合嵌套框架：解耦结构与参数",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08156",
+      "url": "https://arxiv.org/abs/2608.08156",
+      "published": "2026-08-12",
+      "tldr": "提出混合嵌套框架，在LLM驱动的优化中解耦结构搜索与参数优化。",
+      "why": "结构-参数解耦的优化框架可迁移到具身智能体的策略搜索与模型设计中，提升优化效率与可解释性。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM 驱动的演化搜索中,LLM 被当作单一算子同时修改结构(控制流、逻辑)和连续参数(阈值、学习率),但 LLM 对数值参数优化极低效,差劲的参数猜测会让好结构在评分时被过早丢弃。论文目标是解耦这两类决策,让结构搜索和参数优化各归其位。",
+        "method": "形式化为双层目标:外层冻结 LLM 提出带数值空位的结构草图,并输出 manifest(每个空位的下界/上界/类型/建议值);内层用可插拔数值优化器(CMA-ES / VI / NUTS)以建议值为热启动填充空位,按调优后的值评分并用 (1+1) 规则接受/拒绝。核心是 Sec 2.3 的 parametric aliasing 分析:定义调参间隙 Δ(τ)=F(τ)−f(τ,θ̄),证明并实验验证 hybrid 优势与 E[Δ] 成正比(Eq. 4),外层算子也可替换为 GEPA 等文本优化器。",
+        "key_contributions": [
+          "形式化 hybrid nested search 双层目标(Algorithm 1),内外层求解器均可插拔,任何文本优化器可与 CMA-ES/VI/NUTS 组合",
+          "识别 parametric aliasing 为联合搜索的失败模式,给出 Proposition 1:按调参后价值排序可解别名,并从理论上分解出 selection term 与 tuning term",
+          "跨三类问题验证:meta-optimizer、系统/社会困境代码策略、近似贝叶斯推断,hybrid 全面超过 vanilla joint search 与纯数值优化",
+          "在贝叶斯推断中发现非教科书 quadratic shear 重参数化,内层 VI 调单个隐藏曲率参数带来 +60.9 nats 增益"
+        ],
+        "sim_benchmarks": [
+          "Cleanup (多智能体 Gridworld 社会困境)",
+          "Can't Be Late (spot/on-demand 云调度仿真)",
+          "Cloudcast (多云广播路由仿真)",
+          "meta-optimizer 测试函数 (Rosenbrock / Ellipsoid / Rastrigin / Ackley / Schwefel)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "论文未说明(使用冻结 LLM,无训练数据集;输入是任务描述与结构化反馈)",
+        "compute": "论文未明确说明具体算力;仅给出成本模型 C_hyb = K(c_llm + B_in·c_ev),内层预算 B_in=100 时相对 vanilla 增加约 10–100% 开销,并在评价昂贵场景(如完整训练)建议换用样本高效内层求解器",
+        "results_headline": "Rosenbrock loss 从 vanilla 2.1e-4 降到 1.5e-12(跨 12 个数量级),Rastrigin 19.2→1.22 且胜过 oracle CMA-ES(9.95);Cloudcast inter-cloud 成本 $168.7 vs vanilla $213.3 vs 纯 CMA-ES $317.4(1.9×);Cleanup 三个模型×三个难度 9/9 胜出;banana 重参数化 ELBO −74→−13(+60.9 nats)",
+        "baselines": [
+          "vanilla autoresearch (LLM 联合搜索,无内层)",
+          "pure numerical (oracle CMA-ES / 固定结构数值调参)",
+          "GEPA (reflective prompt evolution 外层,无 tuner)"
+        ],
+        "limitations": "manifest 必须可解析,混合整数空位需要更专门求解器;通用 CMA-ES 在几十维以上退化,孔位数需设上限(高维需神经内层算子);作者承认存在新颖性天花板,更适合作为 human-in-the-loop copilot 而非自主前沿系统",
+        "code_release": "已开源:github.com/vicgalle/hybrid-nested-search",
+        "relevance_detail": "adjacent 但机制清晰可迁移:它把'LLM 搜结构 + 数值求解器调参数'的分解形式化,并用 parametric aliasing 和 E[Δ] 解释了为何联合搜索会系统性丢弃'结构好但参数猜得差'的候选,还给出成本不对称分析(LLM 调用贵、仿真 rollout 便宜),正好匹配 sim 中做策略/奖励代码搜索的场景。对具身智能的启发是:Eureka 式 reward/policy 代码搜索、自动 agent 设计、乃至给 VLA 网络骨架搜超参时,都可以套用这个 harness——先按结构调优后的价值排序,而不是按 LLM 原始猜测排序。与 V3/LWv2 无直接关系,不建议作为当前项目参照。",
+        "followup": "重点读 Sec 2.3(Proposition 1 证明与 Eq.(4) 的可证伪预测)和 Sec 3.2 的策略实验(图 3/4 的 E[Δ] 趋势),再看附录 C 的代码画廊(Listing 1–7)理解'结构对、常数错'的具体形态,以及 Sec 3.3 的 SBC 门控如何防止错误但采样快的 transform 混入。"
+      }
+    },
+    {
+      "rank": 17,
+      "key": "arxiv:2608.06111",
+      "title": "Beyond Sequence Order: Syntax-Informed Positional Embeddings for Transformers",
+      "title_zh": "超越序列顺序：面向Transformer的语法感知位置编码",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.06111",
+      "url": "https://arxiv.org/abs/2608.06111",
+      "published": "2026-08-12",
+      "tldr": "提出语法感知的位置编码方法，将句法结构信息注入Transformer的位置表示。",
+      "why": "语法感知位置编码为具身智能体的结构化场景表示与空间推理提供了新的编码思路，可迁移到3D场景理解中。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "Transformer 的位置编码只编码 token 顺序与距离，对句法结构（如谓词-论元、长距离依存）无感知；此前句法注入方法要么在推理时对约 300 棵候选 parse 做边际化（昂贵），要么只在训练时注入、推理时丢弃语法，难以兼顾句法泛化与推理成本。",
+        "method": "提出 SiPE：用 Hexatagging 将依存树线性化为极小标签集（2 个 terminal tag + 5 个 non-terminal tag），预训练时以辅助 tag-预测目标学习两张 embedding 表（新增参数约 O(1,000)），按 'first-subword only' 掩码注入。encoder（RoBERTa/DeBERTa-v3/ModernBERT）最优是加到 input embedding；autoregressive decoder（Transformer-XL）最优是 positional-pathway injection（PP-SiPE）：per-layer 投影把 hexatag embedding 映射到 head 空间，与 relative-position 项 BD 乘法耦合 (1+c)·BD，使语法只门控已有位置偏好；对 DeBERTa 用同样乘法耦合 relative score，对 RoPE 则把 hexatag 变成旋转角相位偏移 Δθ。",
+        "key_contributions": [
+          "提出 SiPE：从 Hexatagging 线性化依存树获得轻量句法先验，兼容 absolute/relative/rotary 三类 PE，不改 self-attention，额外参数仅千级。",
+          "系统隔离“注入位置与耦合方式”：decoder 端 position-pathway 乘法耦合最强（SyntaxGym 80.60，+10.3%），encoder 端 input embedding 加法最优；attention-bias、fully-disentangled 及二者联合均更弱。",
+          "以单棵 parse 条件化建立句法监督与推理成本的新 Pareto 前沿：1/300 的边际化成本获得相当甚至更优的句法泛化，超越 TreeReg 与 Tree-Planted Transformers。",
+          "增益超出句法任务：TXL 的 GLUE macro 68.17→73.78（+8.2%），PPL 降 9.0%；encoder 在 WikiText→BLLIP-LG 持续预训练后 BLiMP 增益增大（OOD +1.87%/+3.06%/+4.21%），说明先验在泛化而非过拟合。"
+        ],
+        "sim_benchmarks": [
+          "BLiMP",
+          "SyntaxGym",
+          "GLUE（CoLA/SST-2/QQP/QNLI/MNLI/RTE/STSB/MRPC）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "预训练：WikiText-103 的 50M-token 离线 hexatagged 切片（encoder 与 TXL，1M steps）、BLLIP-LG（decoder 主实验与 OOD 持续预训练）；评测：BLiMP、SyntaxGym、BLLIP-LG test PPL、GLUE。",
+        "compute": "论文未明确说明 GPU 算力；模型为 base/large 级（RoBERTa/DeBERTa-v3/ModernBERT、Transformer-XL），预训练 1M steps / 50M token；SiPE 新增参数约 O(1,000)/模型；hexatagger 为 DeBERTa-v3-base（184M 参数）。",
+        "results_headline": "最强配置 TXL+PP-SiPE：SyntaxGym 73.09→80.60（+10.29 rel）、BLLIP-LG PPL 18.63→16.95（-9.0%）、GLUE macro 68.17→73.78（+8.2%）；encoder 的 BLiMP 相对提升 +1.41%/+2.27%/+2.32%（RoBERTa/DeBERTa/ModernBERT），OOD 持续预训练后升至 +1.87%/+3.06%/+4.21%。",
+        "baselines": [
+          "Transformer-XL (tokens)",
+          "GPT-2",
+          "PLM (Qian et al.)",
+          "Transformer Grammar (Sartran et al.)",
+          "Pushdown LM (Murty et al.)",
+          "TreeReg (Nandi et al.)",
+          "Tree-Planted Transformers (TPT) 各变体",
+          "SiPE 内部注入位点消融（input-side / attention-bias / fully-disentangled / joint）"
+        ],
+        "limitations": "推理依赖外部 hexatagger（DeBERTa-v3-base），继承 parser 误差；自回归增量生成需随每个新 token 重新 tagging，与 KV-cache 不兼容（早期 token 的 tag 可能被改写、使缓存失效）；仅验证小模型与英语，十亿级 LLM 上收益未证实；DEPREL 全量依存关系标签未带来增益。",
+        "code_release": "盲审版以 /githubCode 占位、正式 URL 未给出；仅提及 in-house parser（clulab.org/processors）。",
+        "relevance_detail": "纯 NLP 论文，价值在可迁移机制与实验方法论：① 它把“结构化先验注入 transformer 哪个通路、用什么耦合形式”做了系统消融——input embedding vs attention logit vs positional pathway、乘法门控 vs 加法独立项、自 layer 1 起注入 vs 深层（§3.3.2、§5、Figure 3、Table 7/8）——这与 V3/LWv2 中 predictor 放置、action 条件耦合、防 representation collapse 是同构的设计问题，Figure 3（跳过第一层 SyntaxGym 即从 80.6 掉到 73.5）是“结构先验应尽早进入骨干”的强证据；② PP-SiPE 的 (1+c)·BD 乘法门控原理——“只调制已有偏好而非替换”——可直接借鉴于向 VLA / world model 注入 object-relation 或 affordance 先验；③ 对 RoPE 的相位偏移注入（Eq.14-16）给出一种不动注意力结构、与 Qwen3-VL 等 RoPE 骨干兼容的先验注入方式。",
+        "followup": "深读 §3.3.2（PP-SiPE 的 Eq.5-6）、§5 + Figure 3（分层注入扫描）、Appendix A.2 Table 7（layer-sharing × projection target 四组合消融）与 Appendix A.5（DeBERTa 注入传播细节）。"
+      }
+    },
+    {
+      "rank": 18,
+      "key": "arxiv:2608.08722",
+      "title": "Gaming Without an Attacker: Benchmark Fingerprinting in LLM-Driven Search Under Selection Pressure",
+      "title_zh": "无攻击者的博弈：选择压力下 LLM 驱动的搜索中的基准指纹识别",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08722",
+      "url": "https://arxiv.org/abs/2608.08722",
+      "published": "2026-08-12",
+      "tldr": "本文研究了在无恶意攻击者的情况下，LLM 驱动的搜索系统在基准测试中的指纹识别问题。",
+      "why": "该工作揭示了基准测试在 LLM 驱动搜索中的潜在偏差问题，对评估方法论和鲁棒性研究有重要启示。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 19,
+      "key": "arxiv:2608.09420",
+      "title": "Intent Speaks Louder: Controllable User Simulation Beyond Response Imitation",
+      "title_zh": "意图胜于言辞：超越响应模仿的可控用户模拟",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09420",
+      "url": "https://arxiv.org/abs/2608.09420",
+      "published": "2026-08-12",
+      "tldr": "本文提出了一种基于意图的可控用户模拟方法，超越了传统的响应模仿方式。",
+      "why": "该方法通过建模用户意图而非表面响应来生成更真实的交互数据，对生成高质量训练数据和评估 agent 交互能力有借鉴价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM 用户模拟器生成下一轮用户话语时天然是一对多问题:同一 profile 和对话状态下存在多种合法续接(Supply/Repair/Amend/Accept 等),现有模拟器只做 response imitation,不把\"本地交互意图\"作为显式 per-turn 控制变量,导致生成流畅但意图错误的回复(如该 repair 却 accept),掩盖助手在澄清、纠错、任务细化上的真实弱点。",
+        "method": "提出 UserIDA(User Intent-Directive Alignment):先用冻结 Qwen3.5-9B 将 LMSYS 语料标注为六类意图(Initiate/Amend/Supply/Repair/SetRegister/GroundAccept),再以目标意图作为每轮显式 directive 做 Intent-SFT;之后做 intent-calibrated policy optimization,沿用 GRPO 的 group-relative 更新,但对每组采样候选引入组内最小平移量校准——mixed group 中强制违规候选奖励低于所有合规候选并留 margin,同时保留合规候选内部的质量区分。",
+        "key_contributions": [
+          "把 interaction intent 确立为缺失的 per-turn 控制变量,提出 surface-underspecified 的六类 canonical intent 接口,将用户模拟从 response imitation 升级为可控的 intent realization",
+          "intent-calibrated 相对奖励:证明固定意图加成会被质量分尺度波动淹没,改为按组计算最小平移量,给出'违规候选绝不高于合规候选'的排序保证且不塌缩质量区分",
+          "三套评估协议(逐轮生成、controlled multi-turn trajectory、within-context intervention)证明意图可控性可与语义/风格保真度并存,且意图控制可沿多轮轨迹可靠组合"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(本文为对话交互任务)",
+        "datasets": "LMSYS-Chat-1M(采用 LMSYS-USP 预处理,得到 444,635 条非歧义训练 turn、27,778 验证、9,233 测试)",
+        "compute": "LLaMA-3-8B Base + LoRA(SFT r=64,RL r=16);4×RTX 4090,BF16;SFT 3 epochs,RL 1 nominal epoch",
+        "results_headline": "UserIDA 逐轮意图准确率 86.62%,较最强专用模拟器 USP 高 24.34 点;controlled multi-turn 全轮意图成功从 USP 的 13% 提到 58%;within-context 干预 4-of-6 成功率 91.67% vs 22.92%;关键消融:quality-only GRPO 把 SimCSE 提到 0.61 但意图准确率降到 80.7%,验证质量-意图错配确实存在",
+        "baselines": [
+          "LLaMA-3-8B Base",
+          "GPT-4o",
+          "Gemini-2.5-Flash",
+          "USP-8B",
+          "UserLM-8B"
+        ],
+        "limitations": "六类意图分布极不均衡(Initiate+Amend 占 81.4%,Supply 仅 1.9%);prospective 意图预测器仅 71.39% 准确率,说明下一意图无法完全从可见状态恢复;冻结 verifier 在边界类仍有混淆(Initiate↔Amend 约 8-10%、Repair→Amend 9.09%),生成样本上的自动与人工意图标注也存在系统差异",
+        "code_release": "https://github.com/ptwang773/UserIDA",
+        "relevance_detail": "对话域论文,但机制可迁移:其核心抽象把\"本轮执行哪个动作/意图\"与\"如何用语言表达\"解耦,并把意图作为显式 per-turn 条件变量,与 VLA 中 latent action 条件化、动作-表达解耦问题同构;最有迁移价值的是 3.3 节的 intent-calibrated RL(固定意图加成会被质量分尺度淹没,改用组内最小平移量保证'正确意图但低质候选'排序),可类比到 V3/LWv2 在 latent prediction 与策略优化中避免'高奖励但动作语义错误'候选压过正确候选的场景;同时 Sec 4.4 的 within-context intervention(同一对话状态、仅改目标意图、检验是否产出不同且一致的续接)是评估可控生成的新协议,对策略可控性评测有直接借鉴意义。",
+        "followup": "重点读 3.3 Intent-Calibrated Policy Optimization(式 4-7 的校准机制)、Fig.4 的 quality-only GRPO 消融,以及 Sec 4.4 within-context intervention 协议;附录 B 的 group normalization 排序证明与附录 C 的人工意图审计也值得看"
+      }
+    },
+    {
+      "rank": 20,
+      "key": "arxiv:2607.27637",
+      "title": "MMOOC: A Comprehensive Benchmark for Out-of-Context Evaluation in Multimodal Large Language Models",
+      "title_zh": "MMOOC: 多模态大语言模型上下文外评估的综合基准",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2607.27637",
+      "url": "https://arxiv.org/abs/2607.27637",
+      "published": "2026-08-12",
+      "tldr": "提出了一个专门评估多模态大语言模型在上下文外（out-of-context）场景下表现的基准测试集。",
+      "why": "该基准聚焦于模型在信息缺失或误导情境下的鲁棒性，为评估和提升多模态模型的推理可靠性提供了新工具。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 21,
+      "key": "arxiv:2608.03887",
+      "title": "Omega-S: A Functional Resilience Index for LLM Fine-Tuning",
+      "title_zh": "Omega-S: 大语言模型微调的功能韧性指数",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.03887",
+      "url": "https://arxiv.org/abs/2608.03887",
+      "published": "2026-08-12",
+      "tldr": "提出了一个名为 Omega-S 的指标，用于评估大语言模型在微调后保持原有功能的能力（即功能韧性）。",
+      "why": "该指标为评估微调过程中的灾难性遗忘提供了新视角，对持续学习和模型迭代有参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 22,
+      "key": "arxiv:2608.07594",
+      "title": "Scaling Inherently Interpretable Language Models",
+      "title_zh": "扩展固有可解释的语言模型",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.07594",
+      "url": "https://arxiv.org/abs/2608.07594",
+      "published": "2026-08-12",
+      "tldr": "研究了如何扩展具有固有可解释性的语言模型，使其在规模增大的同时保持可解释性。",
+      "why": "该工作探索了可解释性与模型规模之间的权衡，对理解模型内部机制和构建更可靠的智能体有参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "这篇论文要解决的核心问题是:主流大语言模型把可解释性当作能力之外的附加税——先训练不透明模型再事后解释,而事后方法(probe、SAE、梯度、CoT)无法保证解释与模型真实计算耦合。作者提出把可解释性作为训练约束内建于训练管线,并在预训练规模上验证这一范式。",
+        "method": "提出 inherently interpretable 训练配方:①数据侧用 Atlas 管线把 33,000+ 人类可理解概念标注到万亿级 token;②架构侧在 transformer backbone 与 LM head 之间插入 additive concept bottleneck,使 logit 分解代数精确(logit = Σϕ_c(y) + ρ(y));③目标侧用 masked diffusion objective 使 mask token 成为 in-distribution 的 absence baseline,并加 concept loss、residual penalty、正交性等可解释性损失;④训练出 Steerling-8B,一个带 causal attention mask 的 diffusion 语言模型,支持输入 token、概念、训练数据三轴归因与 concept steering 闭环干预。",
+        "key_contributions": [
+          "提出并形式化了 inherent interpretability 的可检验条件(agreement、validity、nativeness、interpretation、coverage),并把每个条件追溯到具体训练设计选择",
+          "构建 Atlas 概念标注管线:从文档→标签→33,000+ 概念库→可训练 annotator,覆盖 1.5T token,并做了两阶段人类研究验证概念真正人类可理解而非仅 LLM 流畅",
+          "用 IsoFLOP scaling sweep(三个数量级算力、四种模型族)证明加入 concept bottleneck 只带来小的固定 scaling offset,且所有可解释性指标随规模提升——可解释性随规模变好而非变差",
+          "Steerling-8B 仅用 1.2T 预训练 + 150B mid-training token,在开放同规模模型中达到约 10% 平均差距,而对比模型训练算力多 2–16×"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "预训练数据为自建概念标注语料(web 用 DCLM/Zyda-2、学术用 peS2o/arXiv/Wikipedia、数学用 Dolmino-math/GSM8K/OpenWebMath、代码用 StarCoder、QA 用 FLAN v2),共 1.2T token 预训练 + 150B token mid-training(代码与数学增强)",
+        "compute": "IsoFLOP scaling sweep 覆盖三个数量级算力;Steerling-8B 为 8B 参数,concept module 占 4% 参数;具体 GPU·days 论文未明确说明",
+        "results_headline": "Steerling-8B 与同规模开放模型(Llama 3.1 8B、Qwen2.5 7B 等,训练算力多 2–16×)平均 benchmark 差距约 10%;validation loss 从小时标度拟合预测误差在 0.11 nats 内,4 个可解释性指标中 3 个被 tight bounds 预测",
+        "baselines": [
+          "Llama 3.1 8B",
+          "Qwen2.5 7B",
+          "Gemma 2 9B",
+          "Mistral 7B",
+          "自回归无概念 baseline",
+          "causal diffusion 无概念 baseline"
+        ],
+        "limitations": "作者承认 inherently interpretable 不意味着完全机制透明,只对指定归因查询提供保证;semantic faithfulness 仍可能因 concept leakage 而不完整,且人类可理解性研究对象需领域专家,带宽有限。",
+        "code_release": "论文未明确说明",
+        "relevance_detail": "这篇论文的价值不在 VLA 本身,而在于给‘表征-语义对齐’提供了完整的可训练接口范式:它用 concept bottleneck + 训练期 absence baseline 让归因代数精确,并把可解释性指标纳入 scaling law 分析(第 8 节 IsoFLOP sweep 证明可解释性与能力同向缩放)。这对 V3/LWv2 的 latent prediction 有直接启发:当前 latent 预测面临 representation collapse 与 predictor/target 设计问题,本文证明‘把语义监督瓶颈直接放在计算路径上 + 在损失里显式压 residual’可以同时保住 scaling 效率和表征可解释性——其中 additive concept bottleneck 与 coverage loss 的设计(第 5.3、5.4 节)以及‘归因是训练出来的接口而非事后 probe’这一定义(第 3.3 节)最值得移植。",
+        "followup": "重点读第 8 节(scaling law:concept bottleneck 的固定 offset 与可解释性随 scale 提升的证据)和第 5 节(concept module 的 additive bottleneck 结构、teacher forcing 与 residual penalty 的具体配置),以及附录 J 的 pretraining recipe ablations(unknown concept capacity、residual term、concept teacher forcing 对 loss 与可解释性的影响)。"
+      }
+    },
+    {
+      "rank": 23,
+      "key": "arxiv:2608.09096",
+      "title": "Evo-Bench: Can Language Models Improve Agent Harness?",
+      "title_zh": "Evo-Bench: 语言模型能否改进 Agent 工具框架？",
+      "score": 7,
+      "bucket": "explore",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09096",
+      "url": "https://arxiv.org/abs/2608.09096",
+      "published": "2026-08-12",
+      "tldr": "本文提出了一个基准测试，评估语言模型在自动改进 agent 工具框架（harness）方面的能力。",
+      "why": "该工作探索了 LLM 自我改进工具链的可能性，对研究 agent 的自主适应和工具使用能力有启发意义。",
+      "hits": [
+        "S:hf_curated"
+      ]
+    },
+    {
+      "rank": 24,
+      "key": "arxiv:2608.08311",
+      "title": "Ouroboros: A Self-Developing Frontier Coding Agent with Reviewed Core Evolution",
+      "title_zh": "Ouroboros: 具有核心进化审查的自我发展前沿编码代理",
+      "score": 7,
+      "bucket": "explore",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.08311",
+      "url": "https://arxiv.org/abs/2608.08311",
+      "published": "2026-08-12",
+      "tldr": "介绍了一个名为 Ouroboros 的编码代理，它能够通过审查和进化其核心能力来自我发展。",
+      "why": "这种自我进化的代理机制对于长期自主学习和适应新任务具有启发性，可能迁移到机器人或具身智能体的持续学习。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "大多数长时程 agent 本质是\"模型-脚手架(harness)\"系统,但 harness 在部署后通常固定不变;本文提出 Ouroboros,把 harness 本身(工具、上下文组装、prompts、核心实现)当作可进化对象,通过有审查的 commit 门控持续自我改进。",
+        "method": "Ouroboros 将 launcher/supervisor 边界与可变 agent 仓库分离,仓库内含任务循环、工具、prompts、记忆投影、审查逻辑。核心进化分两种模式:递归自由进化(把改进本身当作任务,完成后可调度下一轮进化)与经验驱动进化(普通任务/社交反馈暴露 bug 后沉淀为持久 error class,再打开维护任务)。所有核心改动经确定性 preflight、staged-diff 指纹校验、多模型 diff-review 仲裁(quorum)后提交;rollback、外部 spend limit 与 /panic 等安全边界独立于被进化的代码。",
+        "key_contributions": [
+          "在 Terminal-Bench 2.1(86.97%,审计后 86.74%)、OSWorld-Verified(90.69%)、CL-Bench(0.2301)刷新 SOTA,SWE-bench Pro 与 GAIA 达到模型匹配的 frontier 水平",
+          "提出两种受审核心进化模式:递归自由进化与经验驱动进化,任务执行和社交反馈可持续转化为 reviewed commit",
+          "Hope:161 天常驻 agent 的 field experiment,7 个交互面、1,085 次自修改 commit(94.2% 为 agent 编写)、$110.6K / 79.7B tokens,社交信号仅 advisory 而不转移 commit 权限",
+          "操作安全架构:常驻 constitution、治理文件保护、staged-diff 指纹、多模型审查 quorum、外部预算上限与 /panic,在进化压力下保持权威"
+        ],
+        "sim_benchmarks": [
+          "Terminal-Bench 2.1",
+          "OSWorld-Verified",
+          "CL-Bench",
+          "SWE-bench Pro",
+          "GAIA"
+        ],
+        "real_robot": "未做真机实验(纯编码/计算机使用 agent,不涉及机器人)",
+        "datasets": "未说明(使用各 benchmark 官方测试集与任务流,无 OXE/DROID 等机器人数据)",
+        "compute": "未说明模型参数量与训练算力;Hope 部署侧为 161 天、$110.6K 模型花费、79.7B 处理 tokens、175,755 LOC、1,085 commits",
+        "results_headline": "Terminal-Bench 2.1 原始 86.97%(审计后 86.74%)比最强 baseline Claude Code+Fable 5 的 83.8% 高约 2 个二项标准误;OSWorld-Verified 90.69% 超此前最优 90.19%;CL-Bench 0.2301 超 ICL 0.1960;SWE-bench Pro 58.2% 与 Codex 59.4% 统计无差异(p=0.40)",
+        "baselines": [
+          "Claude Code + Fable 5",
+          "Codex CLI",
+          "Cursor",
+          "Hermes Agent",
+          "Intelligence-Indeed",
+          "Claude Mythos Preview",
+          "Pointer Agent",
+          "ICL (Sonnet 4.6)",
+          "Claude Code (Sonnet 4.6)",
+          "Mem0",
+          "ACE"
+        ],
+        "limitations": "部署研究只有单条 lineage,不是受控的独立进化群体;SWE-bench Pro 存在公开参考答案泄漏与任务缺陷;LLM 审查者可能与 agent 共享盲区,low 模式会跳过全仓库 scope review;完整文件系统隔离仍需比路径约定更强的 sandbox。",
+        "code_release": "MIT License,github.com/razzant/ouroboros(源码、adapters、run manifests 与完整 per-task 轨迹公开)",
+        "relevance_detail": "这不是机器人/VLA 论文,而是高价值的 adjacent 工作:它在固定模型下证明 harness 是能力的决定性变量(Table 2 每次比较都同时声明 model+harness),并把\"harness 进化\"拆成可审计的工程机制(commit gate、fingerprint、quorum、pattern register)。对具身 agent 系统的可迁移点有三:(1) 把冻结 VLA 之外的推理脚手架看作可版本化、可审阅的进化层——context assembly、工具调用、动作头附加方式都可复用这套 commit 门控;(2) Section 6 的轨迹审计学(reward hacking 清零、对称去污染、隔离失败)是机器人策略评估值得借鉴的方法学;(3) CL-Bench 5-rollout 实验显示持久记忆跨域正迁移、schema drift 失效,对长期记忆设计有参考价值。与 V3/LWv2 的联系是概念层的:经验驱动进化把执行错误沉淀为持久 error class,与用 latent prediction error 驱动策略改进是同构思路,但论文本身未涉及 world model。",
+        "followup": "深读 Section 5 的 Table 2 与 Table 3(benchmark 配置披露)核对分数可信度,Section 6 的轨迹审计案例(reward hacking/污染/远端状态漂移)作为评估方法学,Section 3 的 commit pipeline 与 Appendix A 的安全控制清单作为自进化系统设计模板。"
+      }
+    },
+    {
+      "rank": 25,
+      "key": "arxiv:2608.09848",
+      "title": "CEAA: A Cognitive Embodied Agents Architecture for Interactive Computing Systems",
+      "title_zh": "CEAA：面向交互式计算系统的认知具身智能体架构",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 6,
+      "transfer_value": 5,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.09848",
+      "url": "https://arxiv.org/abs/2608.09848",
+      "published": "2026-08-12",
+      "tldr": "提出一种面向交互式计算系统的认知具身智能体架构，整合感知、推理与行动模块。",
+      "why": "该架构为具身智能体在交互式系统中的认知-行动闭环设计提供了系统化参考，值得关注其模块化设计思路。",
+      "hits": [
+        "H:embodied agent",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "论文要解决具身智能虚拟代理(IVA)在实时交互 3D 虚拟环境中认知能力与可部署性脱节的问题:状态机/行为树等反应式控制缺乏目标推理与可解释性,而 BDI/SOAR/ACT-R 等认知模型又因复杂度难以集成进 Unity/Unreal 这类实时引擎。",
+        "method": "提出 CEAA,一个三层(用户与环境层/知识层/代理层)、十二组件的模块化认知架构,以 Sense-Think-Act 为主循环,融合 blackboard 式共享知识库、显式 Memory+Memory Processor、BDI(Cognitive Construct:Belief/Desire/Intention)推理与 Reasoner/Planner。感知事件先写入共享知识库,经 Sense 选择性过滤后进入记忆与推理,Planner 产出抽象动作序列,再由 Behavior Mapper 依据 Agent Capabilities 映射为动画/对话/导航等具身行为并交给 Act 执行。",
+        "key_contributions": [
+          "提出一个实现导向的可复用模块化架构模板,把 BDI、blackboard、Sense-Think-Act、pandemonium 等既有框架组织成 IVA '大脑' 的部署流水线,而非提出新推理模型",
+          "将具身行为表达(动画、对话、手势、导航选择)显式纳入决策管线(Behavior Mapper + Agent Capabilities),把具身视为决策的一部分而非推理后的输出附件",
+          "通过 Unity3D 虚拟博物馆(桌面+VR 双条件,92 名本科生)的混合方法研究提供可行性证据:两种模式下学习获取均有统计显著提升,组间无显著差异"
+        ],
+        "sim_benchmarks": [
+          "Unity3D 虚拟博物馆(ENIAC 主题,桌面与 VR 两种版本)——非标准 benchmark,为自建评估环境"
+        ],
+        "real_robot": "未做真机实验。原型为 Unity3D 虚拟博物馆,内含 4 个具身教学代理(导航/讲解/评估等角色);92 名本科生随机分桌面与 VR 两组,各 46 人,交互约 45 分钟后做后测与问卷。",
+        "datasets": "未说明(环境为自建 Unity3D 虚拟博物馆,代理知识/角色为人工设定)",
+        "compute": "未说明",
+        "results_headline": "前后测学习增益在桌面与 VR 两组内均统计显著(论文未给具体 p 值与效应量);桌面组增益略高但组间差异不显著;两条件技术接受度中位数相近,VR 在努力期望与行为意向上略高。",
+        "baselines": [
+          "论文未做方法级 baseline 对比;唯一对照为同一 CEAA 系统的桌面 vs VR 两种部署条件"
+        ],
+        "limitations": "作者承认架构仍停留在概念/理论层面,尚未与 BDI、Sense-Think-Act 等组件做延迟、开发难度、用户体验等维度的系统基准对比;目前只是参考模板,无配套工具,性能/可扩展性/跨领域通用性缺乏技术性验证。",
+        "code_release": "未开源(论文未提代码;未来工作计划开发 Unity/Unreal 插件工具)",
+        "relevance_detail": "对做机器人学习/世界模型的读者,这篇不提供学习机制或 benchmark 提升,真正的参考价值在于把长时程 agent 的'感知-记忆-推理-规划-行为落地'切分成一组明确模块(Figure 3 与 Section III 的组件职责清单),可作为手工设计分层 agent 系统脚手架时的结构清单;Section V-A 的两条工程经验(共享 blackboard 减少多代理重复处理;把帧关键操作与异步认知循环分离以控延迟)对实时具身系统有迁移意义。它与 V3/LWv2 这类学习型 latent 世界模型没有直接连接,文中没有可学习组件、没有技术基准,只宜作为 adjacent 架构参考而非方法来源。",
+        "followup": "值得细读 Section III 的十二组件职责与 Figure 3 架构总览,以及 Section V-A 的实时性/内存/多代理扩展工程建议;用户研究细节见 Section IV。"
+      }
+    }
+  ]
+}
