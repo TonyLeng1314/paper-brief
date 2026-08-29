@@ -1,0 +1,121 @@
+{
+  "date": "2026-08-29",
+  "kept": 2,
+  "reviewed": 2,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 38,
+    "unseen": 2,
+    "llm_candidates": 2,
+    "annotated": 2
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2608.25798",
+      "title": "TacForcing: Streaming Action Generation with Execution-Time Tactile Feedback",
+      "title_zh": "TacForcing: 带执行时触觉反馈的流式动作生成",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.25798",
+      "url": "https://arxiv.org/abs/2608.25798",
+      "published": "2026-08-29",
+      "tldr": "提出TacForcing方法，在动作生成过程中引入执行时的触觉反馈，实现流式动作生成。",
+      "why": "触觉反馈是机器人操作中关键但常被忽视的模态，该方法为VLA模型集成实时触觉信息提供了新思路，可能提升操作鲁棒性。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "接触丰富的操作任务中,基于 chunk 的 VLA 模型用执行前的观测一次性生成整个动作块,执行期获取的触觉反馈无法修正后续动作,导致触觉条件在动作 horizon 内逐渐过时(stale),与执行时的真实接触状态产生时间失配。现有做法依赖独立的高频触觉反应式控制器来缓解,但增加架构与训练复杂度。",
+        "method": "TacForcing 用 Streaming Action Expert 替换标准 flow-matching action expert:把动作 chunk 按 block 划分(H=KB),采用位置相关的 flow time 调度 λ_k(n)=min(n/n_k,1),近端 block 先完成并执行,远端 block 的中间隐状态被保留,执行后拿到新触觉反馈再继续细化。同时提出 Execution-Aware Tactile Attention(EATA),用加法注意力掩码限制当前触觉 token 只能被下一个待执行 block 的动作 token attend,阻止陈旧触觉污染更远的 block。训练时按全局进度 p 采样 block 中间状态,用对应执行阶段的触觉表示与 EATA 掩码,loss 只作用于未完成动作,与流式推理保持一致。",
+        "key_contributions": [
+          "提出 TacForcing 流式动作生成框架,在不增加独立反应式控制器的情况下把执行期触觉反馈接入同一个动作生成器",
+          "提出 block-wise flow scheduling 的 Streaming Action Expert,近端 block 先执行、远端 block 保留中间状态并逐步细化",
+          "提出 EATA 触觉注意力掩码,将每次触觉更新限制为只条件化下一个待执行 block,缓解触觉获取与动作执行的时间失配",
+          "在 6 个 UniVTAC 仿真任务与 3 个真实接触丰富任务上分别取得 65% 和 69% 平均成功率,超过所有 baseline"
+        ],
+        "sim_benchmarks": [
+          "UniVTAC"
+        ],
+        "real_robot": "双 7-DoF RealMan RM75 机械臂 + 22-DoF Sharpa Wave 灵巧手(指尖触觉形变图),RealSense 顶视+腕视相机,Manus Pro 数据手套采集示范;三任务 Stand Bottle / Transfer Liquid / Wipe Board,每任务 100 条示范训练、16 次独立试验评估。",
+        "datasets": "仿真用 UniVTAC 每任务 50 条演示;真机为自采数据每任务 100 条;未使用 OXE/DROID 等大规模预训练集。模型在仿真从 π0.5 初始化、真机从 GR00T N1.7 初始化,触觉编码器用 FTP-1 预训练权重初始化。",
+        "compute": "论文未明确说明 GPU 算力与模型参数量;仿真每任务 15,000 步、batch 256,真机每任务 30,000 步、batch 256,AdamW + cosine 学习率衰减。",
+        "results_headline": "仿真平均成功率 65%(高于 π0.5 的 51% 达 14 个点、RDP 的 42% 达 23 个点),真机平均 69%(高于 FTP-1 52%、GR00T N1.7 42%、π0.5 27%);尤其 Transfer Liquid 达到 50% 而所有 baseline ≤19%;6 个仿真任务中 5 个取得最高或并列最高。",
+        "baselines": [
+          "π0.5",
+          "UniVTAC-ACT",
+          "FTP-1",
+          "RDP",
+          "GR00T N1.7"
+        ],
+        "limitations": "论文无专门 limitations 节,可读出的局限:真机每任务仅 16 次试验、数据量小(100 条/任务),统计把握度有限;触觉刷新是 block 级(B=5)而非逐动作,极快接触变化下仍有延迟;Lift Can 任务 63% 未超过 FTP-1 的 66%;消融里 Fixed Tactile 在真机反而掉点(42→31),说明此方案对任务内微调场景更适用,泛化性未验证。",
+        "code_release": "论文未明确说明开源;有项目主页 https://88runaway.github.io/tacforcing/",
+        "relevance_detail": "直接相关:VLA 动作专家的时序建模。它把 Diffusion Forcing 式的位置相关 flow time 引入 π0 风格 flow-matching expert,并用 EATA 掩码解决'新鲜条件信号与预测目标的时间错配'——这个'只让当前信号条件化紧邻下一 block'的掩码原则,对 V3/LWv2 中 predictor 如何在 latent 未来预测里注入最新状态/动作条件有具体迁移价值;Section 2.3 用 cosine 距离量化不同模态表示在动作 horizon 内的漂移(视觉 0.005 vs 触觉 0.55),也是诊断 latent 表示稳定性/塌缩的干净实验范式。",
+        "followup": "重点读 3.2 节 EATA 掩码定义与 3.3 节训练目标(式 6-8),对照表 2 消融(w/o EATA 与 Fixed Tactile 的差距),以及 Appendix A.3 的表示漂移度量方法。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2608.19269",
+      "title": "What Does an Evaluation License? A Commit-Bound Census of Claim-Relative Inference in Inspect Evals",
+      "title_zh": "评估许可什么？Inspect Evals中声明相对推理的提交绑定普查",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.19269",
+      "url": "https://arxiv.org/abs/2608.19269",
+      "published": "2026-08-29",
+      "tldr": "对Inspect Evals中的声明相对推理进行提交绑定普查，分析评估许可的隐含假设。",
+      "why": "评估方法论是机器人学习的关键环节，该研究揭示评估设计中的隐含推理模式，有助于改进VLA和世界模型的评估实践。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "评估产物(task/scorer/指标)只指定前向计算,并不自动许可其附带的科学声明——重放该声明所需的历史证据与替代语义可能未绑定。论文把这一缺失的 claim-replay 层形式化为 (D,F,q),并对 Inspect Evals 仓库 pinned commit 的全部 124 个合格单元做普查。",
+        "method": "定义冻结 substrate D、grounded specification 族 F(按 A/D/X 准入分为 primary 与 review envelope)与 typed claim query q(精确值/方向/winner/全序/两两关系);识别集 Iq(D,F) 非单例时给出 witness 与 stable backbone。对 124 个单元逐一定终止性:14 个进入确定性推演,110 个得到带 first missing object 与 minimum unblock 的 typed STOP;执行确定性、fail-closed,输出 claim ladder 而非单一鲁棒性标签。",
+        "key_contributions": [
+          "提出 claim-relative 对象 (D,F,q),把 primary 结论与 disputed admission 敏感性分离,并区分 evidence stopping / semantic multiplicity / claim-resolution separation 三个不同层次",
+          "完成 124 单元全帧普查:110 个 STOP(103 个 outcome-blind 路径 + 7 个冻结随机抽样),首因是 evidence binding 失败(47)与对比观测缺失(35)",
+          "给出可执行审计契约:人类只在 family admission 处做语义决策,之后的枚举/验证确定性且独立重算;报告 value/direction/winner/order/pairwise backbone 的 claim ladder,保留全部 124 条终止记录"
+        ],
+        "sim_benchmarks": [
+          "AgentDojo",
+          "AutoML Benchmark",
+          "BEIR SciFact",
+          "TheAgentCompany",
+          "BBEH",
+          "Personality",
+          "GDM InterCode CTF",
+          "FrontierScience",
+          "CORE-Bench",
+          "MMMU",
+          "Agent Bench"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "非训练论文;审计对象为 Inspect Evals 公共仓库 commit 32b79a2 的 124 个 eval 单元(内部含 BBEH 的 4,520 样本、Personality 的 1,600 项 TRAIT 切片等冻结数据)",
+        "compute": "未说明",
+        "results_headline": "124 单元中 14 个可执行、110 个 STOP;冻结随机十抽样完成 3/10 且三者 winner/order 均 NON-ID;三个深审(AgentDojo、AutoML、BEIR)保留 ID winner,但 AgentDojo 与 AutoML 的 review-envelope 全序变为 NON-ID(稳定 pair 3/3→2/3、10/10→9/10)",
+        "baselines": [
+          "Available-case sensitivity summary(仅对可执行 case 的多宇宙分析)",
+          "flip/no-flip 鲁棒性标签",
+          "Multicurious",
+          "Specification curve analysis",
+          "Partial identification"
+        ],
+        "limitations": "回顾性诊断,不估计采纳契约后未来能阻止多少 STOP 或是否改变下游决策;结论只限 pinned 帧内,不构成生态系统流行率,也不认证语义 family 完备性或唯一正确语义",
+        "code_release": "arXiv 附件 claim_replay_public_arxiv_v3_reproduction_R2_20260825.zip(含 README.md、reviewer/RESULTS.md、verification/verify_supplement.py 及冻结普查记录与契约实现);审计对象为公开 Inspect Evals 仓库",
+        "relevance_detail": "评估方法论恰好落在 profile 的 transferable methods(evaluation methodology/uncertainty/robustness)上。三个概念可直接迁移到 VLA/世界模型评测:typed STOP 而非零分或失败标签、primary vs review envelope 分离 admission 敏感性、claim ladder(winner 与稳定两两骨架可以保持识别而全序不识别)。对 LIBERO/RoboTwin 这类 leaderboard 驱动工作,它提示发布 SR 或排名时应绑定冻结观测、声明 admitted family 与 typed query;对 V3/LWv2 的预测质量评估也可先按 (D,F,q) 明确冻结评测数据与语义选择,再下结论。",
+        "followup": "精读 Section 3/Table 9 的 stop 分类与 Appendix B.3 的 preservation layers,以及 Section 4/Table 4 的 claim-resolution separation 机制;Appendix A.2 给出 release interface 的最小实现清单。"
+      }
+    }
+  ]
+}
