@@ -1,0 +1,329 @@
+{
+  "date": "2026-09-14",
+  "kept": 6,
+  "reviewed": 6,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 21,
+    "unseen": 6,
+    "llm_candidates": 6,
+    "annotated": 6
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2609.12641",
+      "title": "Breaking the Vision-Action Shortcut: Latent Interface Training for Generalizable Robotics Foundation Models",
+      "title_zh": "打破视觉-动作捷径:面向可泛化机器人基础模型的 Latent Interface Training",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.12641",
+      "url": "https://arxiv.org/abs/2609.12641",
+      "published": "2026-09-14",
+      "tldr": "论文提出 Latent Interface Training，通过在视觉与动作之间插入隐空间接口来阻断模型直接依赖视觉-动作的浅层捷径，从而提升机器人基础模型的泛化性。",
+      "why": "直接针对 VLA 中视觉到动作的 shortcut 问题，其隐接口设计与 V3/LWv2 中动作头挂载位置、action conditioning 与表征坍塌的取舍高度相关，值得对照实验设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "机器人基础模型(VLA / WAM)在训练分布内表现很好,但一旦出现视角、光照、背景、传感器噪声等视觉分布偏移就大幅退化,原因是动作专家依赖了与动作相关但任务无关的视觉线索,即 vision–action shortcut。核心问题是如何在约束视觉信息使用方式的同时,保留动作生成所需的任务相关空间信息。",
+        "method": "提出 Latent Interface Training (LIT),一个与框架无关的两阶段训练策略。Stage 1 冻结预训练 backbone,只用语言与机器人状态表示加上每个动作 chunk 的终端 SE(3) 末端位姿 g_t(3D 位置 + axis-angle + 2 维夹爪,共 8 维,经三层 GELU MLP 编码为 goal token)从头训练 action expert,用原生 flow-matching 目标学习 image-free 的空间目标条件动作先验。Stage 2 引入 K=100 个可学习 latent token,逐层做 self-attention → semantic cross-attention → visual cross-attention(每 m 层共享注意力参数),为 action expert 提供逐层条件,并作为其唯一的视觉通路;同时用 MLP decoder 从最终 latent token 重建终端位姿,L_stage2 = L_act + 0.3·L_pose。推理时保留 latent interface,去掉位姿 encoder / decoder。",
+        "key_contributions": [
+          "提出 LIT:image-free 的空间目标条件动作预训练 + 位姿监督 latent interface(作为 action expert 唯一视觉通路)的组合式模型无关训练策略。",
+          "在 π0.5、MolmoAct2、FAST-WAM、ImageWAM 四种 VLA / WAM 架构上,LIBERO-Plus 总体成功率提升 3.87–10.70 个百分点,同时 LIBERO 平均成功率不降或略升。",
+          "真机三个任务在未见相机配置、光照变化、干扰物下成功率聚合提升 13.3–16.7 个百分点。",
+          "通过注意力可视化、反事实干预(加干扰物 / 模糊图像 / 更换指令)与六组消融,证明增益来自“动作先验 + 位姿监督 + 受限视觉通路”的联合设计,而非 latent token 聚合、两阶段训练或位姿监督单独作用。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO (Spatial/Object/Goal/Long,40 任务 × 50 rollouts = 2000 episodes)",
+          "LIBERO-Plus (7 类扰动,10030 个实例,单次 rollout)"
+        ],
+        "real_robot": "未明确说明机器人型号;三个真机操作任务 Keep LEGOs(把所有积木拆下放进盒子)、Wipe trash(用簸箕清理桌面)、Transfer egg(把鸡蛋从锅转移到碗),共 300 条演示(每任务 100 条)训练单一多任务策略;评估 ID(每任务 25 rollouts)与三种 OOD(光照、仅顶视相机配置、加入任务无关干扰物,各每任务 10 rollouts)。",
+        "datasets": "仿真:仅用原始 LIBERO 演示训练,不微调任何已发布的 VLA / WAM 策略 checkpoint;真机:作者自采 3 任务 × 100 条演示。未使用 OXE / DROID 等大规模数据。",
+        "compute": "论文未明确说明:未给出参数量、GPU 型号或 GPU·days;仅说明每个 baseline–LIT 对使用相同训练数据、相同总优化步数(LIT 为 10K Stage 1 + 20K Stage 2)。",
+        "results_headline": "LIBERO 平均成功率 π0.5 87.75→91.80、MolmoAct2 93.50→94.10、FAST-WAM 97.60→98.10、ImageWAM 98.10→98.40;LIBERO-Plus 总体 π0.5 68.97→79.67(+10.70)、MolmoAct2 63.62→71.92(+8.30)、FAST-WAM 51.44→60.63(+9.19)、ImageWAM 83.02→86.89(+3.87),28 个架构–扰动对比中 26 个提升且最大下降仅 2.11 点;真机 ID 74.7→88.0,Lighting OOD 53.3→70.0,Camera OOD 30.0→46.7,Distractors OOD 50.0→63.3。",
+        "baselines": [
+          "架构匹配 baseline:π0.5、MolmoAct2、FAST-WAM、ImageWAM(同 backbone、随机初始化 action expert、同数据同步数)",
+          "LA4VLA-inspired staged training [12]",
+          "LIT w/o Stage 1",
+          "LIT w/o pose supervision",
+          "LIT w/ direct visual access",
+          "LIT w/o Stage 1 & pose supervision(等价 VLA-Adapter 式 query 接口)",
+          "Baseline w/ pose supervision"
+        ],
+        "limitations": "作者承认真机评估规模有限,尚未在更大、更多样的机器人演示数据与更广任务环境上验证。另外实验刻意从随机初始化 action expert 训练而不微调已发布 checkpoint,因此其 baseline 数值与已发表结果不可直接比较;MolmoAct2 / ImageWAM 在 language instructions 维度上分别下降 2.11 和 0.92 点。",
+        "code_release": "论文给出项目主页 magiclab-nus.github.io/LIT,但正文未明确说明是否开源代码。",
+        "relevance_detail": "这是与 V3/LWv2 高度同构的一篇工作:它把“视觉→动作”的耦合从直接喂 backbone 特征改成经过一层被终端 SE(3) 位姿监督的 latent token 瓶颈(Stage 2, Eq. 6–8),并把它当作唯一视觉通路,正好对应你在 VLA 内挂 latent world prediction / action head 时“预测目标选什么、表征在哪一层接入、如何避免塌缩与捷径”的设计问题——位姿重建作为一种显式监督 target 抑制了捷径依赖(Table III 中 w/ direct visual access 掉 4.18 点,w/o pose supervision 掉 3.06 点,且在 Sensor Noise 上掉 10.75 点)。Fig. 5 的反事实干预(保持任务不变加干扰 / 模糊图像 vs 只换指令)提供了一套可直接复用的诊断协议,用来区分模型是“看任务相关区域”还是“背视觉相关性”,比单看成功率更能验证 latent 表征质量;Fig. 7 还给出了两阶段 loss 曲线与步数预算匹配的对照(Stage 2 20K 步 loss 0.025 优于 baseline 30K 步 0.033),对设计预训练/微调比例有直接参考。",
+        "followup": "重点看 Sec. III-C 的 latent interface 结构与 Eq. 6–8、Table III 的六组消融,以及 Fig. 4/5 的注意力与反事实分析。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2609.13146",
+      "title": "SNAP3D: Physically Grounded 3D Parts for Assembly from a Single Image",
+      "title_zh": "SNAP3D:从单张图像生成物理可用的 3D 装配零件",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.13146",
+      "url": "https://arxiv.org/abs/2609.13146",
+      "published": "2026-09-14",
+      "tldr": "论文提出 SNAP3D，从单张图像重建具有物理约束、可用于装配的 3D 零件表示。",
+      "why": "把单图 3D 重建与可装配性、物理约束结合，为机器人操作中的部件级 affordance 与装配规划提供了可复用的 3D 表征思路。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 part-aware 3D 生成方法只保证单个部件视觉完整,不保证部件之间能组成物理上合法的整体——相邻部件常常互相穿透、没有有效接触面与连接结构,装配后会在重力下坍塌。论文要在单图生成的前提下,让语义部件分解同时具备物理可装配性。",
+        "method": "在 Hunyuan3D + XPart 得到的语义部件网格基础上做三阶段处理:(1) Part Geometry Editing,用基于 intrusion score s_ij 的成对 Boolean difference 消除部件间体积重叠并限制体积损失上界,得到共享的接触面;(2) Connector Geometry Reasoning,用距离 δ 与 facing area 阈值 λD² 构建 contact graph,在每条边上初始化 peg-and-socket 连接件(小件给 peg、大件给 socket),并用 6 参数 θ=(u,v,α,β,r,ℓ) 相对接触面参数化;(3) Physics-Based Connector Optimization,用 IPC on affine bodies 做 rollout,定位不稳定部件子集 U 及其候选连接边,以 L_pair / L_global 为目标用 CEM(32 候选、8 elite、保留全协方差、多 basin 初始化)搜索连接件的位置/朝向/尺寸。",
+        "key_contributions": [
+          "提出 physically grounded 3D part decomposition,把 part-aware 生成从语义分解推进到具有物理兼容接触面、可在重力下稳定装配的部件",
+          "三阶段框架:部件几何编辑 + contact graph 推理与连接件初始化 + physics-in-the-loop 的连接件参数优化",
+          "首个针对 part-aware 3D 生成的物理装配工作,仿真稳定率 95.0%(baseline 近 0%),并用 3D 打印与手工装配验证",
+          "提出基于物理的评测协议(IPC 无穿透接触 + 零重力有效性检查),指出容忍穿透的求解器会把穿透最严重的装配误判为最稳定"
+        ],
+        "sim_benchmarks": [
+          "HY3D-Bench (100 组 textured mesh–image 子集)",
+          "IPC on affine bodies (libuipc) 重力 rollout 评测",
+          "Genesis (仅用于 baseline 的定性可视化)"
+        ],
+        "real_robot": "非机器人真机实验,而是 3D 打印实物验证:6 个装配体(选择打印的全部对象)缩放到最长边 15 cm,PLA 材料,Bambu Lab A1 mini 打印,名义 peg–socket 间隙约 0.2 mm;全部部件仅用生成的连接件手工装配,不用胶水或螺丝,装配后手工把持与摇晃保持完整。",
+        "datasets": "评测用 HY3D-Bench 的 100 组带部件标注的 textured mesh–image 对(整理自 10 类物体,2–18 个部件);初始分解用 Hunyuan3D 做 image-to-3D + XPart 做部件分解。未做训练(方法本身是几何编辑 + 仿真搜索,不含学习模型)。",
+        "compute": "论文未明确说明(GPU/训练成本未给出;附录 B 给出几何/接触参数设置,如 256³ 编辑网格、δ=0.5 cell、τ_p=5.9% D、λ=1.5×10⁻⁵,以及 CEM 32 候选 × 3 代,指出优化代价高因窄间隙需要高保真接触)。",
+        "results_headline": "在 100 个装配上稳定率 95.0%(XPart 0.0% / OmniPart 2.0% / PartCrafter 1.0%),worst-part Shift 5.6 vs 73.5 / 33.4 / 98.1,IPR 0.5% vs 31.8% / 30.4% / 24.9%,IVR <0.01% vs 4.86% / 2.98% / 6.40%,同时几何保真第二(CD 0.98 仅略逊 XPart 0.85,F1 94.8);额外载荷下 88.4%(反向重力)与 96.8%(三轴振动)仍保持连接。",
+        "baselines": [
+          "XPart (CVPR 2026, 本文所用初始分解)",
+          "OmniPart",
+          "PartCrafter",
+          "Hunyuan3D (作为 XPart 的 image-to-3D 前置)",
+          "Table 2 中的 stage-wise 消融 (baseline / +PGE / +CGR)"
+        ],
+        "limitations": "仿真把部件与连接件当刚体,忽略打印材料的弹性变形,因此实物装配会略有间隙内位移;优化成本高(窄间隙需要高保真接触仿真);方法只编辑不重生成输入几何,开放曲面导致 Boolean 差良定义性差,残留 0.5% 相交;接触面太薄、无法容纳足够大连接件的装配仍不稳定。",
+        "code_release": "论文给出项目主页 https://lucytuan.github.io/SNAP3D/ ,但未明确说明是否开源代码/数据,论文未提 GitHub 仓库。",
+        "relevance_detail": "直接对应你 profile 里的 3D 智能、场景动力学与物理推理:contact graph 的构建准则(距离 δ + 对向法向的 facing area 阈值)本质上是从几何中恢复部件间的「接触/装配关系」,可迁移到操作任务的接触点与 affordance 推理;更重要的是它的评测方法论——作者在第 4.1 节与附录 A 指出,若仿真器允许小穿透,求解器会用接触力把互相穿插的部件「焊住」,反而被判为最稳定,因此改用 IPC on affine bodies 保证全程 intersection-free 并加了零重力有效性检查。这个「评测器本身的建模假设会系统性反向奖励错误解」的教训,对任何用仿真做闭环评测的工作(VLA/世界模型的 rollout 评测)都成立。方法层面,连接件 6 参数在接触面局部切线/法向坐标下参数化、再让 CEM 在无梯度仿真反馈下搜索、并保留初始化 θ⁰ 保证不会变差(Table 3: 86.0%→95.0%,去掉 position/scale 各掉到 90%),这是一个干净的「不可微仿真 + 参数化几何搜索」范式,可选地借鉴到需要物理可行性约束的生成/优化回路。与 V3/LWv2 无直接关系,不要强行套用。",
+        "followup": "重点看 Sec. 3.2(contact graph 与连接件参数化)、Sec. 3.3 的 CEM 目标 L_pair/L_global 与不稳定定位流程,配合 Table 1/2/3 和附录 B 的固定参数表与 Sec. C 的额外载荷测试。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2609.13141",
+      "title": "SAS: Simple Attention Sparsification via End-to-End Optimization of Context Ranking",
+      "title_zh": "SAS:通过上下文排序端到端优化的简单注意力稀疏化",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 8,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.13141",
+      "url": "https://arxiv.org/abs/2609.13141",
+      "published": "2026-09-14",
+      "tldr": "论文提出 SAS，用端到端可微的上下文排序来学习注意力稀疏化，从而在保持性能的同时降低注意力计算量。",
+      "why": "端到端学习 token 重要性排序的稀疏注意力机制，对长时程视频 world model 与 VLA 中长上下文推理的效率优化有直接可迁移价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "后训练 attention sparsification 里,轻量 selector 打分后要做硬 Top-K 选择,这一步不可微,LM loss 的梯度无法回流到 selector,因此现有可训练方法只能退而用逐层 dense attention 蒸馏来监督 selector——这会把「按原模型注意力权重排 block」当成目标,而不是「在固定 attention budget 下真正影响最终预测」的排序,导致有限的 attention budget 被浪费在没用的 block 上。",
+        "method": "SAS 沿用 SeerAttention-R 的 block-sparse 框架(block size 64,selector 输出 C 个历史 block 的分数 s),但把 s 经 softmax 归一化成 gate g=softmax(s)(当前 block 恒为 unit gate g0=1),并以 log g 的形式加到 attention logits 上:o=softmax(qK_S^T + log g_S)V_S,使 LM loss 的梯度通过标准反传直接更新 selector,完全去掉蒸馏 teacher。作者用受控消融固定了四个设计选择:gate 加在 softmax 内部(log 形式)、gate 用 softmax 归一化、保留连续分数而非 STE 二值化、训练时用 sparse scope(只对选中的 block 计 attention 与梯度,更省但最终性能与 full scope 相当)。为支持 32K 长序列训练,实现了把 block gate 融进 tile 级 qK^T 的 FlashAttention-style Triton kernel,推理侧集成到 SGLang(prefill dense + decode block sparse)。",
+        "key_contributions": [
+          "提出 SAS:把 selector 连续分数作为 log-space gate 注入 attention softmax,用 LM loss 端到端训练 context ranking,不再需要 dense attention 蒸馏或任何辅助监督。",
+          "用解析梯度 + 消融锁定四个关键设计:inner softmax 注入、softmax 归一化 gate、保留连续排名信息(不用 STE 硬 gate)、sparse scope 训练,并解释 sigmoid gate 饱和到 1、raw logit 塌缩到 0 会退化成无 gate。",
+          "实现融合 gate 的 Triton kernel 与 SGLang 稀疏 decode 后端,在 512K 上下文下 decode 延迟最高降 5.6×(batch 8 时 ~13×),并指出超长上下文的新瓶颈是 selector scoring + Top-K 排序(512K 时占单步 90%)。",
+          "在 reasoning / long-context / agentic 三类任务、Qwen3-4B/8B/14B 三个规模上全面超过 SeerAttention-R,且在低 budget 下增益最大;并初步验证同一目标可迁移到 continued pretraining(OLMo3-7B 联合训练)。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "后训练 selector 在 OpenR1-Math-220k 的 93.7K 样本上训练 1 epoch(seq len 32,768);continued pretraining 实验用 OLMo3 预训练语料,seq 8192 × 13,000 步、global batch 512,约 50B tokens。",
+        "compute": "论文未明确说明 GPU 数量 / GPU·days。可确定的是:后训练阶段 backbone 冻结、只训 AttnGate selector(AdamW, lr 1e-3, cosine, batch 32, seq 32K, 1 epoch),基于 VeOmni + FSDP;continued pretraining 阶段 backbone 与 selector 联合训练,13,000 步 × batch 512(lr 2e-4→2e-5)。模型规模为 Qwen3-4B/8B/14B 与 OLMo3-7B。",
+        "results_headline": "同一 selector 架构下 SAS 全面超过蒸馏训练的 SeerAttention-R:budget 1024 时 MATH500 90.65 vs 84.67(4B,提升 6.0–7.7 分)、GPQA-Diamond 50.41 vs 39.84(4B/8B/14B 上 +10.6–15.5 分);budget 2048 时 AIME24 68.85 vs 55.83(4B,+13.0);budget 4096 时 AIME24 71.72 vs full attention 71.25;LongBench 在 8K+ 桶上 14B/budget 2048 提升 +2.4(53.9 vs 51.5);BFCL 最多 +3.5;Qwen3-4B 单卡 512K 上下文 decode 提速 5.6×、batch 8 在 64K 时 ~13×。",
+        "baselines": [
+          "Full Attention(dense)",
+          "Sliding Window Attention",
+          "StreamingLLM",
+          "Quest(Quest*)",
+          "SeerAttention-R(SeerAttn-R,另含复现版 SeerAttn-R#)",
+          "OLMo3-Base / OLMo3-512SWA / HiLS-Attn-RoPE(continued pretraining 对比)"
+        ],
+        "limitations": "作者未单列 limitation 章节,可读出的问题包括:只稀疏化 decode 阶段,prefill 仍是 dense;selector 仅在数学数据上训练,长上下文/agentic 上的增益明显小于 reasoning(LongBench 平均 51.5 vs 51.2,已接近 full attention 饱和区);continued pretraining 下平均分 43.28 仍低于 dense base 43.88;超长上下文时 Top-K 排序本身成为新瓶颈(512K 时占单步 90%),且 sparse scope 训练前期收敛更慢。",
+        "code_release": "已开源:https://github.com/Tencent-Hunyuan/Simple-Attention-Sparsification",
+        "relevance_detail": "它本身是 LLM 推理效率论文,但核心机制极具可迁移性:当 pipeline 里存在「硬 Top-K / 离散选择」而你还想用主任务 loss 端到端训练排序器时,把连续分数以 log 形式注入 softmax 内部、并用 softmax 归一化相对于恒真单元(这里是当前 block)做校准,是一条免蒸馏的通用药方——可对应 VLA / world model 里的 patch、keyframe、memory slot、检索块选择。更值得细看的是 Section 4.2 与 Figure 3:sigmoid gate 会饱和到 1、raw logit 会塌缩到 0 并降方差,两种参数化都退化成「无 gate」的平凡解,这与 JEPA 式潜空间预测里担心的 representation collapse 是同一类退化现象;如果 V3/LWv2 的 predictor/action head 里用到 gate、top-k 或硬选择,Table 1 的四维消融(inner vs outer softmax、softmax vs sigmoid、连续 vs STE、full vs sparse scope)可直接作为实验设计模板。另外 Figure 4 与 Appendix D 的梯度推导示范了如何用梯度量级/相关性解释「为什么某种松弛训不动」,是可复用的分析范式。",
+        "followup": "重点看 Section 4.2.2 + Table 1(四维设计消融)、Figure 3/4(退化解与稀疏 scope 梯度行为)以及 Appendix D 的完整梯度推导、Appendix E 的 kernel 伪代码。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2609.11115",
+      "title": "Benchmark Radar: A Living Database and Search Engine for AI Benchmarks and Evaluation",
+      "title_zh": "Benchmark Radar:面向 AI 基准与评测的活数据库与搜索引擎",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 7,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.11115",
+      "url": "https://arxiv.org/abs/2609.11115",
+      "published": "2026-09-14",
+      "tldr": "该工作构建了一个持续更新的 AI 基准与评测数据库及搜索引擎，用于检索、追踪和比较各类 benchmark 与评测方法。",
+      "why": "评测方法论是 embodied/VLA 研究的常见痛点，一个可检索的 benchmark 索引能帮助快速定位适合机器人策略与 world model 的评测协议，避免重复造轮子。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "研究者要为一个新任务找相关 benchmark、定位其数据集/代码仓库、并搞清某个分数背后的评测设置时，需要在论文服务器、代码托管、数据集 hub、模型卡和各家 leaderboard 之间来回翻找；现有 leaderboard 资源(LLM Stats、OpenCompass、Artificial Analysis)把目录检索、每日新发现、模型报告中的引用与分数历史割裂在多个站点。",
+        "method": "构建 Benchmark Radar:一条输入是日更发现管线(37 个源 = 13 个直接 connector + 24 个第一方研究/工程 feed,每次采集 48 小时窗口,arXiv / HuggingFace Hub / GitHub Search 为核心源,核心源不健康则不发布),另一条输入是 benchmark 目录(4 个来源归一化成 source record,保留 name / ID / artifact 链接 / score observation / model identity / 引用等公共字段,重名不合并而是用 reviewed identity link 连接)。检索用 BM25F 字段加权词匹配(对 name 与 phrase 匹配加分),结果暴露命中词、缺失词与分数分量;同一套 benchmark ID 与 JSON 响应格式同时服务 web dashboard、下载导出与 CLI 离线客户端。评测协议上把「分数量纲可比较」定义为显式声明 percent 单位 + 已知方向 + 数值落在 0–100,并把 interaction paradigm 与 modality 作为与 domain 正交的 facet 记录。",
+        "key_contributions": [
+          "v0.11.0 发布 1,283 条 benchmark source record 的可搜索 living catalog(LLM Stats 687 / OpenCompass Hub 461 / Artificial Analysis 25 / model reports 110),其中 790 条有数值分数共 12,916 条 observation,493 条无分数但 464 条仍带 paper / repo / dataset 链接。",
+          "日更发现历史:11,068 条 observation、6,546 个 artifact(按 DOI / arXiv ID / repo URL 精确匹配)、46 个 snapshot,与 benchmark 目录分开计量。",
+          "对全 catalog 做普查审计:只有 82/790 条有分数的 record 满足百分比尺度比较条件,708 条尺度未知;1,208 篇去重引用文档里 1,171 篇缺机构信息;615 条有 release date、668 条无。",
+          "给出 11 个一级域 / 63 个子域的能力分类学,并把 agentic 与 embodied 作为可跨域 facet(agentic facet 345 条中有 117 条一级标签其实是 Coding),另附一个用 CLI 做 prior-art 检索的完整用例。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "未在公开数据集上训练;数据来源为 LLM Stats、OpenCompass Hub、Artificial Analysis 三个 benchmark 目录 + 110 条 model report 记录,发现源覆盖 arXiv、Hugging Face Hub / Papers、GitHub Search / Organizations / Releases、Kaggle、Zenodo、Crossref、OpenReview、OpenAlex、Semantic Scholar 及 24 个机构 feed。",
+        "compute": "论文未明确说明;无模型训练,仅数据采集 / 归一化 / 分类 / 打包管线(v0.11.0,commit 8f46bbf,discovery cutoff 2026-09-07),未报告任何 GPU 或算力开销。",
+        "results_headline": "没有训练或性能对比数字,核心是统计量:1,283 条 record / 790 条有分数 / 12,916 条分数观测,但仅 82 条(10.4%)满足可比尺度,22 条 record 有 ≥100 个被评模型,Artificial Analysis 的 GPQA Diamond 一条 record 就含 586 个模型 586 条分数。",
+        "baselines": [
+          "LLM Stats",
+          "OpenCompass / OpenCompass Hub",
+          "Artificial Analysis"
+        ],
+        "limitations": "作者承认检索精度、benchmark 适配性与节省的时间均未评测,worked example 也只有本地查询 + 网页搜索、没有受控 baseline;词法匹配会漏掉改写或改名的任务,arXiv 路由不回溯采集窗口之前的旧论文(第 2 节就漏了两篇相关研究,靠共同作者补上),分类标签在本轮重建中同样未经验证。",
+        "code_release": "开源,https://github.com/ktwu01/benchmark-radar,含 web dashboard、CLI 离线查询与可复现分析。",
+        "relevance_detail": "这篇不是具身方法论文,直接价值在「评估方法论」这一可迁移兴趣:它把「分数可比」拆成显式单位 + 已知方向 + 0–100 取值三条判据,结果只有 82/790 条有分数 record 通过,并指出量纲一致也不等于测试版本、prompt、工具、尝试次数、评测者一致(第 3.5 节、Appendix B.2 Table 6)——这正好是 LIBERO / RoboTwin 类结果汇报最容易含糊的地方。它的分类学还给出一个有用信号:通用 catalog 里 embodied agent 仅 3 条、Spatial & 3D 仅 9 条、Tool & function calling 38 条,说明这类目录几乎不覆盖具身评测,做 VLA / world model 对比时不能依赖通用 leaderboard,需自行固定协议。工程上 BM25F + 稳定 ID + 证据溯源 + CLI 的做法,也可借鉴为内部实验记录/评测元数据检索的轻量方案。",
+        "followup": "重点看第 3.5 节与 Appendix B.2(Table 6 的 82/790 比较资格判据)和 Appendix C(display filter、Frontier 的 score cutoff 70 与 priority 权重 35/20/20/25),再扫 Appendix D 的 37 个源清单判断能否扩到具身评测源。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2609.11682",
+      "title": "COBRA-Skills: Contextual Bandit-Guided Evolution for Agent Skill Optimization",
+      "title_zh": "COBRA-Skills:基于上下文赌博机的演化式智能体技能优化",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.11682",
+      "url": "https://arxiv.org/abs/2609.11682",
+      "published": "2026-09-14",
+      "tldr": "论文用上下文赌博机引导的演化搜索来自动优化智能体技能（skill）的生成与选择。",
+      "why": "把技能库优化建模为 bandit 问题，为长时程智能体的技能发现与自适应选择提供了可迁移的机制，可启发机器人技能库与工具使用的自动改进。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM agent 的 skill(可复用的过程性知识/提示)如何高效优化:现有方法依赖昂贵的 target-agent 执行评估和大量任务数据,大量预算被花在低质量候选上,且反复调用 LLM 分析轨迹、改写 skill 的 token 成本很高。",
+        "method": "把 skill 优化形式化为『动态演化候选空间上的预算受限序列优化』:用 Qwen3-Embedding-4B 得到 skill 语义嵌入 z_s,训练一个 2560→64→1 的轻量 MLP reward predictor f_θ 预测该 skill 的执行收益,再叠加 LinearUCB 置信奖励 b(z)=ν√(zᵀA⁻¹z) (A=λI+Σz zᵀ) 组成 priority score U_t(s)=f(z_s)+b(z_s),每轮只评估得分最高的 skill(在 50 例 optimization set 上跑 target agent),用新 reward 更新历史并重训 predictor。每经过对数间隔的种群更新时,裁剪 m=3 个低优先级 skill,并由三个 evidence-grounded 进化算子补充新候选:regeneration(从原始 no-skill 轨迹独立生成)、rollout mutation(用当前 skill 的成功/失败轨迹做局部修正)、crossover(以强 skill 为 backbone、另一强 skill 作正证据、弱 skill 作负证据做重组)。",
+        "key_contributions": [
+          "把 agent skill 优化建模为动态演化候选空间上的预算受限序列优化问题,候选效用只能通过昂贵的 target-agent 评估揭示。",
+          "提出 COBRA-Skills:用 contextual bandit(neural reward predictor + LinearUCB bonus)同时决定『评估哪个候选』和『保留哪个候选』,并与 evidence-grounded 种群进化(regeneration / rollout mutation / crossover)闭环耦合。",
+          "在 6 个异构 agent benchmark × 3 个 target model 上取得最高平均分,同时把优化成本比 SkillOpt 降低 55–58%、cost/∆Score 降低 60–69%,且每 benchmark 只用 50 例优化样本。",
+          "验证了跨 agent harness(Claude Code / Codex)、self-teaching(target model 自己当 teaching model)以及 cross-model skill 迁移(36 组中 34 组优于对应 no-skill baseline)下的泛化性。"
+        ],
+        "sim_benchmarks": [
+          "ALFWorld (text-based 具身家务任务,多轮 ≤30 步)",
+          "SearchQA",
+          "SpreadsheetBench (多轮 ≤30 turn)",
+          "DocVQA",
+          "LiveMathematicianBench (LiveMath)",
+          "SocialMaze (Hidden Role Deduction 任务)",
+          "外部 harness: Claude Code、Codex"
+        ],
+        "real_robot": "未做真机实验;唯一的具身相关设置是文本交互环境 ALFWorld(多轮 household 任务,按任务完成度评测),不涉及任何真实机器人或视觉-动作策略。",
+        "datasets": "不涉及 OXE / DROID / Ego4D 等机器人数据。每个 benchmark 自建 50 例 optimization set(D_opt,含 no-skill rollout 池)与固定 100 例 held-out test set;Trace2Skill/SkillOpt 使用 2–3 倍大的优化池(如 SearchQA 150 例、SocialMaze 170 例、LiveMath 53 例)。",
+        "compute": "论文未给出 GPU 数量/GPU·days;只给出 token 与美元成本:Qwen3.6-35B-A3B 上 teacher 3.00M / target 115.92M tokens、约 $54.10;reward predictor 为 2560→64→1 MLP,T=30 轮、每轮 50 例评估。teaching model 为 GPT-5.5(medium reasoning),target model 含 35B-A3B / GPT-5.4-Nano / 26B-A4B-it 级别。",
+        "results_headline": "6 benchmark 平均分在三个 target model 上均最高,相对 no-skill baseline 分别提升 +13.1 / +26.9 / +22.5 pp(Qwen3.6-35B-A3B 上 60.4→73.5,SkillOpt 为 69.6);总优化成本比 SkillOpt 低 55–58%,cost/∆Score 低 60–69%,teacher token 用量少 67–80%;换 harness 后仍最高(Claude Code 68.2、Codex 72.4),self-teaching 仅从 73.5 降到 72.5 而成本约减半。",
+        "baselines": [
+          "No Skill (无 skill 的 target agent)",
+          "LLM Skill (仅做一次 evidence-grounded regeneration,不后续优化)",
+          "Trace2Skill",
+          "SkillOpt",
+          "Best-of-30 (固定 30 个候选取最好)",
+          "w/o Bandit (保留进化但随机选候选)",
+          "w/o Evolution (固定候选池 + bandit)"
+        ],
+        "limitations": "优化集仅 50 例,论文承认这是在评估可靠性与任务覆盖之间的折中,复杂任务的泛化上限未被验证;基线对比不完全对称——作者因无法复现 SkillOpt 的 OfficeQA 配置而将该 benchmark 整条剔除,且 baseline 使用了更大的优化池(2–3 倍)。此外 skill 始终是注入上下文的文本,未与参数级更新(RL / LoRA / 微调)结合,也完全没触及真实机器人或视觉闭环。",
+        "code_release": "已开源:https://github.com/Jerry-LuP/COBRA-Skills",
+        "relevance_detail": "最可迁移的是它的『昂贵评估预算分配』机制:NN reward predictor + LinearUCB 置信上界在候选集合持续演化时决定下一个要评估谁(Sec 3.2, Eq. 2–4, Fig. 7 显示 ν=0.1 最优的 exploration–exploitation 曲线),这套打分器可直接用于任何『候选很多、每次评估很贵』的场景——例如在 V3/LWv2 上自动搜索 predictor/target 设计或 action head 接入点时,把每个配置当 arm、把 skill embedding 换成配置嵌入,就能避免穷举消融。其次,『成功轨迹作正证据、失败 skill 作负证据』的 crossover/rollout mutation(Sec 3.3, App A.1)是一份可复用的 in-context skill/memory 更新配方,与长程任务里往 VLA 上下文注入经验记忆的思路同源;其 Table 2 对 teacher/target token 的拆分口径也值得借鉴到自己的实验预算报告。需诚实指出:这是 LLM agent 层面的文本 skill 优化,不是 world model / VLA / 视觉-动作方法,具身相关性仅来自 ALFWorld 一列(Qwen 上 +18.0 pp)。",
+        "followup": "重点读 Sec 3.2–3.3 的 priority score 与三个进化算子、Alg. 1、Table 4 消融(w/o Bandit −2.2、w/o Evolution −2.4、Best-of-30 −2.5),再看 App A.1/A.2 的完整超参与 baseline 预算对照。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2608.30597",
+      "title": "PLC-DPO: Posterior Label Correction in Noisy and Ambiguous Preference Optimization",
+      "title_zh": "PLC-DPO:噪声与模糊偏好优化中的后验标签校正",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2608.30597",
+      "url": "https://arxiv.org/abs/2608.30597",
+      "published": "2026-09-14",
+      "tldr": "论文提出 PLC-DPO，用后验标签校正来缓解偏好数据中噪声与模糊标注对 DPO 训练的负面影响。",
+      "why": "偏好数据噪声是机器人策略后训练与 VLA 对齐中的现实问题，其标签校正思路可迁移到含噪声人类演示或偏好反馈的 policy learning 流程。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "DPO 假设成对偏好标签一定可靠,但真实偏好数据中存在翻转(reversed)、弱方向、无方向(tie)的标注,直接照搬 DPO 会把错误方向当成监督信号并产生有害梯度更新。",
+        "method": "PLC-DPO 把每个偏好对观测到的方向建模为隐状态 s∈{clean, flip, tie}:先算标准 DPO 序列级 margin m_seq 并 stopgrad 得到 ˜m,用 batch 均值/方差的 EMA 做在线标准化得到 z;再用能量分数 ℓclean=logπ0_clean+z/τdir、ℓflip=logπ0_flip−z/τdir、ℓtie=logπ0_tie−|z|/τtie 经 softmax 得到路由权重 q(梯度截断),混合三个状态损失 Lclean=−logσ(m)、Lflip=−logσ(−m)、Ltie=softplus(|m|)。最终损失为 warm-up 后按路由置信度 C(q)=((max_s q_s−1/3)/(2/3))^κ 门控的加权:(1−γ_tC)L_DPO + γ_tC L_PLC。",
+        "key_contributions": [
+          "提出 PLC-DPO:把观测的 pairwise 标签当作 clean/flip/tie 隐状态,用校准后的 policy-reference margin 在线估计后验式路由分布。",
+          "推导出路由混合目标,软性地把 forward DPO、reversed DPO 与 tie 正则损失组合起来,直接修正 DPO 消费的 pair label,而非过滤样本或做 response-level 质量估计,且不需要额外监督。",
+          "给出稳定训练配方:EMA 校准、stop-gradient 路由、warm-up、confidence-gated mixing,避免早期训练不稳定。",
+          "在 57 个 dataset–model–benchmark 单元上取得最高平均胜率,并补充注入噪声/tie 压测、人类分歧数据(MultiPref)、路由诊断与组件消融。"
+        ],
+        "sim_benchmarks": [
+          "UltraFeedback (UFB)",
+          "AlpacaEval",
+          "AlpacaEval 2",
+          "MT-Bench",
+          "Vicuna",
+          "Evol-Instruct",
+          "HH-RLHF",
+          "HH-Golden",
+          "MultiPref"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "SFT 初始化用 UltraChat-200k;偏好训练数据为 UltraFeedback (Binarized)、HH-Golden、Nectar-60k、ORPO-mix-40k;人类分歧评测用 MultiPref。",
+        "compute": "论文未明确说明具体算力;实验用 Qwen2.5-1.5B/7B、Phi-2-2.7B,泛化实验加 Llama-3-8B、Mistral-7B,统一单 epoch 偏好优化预算(硬件/框架细节放在 Appendix D)。",
+        "results_headline": "57 个 dataset–model–benchmark 单元平均胜率 60.5,超过次优 rDPO 55.5 约 5.0 点(worst-cell 41.2 vs γ-PO 42.5);注入 flip 噪声 η=0.30 时 Vicuna 胜率 61.88 vs ROPO 56.88;HH-Golden 上相对 DPO 提升 +22.7(Qwen2.5-7B)/+23.1(Llama-3-8B)/+30.4(Mistral-7B) 点。",
+        "baselines": [
+          "SFT",
+          "DPO",
+          "cDPO (label-smoothed DPO)",
+          "rDPO",
+          "KTO-Pair",
+          "RSO",
+          "Dr.DPO",
+          "γ-PO",
+          "ROPO",
+          "RE-PO"
+        ],
+        "limitations": "路由证据完全来自当前 policy–reference margin,若 policy 与冻结 reference 共享系统性偏差,margin 仍不可靠,分布偏移下可能需要更长 warm-up 或更自适应的校准;作者也承认缺少关于路由误差、EMA 自适应与门控动态的理论刻画。",
+        "code_release": "https://github.com/VennTum99/PLC-DPO (论文脚注给出,正文未说明是否含完整训练代码)",
+        "relevance_detail": "这是 LLM 对齐论文,不属具身一线工作,但有两个可迁移机制值得看:(1) 把监督标签本身当作隐状态并\"修正梯度方向\"而不是丢样本——机器人偏好/奖励学习里人工偏好同样充满翻转与无方向样本(例如同一 Demo 两个 rollout 都只是勉强成功),clean/flip/tie 的三状态路由可以直接搬到 VLA 的 preference-based fine-tuning;(2) 训练目标的稳定化配方:stop-gradient 的路由权重 + EMA 在线标准化 + confidence gate + warm-up,本质是\"不让被估计的信号反过来被模型 hack\",与 V3/LWv2 里 predictor 可能通过与 target 共谋/自确认来降低 latent prediction loss 的风险同构,其 Section 5 的自确认分析与 Appendix A.5 的控制变量实验(20% 噪声下 flip-marker AUROC 0.731,q_flip 预测独立 reward model 分歧 AUROC 0.779、Spearman 0.561;前 20% 训练只占 1.9% 校正权重)提供了一套可复用的\"在线估计信号是否可信\"的诊断方法。此外 Table 5 证明去掉 flip 状态(51.62)与去掉 warm-up/gate(48.93)掉点最大,提示这类路由式目标的收益主要来自方向校正与延迟启动,而非单纯重加权。",
+        "followup": "重点看 Section 3.3–3.5 与 Algorithm 1 的路由/门控公式,再对照 Table 5 组件消融和 Appendix A.5 的 self-confirmation 控制、A.6 超参敏感性;若要把三状态路由移植到机器人偏好数据,先看 Appendix C 的噪声注入与 weak-gap 划分协议。"
+      }
+    }
+  ]
+}
