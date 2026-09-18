@@ -1,0 +1,1508 @@
+{
+  "date": "2026-09-18",
+  "kept": 25,
+  "reviewed": 110,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 318,
+    "unseen": 295,
+    "llm_candidates": 180,
+    "annotated": 110
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2609.20800",
+      "title": "JEPA-Anything: Learning Predictive Models across Different Worlds",
+      "title_zh": "JEPA-Anything:跨不同世界学习预测模型",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 9,
+      "novelty": 8,
+      "authors": [
+        "Taoyong Cui",
+        "Zhongyao Wang",
+        "Xinyue Xu",
+        "Weiyang Liu",
+        "Zhaochen Yu",
+        "Yuying Zhang",
+        "Qiang Gao",
+        "Mengyue Yang",
+        "Wanli Ouyang",
+        "Pheng Ann Heng",
+        "Yingcheng Wu",
+        "Zhenfei Yin",
+        "Ling Yang"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2609.20800",
+      "url": "https://arxiv.org/abs/2609.20800",
+      "published": "2026-09-18",
+      "tldr": "JEPA-Anything 提出正交预测分解(OPF),把 JEPA 的隐目标拆成互补因子并用独立通路学习再重组,在视觉、生物、临床、控制、分子动力学、物理场、天气七个域上一致优于匹配的 JEPA 基线。",
+      "why": "它直接触及 JEPA 式隐空间预测的核心设计问题(目标如何分解、通路如何共享),其因子化目标与重组机制对 V3/LWv2 的 predictor/target 设计与表征坍塌规避有具体借鉴意义。",
+      "hits": [
+        "H:world model",
+        "M:JEPA",
+        "M:representation learning",
+        "M:long-horizon",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 JEPA 类世界模型用单一 monolithic target embedding 与单条预测通路承载所有可预测结构,导致局部/全局、多实体、多尺度结构互相争抢容量,弱预测结构被高方差方向淹没。论文问:能否用一套共同的潜空间世界模型接口,为视觉、生物、临床、控制、分子、物理场、天气等异质系统组织预测状态?",
+        "method": "提出 JEPA-Anything,核心是 orthogonal predictive factorization (OPF)。学习 K 个投影矩阵 P_k∈R^{d×r}(Kr=d),把 stop-gradient 的 EMA target 表示 z_t 分解为 z_t^(k)=P_k^T z_t,每个因子配一个独立 predictor q_k 从共享 context 表示 z_c 预测,再用 Moore–Penrose 伪逆 (P^T)† 合成完整 latent state;条件化时把 action/intervention ξ_t 放进 context token 或 target descriptor,形成 ũ_{t+1}=[q_1(z_t,ξ_t,s_{t+1});...;q_K(·)] 并反复迭代做 latent rollout。训练目标为 L_OPF = L_pred + λ_orth L_orth(因子内正交规范化 + 跨因子子空间正交) + λ_fac L_fac(因子活动度下限) + λ_enc L_enc(在线 encoder 各维方差下限,直接 anti-collapse),加到各域原有 base loss 上。",
+        "key_contributions": [
+          "定义统一的 latent world-state 接口:A_δ 做域适配与 token/descriptor 化,V_δ 采样 context–target,之后所有域共用同一预测算法(Table 1 明确何种部分随域变、何种不变)。",
+          "提出 OPF:用 K 个正交子空间 + 专属 predictor 把预测容量显式分配,并以伪逆合成完整 latent state;Prop.1/Cor.1 证明零惩罚极限下因子构成正交直和、信息无损且合成条件数 κ2(P)=1。",
+          "给出配套正则化(L_orth/L_fac/L_enc)使多因子既互不重叠又保持活跃、且在线 encoder 不坍塌,并提供可解释的因子级诊断接口 u_k(x)=P_k^T z(x)。",
+          "跨七个域验证同一核心:terminal readout、intervention-conditioned/OOD 长程 rollout、以及因子坐标驱动的湿实验干预提名与 Kepler 标度律复现。"
+        ],
+        "sim_benchmarks": [
+          "CITRIS Interventional Pong",
+          "CausalWorld",
+          "DeepMind Control Suite",
+          "PDEBench (Burgers / shallow water)",
+          "APEBench (Burgers / Kuramoto–Sivashinsky)",
+          "WeatherBench2",
+          "MuJoCo 重建场景(controlled visual binding)",
+          "Hopper-v5 / Walker2d-v5 / HalfCheetah-v5 (CEM planning)",
+          "1-D viscous Burgers 50-step 长 rollout"
+        ],
+        "real_robot": "未做真机实验。唯一的物理世界验证是生物湿实验:Huh7–PBMC 共培养、3 例 patient-derived organoid、3 例 tumor fragment 与免疫健全小鼠,验证模型因子提名出的 IL-18 + NT5E/CD73 阻断组合。",
+        "datasets": "约 80 万 human kidney 细胞预训练,下游 PBMC-10K、Adamson、Norman 单细胞扰动数据;纵向多模态临床队列(>1000 临床事件,patient-level split);MuJoCo 重建图像;分子动力学数据(water、α-quartz、paracetamol、benzene);PDEBench/APEBench 与 WeatherBench2。未使用 OXE / DROID / Ego4D 等机器人数据。",
+        "compute": "论文未明确说明 GPU·days。仅给出模型/预算细节:backbone 为 DINOv3 ViT-S(d=384)与 SigLIP2 Base(d=768)、单细胞 scGPT(512)、临床 GPT-2 small(d=768),OPF 维度多为 d=128/160/384/768、K=4;训练步数如 Burgers 2000 步、CITRIS audit 2500 步,各实验 3–10 seeds。",
+        "results_headline": "CITRIS 单因子干预一步预测 MSE 0.009541→0.006218(降 34.83%)、组合干预降 12.90%、六步 free rollout 降 8.58%;APEBench Burgers held-out late MSE 0.1662→0.0839(降 49.5%)、六步 rollout 降 44.7%;单细胞 PBMC 微调 AvgBIO 0.7830→0.8301、zero-shot 0.7194→0.7752;四个分子体系的一步 MAE 与 100 步 RMSD 全部最低;但连续控制上仅 Walker2d/HalfCheetah 优于标准 JEPA,Hopper 反而更差。",
+        "baselines": [
+          "Standard JEPA(monolithic target,容量匹配)",
+          "Unconstrained multi-head(容量匹配,无正交约束)",
+          "Cell-JEPA",
+          "scGPT",
+          "TrajCast-JEPA",
+          "Scratch(从零训练)",
+          "DINOv3 / SigLIP2 frozen checkpoint"
+        ],
+        "limitations": "作者自认正交因子本身不构成因果机制,共享预测架构也不保证跨域表征对齐;长 rollout 上相对收益随步数收窄(H20 −5.84% → H50 −3.15%),Hopper 上规划劣于标准 JEPA;除生物/轨道外,因子语义仍需领域专家解释,因子数 K 与宽度 r 的选择依赖预测复杂度先验。",
+        "code_release": "已开源:https://github.com/Gen-Verse/JEPA-Anything(论文提供 Code 与 Models 链接)。",
+        "relevance_detail": "这篇直接命中 V3/LWv2 的两个核心工程问题:(1) predictor/target 设计——OPF 把 target latent 拆成 K 个正交子空间各配一个 predictor,再用伪逆合成,正是'在何处接 action/prediction head'的一种显式替代方案,可对照你目前的单头 JEPA predictor 做受控消融;(2) 表征坍塌——L_fac(因子活动度)与 L_enc(在线 encoder 方差)是写在 loss 里的 anti-collapse 项,而 Table 5 给出可复用的量化诊断(跨因子子空间重叠 0.455→5e-16、σ_min(P) 0.00513→0.99999、κ2 438.5→1.00005、伪逆合成 NMSE 0.789→2.98e-14),这套指标可直接用来检查 LWv2 的多个 head 是否在重复学同一方向。CITRIS 的 action/intervention-conditioned 一步与六步 rollout(降 34.8%/8.6%)和 locomotion 的因子屏蔽干预(Fig.7)提供了 action conditioning 与因子功能验证的实验协议模板。注意它全部在非机器人域、无语言条件、无 VLA,需自行迁移到 Qwen3-VL + RoboTwin。",
+        "followup": "重点读 Section 2.2(Eq.3–10 的分解/合成与正交正则)、Table 5 的机制审计与 Table 6/7 的 rollout 诊断,再看附录中 K 与 r 的取值与敏感性消融(文中提到 Propositions 5/附录)。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2609.20715",
+      "title": "Don't Mask the Environment: Observation Supervision Changes How Agents Explore Under RL",
+      "title_zh": "不要遮蔽环境:观测监督如何改变 RL 下智能体的探索",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 9,
+      "novelty": 7,
+      "authors": [
+        "Juzheng Zhang",
+        "Disha Makhija",
+        "Manoj Ghuhan Arivazhagan",
+        "Vinayshekhar Bannihatti Kumar",
+        "Rashmi Gangadharaiah"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20715",
+      "url": "http://arxiv.org/abs/2609.20715v1",
+      "published": "2026-09-17",
+      "tldr": "论文提出 ActObs,在 SFT 阶段除了动作 token 外也监督轨迹中已有的观测 token,发现这种联合监督在后续 GRPO 中带来更高的 pass@k、更多样的任务求解和更少的策略漂移。",
+      "why": "它给出一个几乎零成本的可迁移机制——把环境观测当作预测目标来训练策略,从而保留「动作后果预测」能力,这与 V3/LWv2 中动作条件化未来隐状态预测的动机高度一致,可作为 SFT 初始化阶段的对照设计。",
+      "hits": [
+        "M:reinforcement learning"
+      ],
+      "deep": {
+        "problem": "标准 agent SFT 只对 agent 自己产生的 action token 计 loss,把环境返回的 observation 当作 context 而 mask 掉;论文追问:这种约定是否为后续 RL 提供了最好的初始化。",
+        "method": "提出 ActObs:轨迹 τ=(x,a1,o1,...,aT,oT) 已经同时包含动作与后果,只需把 loss mask 改成 L_λ=−(Σ_{i∈A}logp + λΣ_{i∈O}logp)/(|A|+λ|O|),即对 observation token 也做语言建模损失(lambda=0 退化为 ActionSFT,默认 λ=1),不增加数据、参数、序列长度或前向次数,然后在完全相同的 GRPO 流程上对比。另外设 Obs→Act(先纯 observation SFT 再 action-only SFT)作为时序对照,ECHO(RL 阶段加 next-observation loss)作为 RL 端观测感知对照,并用 cos(g_obs,g_act) 与 ‖g_obs‖/‖g_act‖ 追踪 SFT 梯度几何。",
+        "key_contributions": [
+          "Objective:只改 SFT loss mask,把轨迹里已有的 observation token 变成预测目标,把每条轨迹同时当作 imitation 样本和 transition 样本,零额外开销。",
+          "Results:三个 SFT checkpoint 在 Terminal-Bench 2.0 上几乎打平,但同一 GRPO 后 ActObs 初始化得到更高 pass@k,并跨域迁移到未见过的 aider-polyglot 多语言代码编辑任务。",
+          "Mechanism:分析显示 action 与 observation 梯度在 10–20 步内变为近正交,ActionSFT 留下巨大残差 observation 梯度(范数比升到约 41)并把环境预测退化到低于 base model,而 ActObs 保持双目标平衡(比值≈0.5),使 GRPO 以更小的策略位移保留更高 entropy。"
+        ],
+        "sim_benchmarks": [
+          "Terminal-Bench 2.0 (89 tasks)",
+          "aider-polyglot (225 tasks, 6 languages)",
+          "Endless Terminals (2392 containerized RL 环境)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "SFT: Nemotron-Terminal-Corpus 合成部分中 5 万条多轮 terminal 轨迹(0.71B tokens,DeepSeek-V3.2 生成,observation token 约占 45%);RL: Endless Terminals 的 2392 个容器化任务(与 SFT 语料不重叠);评测: Terminal-Bench 2.0 与 aider-polyglot(均与训练集不重叠)。",
+        "compute": "Qwen3-4B 与 Qwen3-8B,SFT 1 epoch(781 步,batch 64,cosine,lr 1e-5),GRPO 135 步(batch 32,lr 1e-6,每任务 16 rollouts);评测服务用 8×NVIDIA A100 单节点 vLLM(tensor parallel + 12 并发 trial)。训练总 GPU·days 未说明。",
+        "results_headline": "4B 上 GRPO 后 ActObs 在每个采样预算都领先 ActionSFT:pass@1 7.2 vs 5.6(+1.6pp,相对 +29%),pass@16 19.1 vs 18.0;aider-polyglot pass@1 13.9 vs 9.7(+4.2pp,相对 +43%);8B 上 pass@1 略降但 pass@16 27.0 vs 23.6(+3.4pp,相对 +14%),覆盖 24 vs 21 个任务。",
+        "baselines": [
+          "Base model (Qwen3-4B/8B)",
+          "ActionSFT (action-only loss mask)",
+          "Obs→Act (sequential control)",
+          "ActionSFT→ECHO / ActObs→ECHO",
+          "ActionSFT→GRPO"
+        ],
+        "limitations": "评测只覆盖 terminal agent 与代码编辑这类文本语言 agent,没有视觉/真机或连续控制的证据;observation loss 只在 SFT 阶段使用,8B 上 pass@1 反而略低于 ActionSFT,存在 pass@1–pass@k 的权衡;结论依赖单一 SFT 语料(Nemotron-Terminal-Corpus)与单一 RL 算法(GRPO),且论文未提开源。",
+        "code_release": "论文未提",
+        "relevance_detail": "虽然对象是 terminal LLM agent,但机制直接打在具身世界模型的核心假设上:标准做法只监督 action,而 ActObs 证明在同一序列里联合监督 action-conditioned 的 next-observation 预测能改变 SFT 解与后续 RL 动力学。Fig 5 的梯度分析(cos(g_obs,g_act) 从 0.83 在 10–20 步内跌到噪声底、ActionSFT 的 ‖g_obs‖/‖g_act‖ 升到 ~41 而 ActObs 稳定在 ~0.5)说明「只拟合动作会把动作-后果预测压到 base model 以下」,这与你 V3/LWv2 中 predictor/target 设计、动作条件如何注入、以及表示坍缩/动作头位置的取舍是同一类问题:预测后果的那一路梯度一旦被丢掉,后续策略的 support 就被压窄(§4.2 的 self-entropy 与 KL(π_init‖π_final) 更小、pass@k 更高)。λ 扫描的 pass@1↔pass@k 权衡(§4.4, Fig 4b)也可作为 latent 预测损失权重的对照实验模板。",
+        "followup": "重点读 §5.1 与 Figure 5 的梯度正交性分析,以及 §4.2–4.4(Fig 4 的 KL–entropy–pass@16 三角关系与 λ 扫描),附录 B 的 observation-only / shuffled-observation 控制实验确认信号来自联合监督而非单纯暴露。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2609.20669",
+      "title": "Learning Foresight without Explicit Trajectories for 3D Diffusion Policies",
+      "title_zh": "无需显式轨迹的 3D 扩散策略前瞻学习",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 9,
+      "novelty": 7,
+      "authors": [
+        "Zhongbo Zhang",
+        "Zaibin Zhang",
+        "Yifan Wang",
+        "Changbo Yan",
+        "Lijun Wang",
+        "Huchuan Lu"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20669",
+      "url": "http://arxiv.org/abs/2609.20669v1",
+      "published": "2026-09-17",
+      "tldr": "提出 Movement Trend Guidance,从短观测历史学一个紧凑的交互演化 latent,训练时用稀疏未来夹爪状态监督,推理时仅以该 latent 作为未来导向条件注入 DP3,在 RoboTwin2.0、LIBERO-40、DexArt 与真机上一致提升成功率。",
+      "why": "它证明只加 3.52% 参数、不生成未来视频也能给扩散策略注入\"交互走向\"的前瞻信息,与 V3/LWv2 中\"未来 latent 该预测什么、如何条件化动作头\"的问题高度同构,且 RoboTwin2.0 上的对比数据可直接参考。",
+      "hits": [
+        "M:diffusion policy"
+      ],
+      "deep": {
+        "problem": "3D diffusion policy（DP3）只能从当前观测生成几何上可行的密集动作，缺少对交互未来走向（下一步该在何处接触、如何收敛）的显式建模，未来结构完全靠动作学习隐式涌现。作者想在不引入显式轨迹/waypoint 规划接口的前提下，给扩散策略补充这种 foresight。",
+        "method": "提出 Movement Trend Guidance：用一个轻量 trend encoder（DP3 式点云+本体状态编码器 → 2 隐层 MLP，latent z_t 维度 256，N=3 帧历史）从观测历史中压缩出 interaction evolution 的隐表示；训练时用辅助 head G_ω 从 z_t 回归 K=4 个未来 offset {5,10,15,20} × 2 个 gripper slot 的稀疏笛卡尔夹爪目标（MSE，λ_future=1.0，L = L_diff + λL_future），推理时丢弃解码结果、只保留 z_t。z_t 经 MLP ψ 投影后走标准 global conditioning 路径与每帧点云/状态特征 early fusion，另加一路 gated FiLM（零初始化 scale/bias + 负 gate bias，α,β,γ=σ(W_γc+b_γ)，y=x+γ⊙(x̃−x)）只作用在 UNet bottleneck；保持原有 dense action + receding-horizon 公式（N=3, H=8, 执行 n_a=6）。",
+        "key_contributions": [
+          "提出一种不依赖显式规划目标的 foresight 形式化：策略同时学习当前可行动作与交互未来走向，而不产生 waypoint/轨迹作为中间控制目标。",
+          "轻量实现：未来状态只作为训练期监督塑造紧凑 latent，latent 走标准 global conditioning，额外的 gated FiLM 调制被限制在 UNet bottleneck，参数量只增加 3.52%（+9.23M / 262.43M），推理延迟 50.28→50.90 ms。",
+          "在 RoboTwin2.0（50 任务混合训练 56.1→62.8）、LIBERO-40（37.08→71.93）、DexArt（52.0→59.25）和 5 个 SO101 真机任务（49.0→72.0）上一致提升。",
+          "受控消融证明收益来自 future supervision 而非额外表征容量（参数匹配但去掉 future loss 仅 44.87 vs 完整 71.93），且比直接条件化显式未来点更优（65.28）。"
+        ],
+        "sim_benchmarks": [
+          "RoboTwin2.0 (50 tasks, category-level + 50-task mixed training)",
+          "LIBERO-40 (LIBERO-Spatial/Object/Goal/LIBERO-10)",
+          "DexArt (faucet/laptop/toilet/bucket)"
+        ],
+        "real_robot": "SO101 双臂平台，5 个任务（push cube、stack bowls、stack cubes、lift basket、handover bottle）；Intel RealSense RGB-D 经标定内参反投影 + 相机到机器人外参变换成点云；每任务用 LeRobot 遥操作采集 50 条示范，每任务评估 20 次 rollout，平均成功率 72.0%（DP3 49.0%，SimpleDP3 43.0%）。",
+        "datasets": "全部仿真数据由各 benchmark 模拟器生成（RoboTwin2.0 每任务 50 条示范、LIBERO-40 每任务 50 条、DexArt 每任务 100 条），未使用 OXE/DROID 等大规模预训练语料；真机数据为自己遥操作采集的 5×50 条示范。",
+        "compute": "未说明 GPU·days；模型 271.67M 参数（DP3 262.43M），训练 3000 epochs（RoboTwin2.0/DexArt）/1000 epochs（LIBERO-40），推理在单张 NVIDIA RTX 4090、batch size 1、10 步 DDIM 下测量延迟。",
+        "results_headline": "RoboTwin2.0 50 任务混合训练 62.8% vs DP3∗ 56.1%（50 任务中 38 个提升），LIBERO-40 71.93%±0.49 vs 37.08%±1.21（+34.85），DexArt 59.25% vs DP3 52.0%，SO101 真机 72.0% vs DP3 49.0%。",
+        "baselines": [
+          "DP3",
+          "SimpleDP3",
+          "DP (Diffusion Policy)",
+          "ACT",
+          "RDT",
+          "π0",
+          "IBC",
+          "BCRNN",
+          "H3DP",
+          "FreqPolicy",
+          "VITA"
+        ],
+        "limitations": "作者承认：当机械臂遮挡被操作物体导致点云不完整时，trend 估计与动作都会变差，在精密接触/放置/工具使用类任务上增益最小（tool use 仅 +2.6，DP3∗>80% 的任务平均变化 0.0）；真机仅验证了 SO101 单一平台与 5 个任务，跨物体/场景/扰动的泛化未验证。可读出的额外疑点：LIBERO-40 上 DP3 复现基线仅 37.08%，与常见报道差距很大，可能低估 baseline 从而放大相对增益。",
+        "code_release": "已开源：https://github.com/zhangzhongbo2213/movement-trend-guidance",
+        "relevance_detail": "与 V3/LWv2 的 JEPA 式未来 latent 预测高度同构且提供了可直接对照的工程结论：(1) Table V 的参数匹配消融——相同 latent 架构但不加 future loss 只有 44.87%，加未来监督跃升到 71.93%，直接回答了“latent 预测收益是否只来自额外容量”这一 collapse/有效性问题；(2) 用稀疏未来夹爪状态（32 个标量）而非稠密轨迹做监督即可，且显式未来点条件化（65.28）反而不如用未来预测塑造 latent，支持“预测目标只用于塑造表示、不作为中间控制目标”的设计；(3) 第 V-D 节 / Appendix IV 关于注入位置的消融（bottleneck-only gated FiLM 62.8 > all-block 55.8 > cross-attn 52.9，cross-attn 甚至低于 56.1 基线）对“action head 挂在哪里、条件信息该多强耦合”是少见的定量证据，可直接映射到 LWv2 中 action head 与 predictor 的连接方式；(4) 与 FLARE/ForeDiffusion 的对比说明在 3D 任务空间做 foresight 相对 2D 未来视图预测的差异。",
+        "followup": "重点看第 V 节消融 + Table V（参数匹配 latent 与显式未来点对比）和 Appendix IV（injection 架构分析），再看 Appendix I 的 Table VII（按 DP3∗ 基线成功率分档的增益规律）。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2609.20709",
+      "title": "MoWAM: Explicit Future Motion Prediction for Efficient World Action Models",
+      "title_zh": "MoWAM:面向高效 World Action Model 的显式未来运动预测",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 9,
+      "novelty": 8,
+      "authors": [
+        "Jiayu Wang",
+        "Bin Zhu",
+        "Yue Yu",
+        "Jingjing Chen"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20709",
+      "url": "http://arxiv.org/abs/2609.20709v1",
+      "published": "2026-09-17",
+      "tldr": "用显式未来运动预测替代未来视频生成:训练时 Mixture-of-Transformer 联合学习视觉动态并预测运动与动作,推理时完全去掉视频生成只保留紧凑运动表示,并用运动感知的任务进度验证器做候选采样扩展。",
+      "why": "它直接回答\"未来该预测什么抽象\"——用机器人运动而非整帧视频作为未来表示,既保留显式前瞻又去掉推理开销,与 V3/LWv2 的 latent 预测目标设计和推理时 scaling 思路高度相关。",
+      "hits": [
+        "M:policy learning"
+      ],
+      "deep": {
+        "problem": "World Action Models 在 inference 时生成稠密未来视频代价过高，而像 Fast-WAM 那样直接去掉未来生成又只剩隐式的 observation feature，导致分布偏移下鲁棒性下降。核心问题：能否在不生成完整未来视频的前提下，让 WAM 在推理时仍保留显式的未来预测？",
+        "method": "MoWAM 用结构化末端执行器 motion 代替稠密未来视频作为未来的紧致显式表示：从左右指尖与 palm 关键点在图像上的投影导出 gripper center c、fingertip span s、palm offset r，并定义 dynamics 分量 m_dyn∈R^6（相邻步 c/s/r 的变化）与 structure 分量 m_str∈R^4（s 与 r 本身）。架构是 Mixture-of-Transformer：Video Transformer（Wan2.2-5B 的 DiT）仅在训练时做未来视频 denoising 以学场景动力学，Action-Motion Transformer 通过 cross-attention 读取观测 latent 的 KV_obv，用 flow matching 联合预测 action chunk 与 motion chunk，推理时只用一次 Video Transformer 前向取出 KV_obv，完全不生成未来视频。推理期 scaling：采样 K 组 (action, motion) 候选，用 motion-aware task-progress verifier s_ψ(I,ℓ,m)（用 demo 正样本 vs 缩减/平移/截断扰动负样本，pairwise ranking loss 训练）打分并执行最高分候选的 action。",
+        "key_contributions": [
+          "提出以结构化机器人 motion 作为 WAM 的紧致显式未来表示，在推理时不生成稠密未来视频的同时保留显式未来推理。",
+          "提出 MoWAM：双分支 Mixture-of-Transformer（Video Transformer 训练期学动力学 + Action-Motion Transformer 联合预测 action/motion）的 world action model。",
+          "提出基于 motion 的推理期 scaling 策略，用 motion-aware verifier 在多个 (action, motion) 候选中挑选，性能随候选数增加而提升。",
+          "在 LIBERO、LIBERO-Plus 与真机任务上验证 ID 性能、OOD 鲁棒性与真机成功率均优于代表性 WAM baseline，且延迟接近无未来生成的策略。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "LIBERO-Plus"
+        ],
+        "real_robot": "Franka Research 3 单臂，三个任务 Pick Banana / Stack Bowls / Close Drawer；每任务采集 100 条 demo，每任务评测 20 次。MoWAM 平均成功率 80%（Motus 71.67%，Fast-WAM 45%），action latency 293.5 ms（Motus 1621.9 ms）。",
+        "datasets": "LIBERO 四个 suite 各 500 条示范轨迹（含 LIBERO-Long 用于 ablation）；真机每任务 100 条自采示范。无额外大规模 embodied 预训练（w/o Robo. P.T.），backbone 用预训练 Wan2.2-5B。",
+        "compute": "4× NVIDIA A100，训练 20000 steps；backbone 为预训练 Wan2.2-5B 视频 DiT，Action-Motion Transformer hidden dim 1024，action/motion horizon 均为 32，视频按 4× 时间下采样为每 chunk 9 帧；推理 10 步 denoising，CFG=1.0，速度测试在单张 RTX 5090 上。",
+        "results_headline": "LIBERO 平均成功率 98.9%（Fast-WAM 96.5%，+2.4 点）；LIBERO-Plus 平均 81.43%（Fast-WAM 70.43%，+11.0 点；Motus 76.00%，LaWAM 78.43%），同时延迟仅 293.5 ms，而 Joint-WAM / IDM-WAM 为 766.3 / 995.4 ms；真机平均 80% vs Motus 71.67%，候选数 1→4→8 使 Pick Banana 成功率 65%→75%→80%。",
+        "baselines": [
+          "OpenVLA",
+          "OpenVLA-OFT",
+          "UniVLA",
+          "π0",
+          "π0-FAST",
+          "π0.5",
+          "LingBot-VA",
+          "Motus",
+          "LaWAM",
+          "Fast-WAM",
+          "IDM-WAM",
+          "Joint-WAM"
+        ],
+        "limitations": "motion 只刻画机器人自身运动，不能替代完整视觉未来：在 LIBERO-Plus 的 Initial 与 Camera 偏移上仍比 Joint-WAM / IDM-WAM 低 5 和 8 个百分点；真机只覆盖 3 个单臂任务，Close Drawer 上略逊于 Motus；verifier 依赖 demo 构造的扰动负样本，其泛化性未做深入分析。",
+        "code_release": "论文未提",
+        "relevance_detail": "这是\"未来预测到底该在什么空间做\"的直接对照实验：与 JEPA-WAM / LaWAM 的 latent future 不同，MoWAM 用可解释的几何 motion 作为显式未来变量，并给出 Table IV 的关键证据——冻结 Video DiT（不做训练期未来视频建模）时平均 SR 从 76% 崩到 33.14%，说明训练期的 future prediction 监督本身比推理时是否 rollout 更关键，这对 V3/LWv2 中\"predictor 该学什么 target、未来监督是否必要\"的问题是一个强参考。另外 action/motion 通过 attention 直接读 observation 的 KV（而非依赖生成帧）这一解耦设计与在 VLA 里挂 action head 的位置选择高度相关；Table V 指出把 action 投影到图像来当未来（ADE 77.56）远差于直接预测 motion（ADE 5.63），提示 action 与 future 表征必须分开建模，可直接用于 V3/LWv2 的 predictor/target 设计。verifier + 候选采样的推理期 scaling 也可迁移到任何 flow/diffusion action head 上。",
+        "followup": "重点看 Sec. III-D 的 motion verifier 训练与 Fig. 4 的候选数 scaling 曲线，以及 Table IV 的三组消融（w/o Video DiT Training、w/o Motion Conditioning）和 Table V 的 ADE 对比。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2609.20648",
+      "title": "SkipVLA: Skipping VLA Steps with Classical Planning for Fast Robot Manipulation",
+      "title_zh": "SkipVLA:用经典规划跳过 VLA 步骤实现快速机器人操作",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 6,
+      "authors": [
+        "Kaivalya Agrawal",
+        "Md Ashiqur Rahman",
+        "Raymond A. Yeh",
+        "Zachary Kingston"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20648",
+      "url": "http://arxiv.org/abs/2609.20648v1",
+      "published": "2026-09-17",
+      "tldr": "SkipVLA 把预训练 VLA 与经典运动规划器混合,用规划器负责自由空间运动、只在抓取/放置等接触密集技能上查询 VLA,并复用冻结的 VLM 主干预测目标位姿,在 LIBERO 13 个任务和真机 YAM 臂上实现最高 2.5 倍加速且成功率不变。",
+      "why": "它给出一个可复用的分层思路:把语义理解交给 VLA、把几何运动交给经典规划,并用冻结 VLM 主干零额外演示地学习目标位姿预测,对降低长程 VLA 推理成本很有参考价值。",
+      "hits": [
+        "H:VLA",
+        "H:robot manipulation",
+        "M:planning",
+        "M:long-horizon"
+      ],
+      "deep": {
+        "problem": "VLA 策略在测试时推理延迟极高(多十亿参数、长程任务需数十到上百次查询),现有加速方案(蒸馏小模型、异步 action chunk、VLA+快速低层策略)仍然在整个任务上跑学习策略,在纯几何的自由空间移动上浪费算力。",
+        "method": "SkipVLA 把预训练 VLA 与经典运动规划器动态交织:用 3D 检测(FastSAM+DBSCAN)得到候选物体 bounding box,用一个轻量 cross-attention 打分头 f_tgt(以 box 的 learned positional embedding 为 query、冻结 VLM 的 vision-language token 为 key/value,再经 MLP 输出标量 relevance score)选出目标物体并指定其上方 collision-free hover pose;由 VAMP / cuRoboV2 规划自由空间运动到该 pose,指示器 I 以 gripper 状态翻转和末端到目标距离阈值切换,交回 VLA 做抓取/放置等 contact-rich 技能。打分头只在 LIBERO 人类示教上用 cross-entropy 训练,标签由 gripper event 时刻离末端最近的 box 自动生成,基础 VLA 完全冻结,无需端到端优化或额外标注。",
+        "key_contributions": [
+          "提出 SkipVLA:plug-and-play 混合策略,把自由空间 transit 全部路由给经典 motion planner,只把 contact-rich 技能留给预训练 VLA,无需重训策略。",
+          "设计轻量 target pose scoring head,复用 VLA 冻结的 vision-language token 预测 3D 目标姿态,可从已有 imitation learning 数据自动生成监督、零人工标注。",
+          "在 LIBERO 13 个任务、3 个 VLA backbone(π0.5 / SmolVLA / MolmoAct2)与 2 个规划器(VAMP / cuRoboV2)上验证模块化与稳定性。",
+          "真机 6-DoF YAM 上最多 2.5× 墙钟加速(延迟降 59.6%)、Jetson Thor 上能耗降超 52%,且成功率持平或更高。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO-OBJECT",
+          "LIBERO-10 (MuJoCo)",
+          "MuJoCo 600 step timeout"
+        ],
+        "real_robot": "6-DoF YAM 机械臂 + NVIDIA Jetson Thor 机载算力,三个 top-down pick-and-place 任务(单物体放盒、红蓝双物体放盒、三块积木堆塔),每任务 20 次独立试验;每个 backbone 每任务用 50 条遥操作示教 fine-tune。",
+        "datasets": "仿真用 LIBERO 人类遥操作示教,每任务 50 条、共 650 条训练打分头;真机每任务 50 条遥操作示教用于 fine-tune π0.5 / MolmoAct2。",
+        "compute": "训练算力未说明(打分头为 3 层 MLP box encoder + multi-head cross-attention 的轻量结构);推理部署在 NVIDIA Jetson Thor 上,backbone 规模为 π0.5 3.5B、SmolVLA 0.5B。",
+        "results_headline": "真机上 MolmoAct2 墙钟时间平均降 46.0%(最多 59.6%,2.47×),π0.5 降 30.6%,VLA 查询次数平均降 33.8%,能耗分别降 52.4% / 29.1%,双物体放置成功率 90%→100%、堆塔分别 +15.0 / +10.0 个百分点;仿真 LIBERO-OBJECT 上 π0.5 成功率 99.0% 不变而墙钟 8.33s→5.27s,SmolVLA 成功率 39.0%→82.0%(cuRoboV2)。",
+        "baselines": [
+          "π0.5",
+          "SmolVLA",
+          "MolmoAct2",
+          "gripper-state indicator (本文)",
+          "height-based indicator 消融"
+        ],
+        "limitations": "作者明确说明方法局限于 pick-and-place:指示器 I 依赖 gripper 状态翻转,假设每段 active manipulation 都以抓取或释放结束;且任务集只选可用 top-down 抓取完成的任务,不涉及复杂抓取合成。未来工作是用可学习的 task-conditioned 时序分段模块替换启发式指示器。",
+        "code_release": "论文未提(github URL 未给出)",
+        "relevance_detail": "核心机制对口:它不动 VLA 本体,只在冻结 vision-language latent 上挂一个轻量 cross-attention 打分头做目标物体/位姿预测,训练监督由 gripper event 自动从示教里挖出来——这正是 V3/LWv2 里讨论的“在冻结 VLM 潜空间上挂附加预测头、且不要引入额外示教”的一种低成本范式,可直接对照 Eq.(13) 的 box-query / token-key attention 设计与第 IV-C 节的数据生成方式。更值得读的是它的误差论证:把 VLA 查询限制在短 segment T_manip ≪ T,并让规划器把机器人重新“锚定”回示教分布内的起态,可解释为何混合后 SmolVLA 从 39.0% 涨到 82.0%——这对“何时触发 latent 预测/action head、如何避免长程 compounding error”有直接借鉴价值,也与 Table I/II 里 planner 选择不影响成功率的模块化结论相关。",
+        "followup": "重点看第 IV-B 节(Eq. 13 打分头结构 + Eq. 14 指示器)、第 V 节 compounding error 讨论与 Table III / Fig. 4 的真机累积成功率-时间曲线。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2609.20649",
+      "title": "DexTouch-WM: Learning Action-Conditioned Tactile World Models from Human Touch for Dexterous Robot Manipulation",
+      "title_zh": "DexTouch-WM:从人类触觉学习动作条件触觉世界模型用于灵巧机器人操作",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [
+        "Yan Qin",
+        "Yue Chen",
+        "Wenwei Lin",
+        "Shujia Liu",
+        "Chuqiao Lyu",
+        "Kailun Su",
+        "Chenze Yu",
+        "Ping Luo",
+        "Wenbo Ding",
+        "Tianxing Chen",
+        "Renjing Xu"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20649",
+      "url": "http://arxiv.org/abs/2609.20649v1",
+      "published": "2026-09-17",
+      "tldr": "DexTouch-WM 在人与机器人手上部署同布局柔性压阻阵列并把人类动作重定向到机器人动作空间,用解剖感知触觉 token 与对齐的动作条件把视频专家和轻量触觉专家耦合,联合预测未来 RGB 与双手触觉动态,并证明增加人类交互数据可提升机器人域预测与策略学习。",
+      "why": "它展示了跨具身人类数据作为世界模型监督的可行数据轴,以及动作条件多模态(视觉+触觉)预测如何当代理环境评估策略,对世界模型的数据扩展与动作条件设计有直接启发。",
+      "hits": [
+        "H:robot manipulation",
+        "H:world model",
+        "M:policy learning"
+      ],
+      "deep": {
+        "problem": "接触密集的灵巧操作需要稠密触觉数据来学习预测模型，但真机触觉数据采集昂贵、且数据与特定本体和传感器配置强绑定，难以规模化扩展到 dexterous hand。",
+        "method": "DexTouch-WM 是一个 action-conditioned 视觉-触觉 world model：以预训练视频专家 Wan2.2-TI2V-5B（冻结 video VAE 与 text encoder）搭配轻量 Tactile DiT，通过 Mixture-of-Transformers 的双模态 joint attention 交换上下文但保留各自 AdaLN 与 FFN，用 conditional flow matching 联合预测未来 RGB 与双手触觉。触觉用 anatomy-aware Split-Hands tokenizer（指尖/手掌共享分区编码器 + pad identity embedding，320 taxels）编码，并预测相对初始触觉 latent 的残差 r_t = z_t − z_0；动作通过 dual-rate AdaLN 注入，视频用 4 帧 chunk、触觉用逐帧分辨率，输入为 67-D 共享 robot-centric 位姿（双侧腕部 + 20-DoF 手 + 相机运动）。人类手部动作经 IK retarget 到 WujiHand2 的 20-DoF 手，使人类数据可以监督同一个机器人动力学模型。",
+        "key_contributions": [
+          "提出 action-conditioned 触觉 world model，联合预测未来视频和双手全掌稠密触觉观测，用于灵巧交互。",
+          "给出结构化触觉动力学建模：anatomy-aware 触觉 tokenization、以初始观测为锚的残差 latent、时间对齐的 dual-rate action conditioning。",
+          "构建 100 小时双手人类交互数据集与共享的人类-机器人感知/动作接口（同一压阻阵列布局 + retarget 动作空间），证明人类数据可 scale 机器人域预测。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "天玑(Tianji)机械臂 + 20-DoF Wuji 灵巧手；10 个灵巧操作任务，其中 6 个任务共 5 小时用于 world model 预训练，另 4 个不相交任务用于下游 adaptation/eval；每个下游任务含 300 条真机轨迹（拆成 A/B/C 各 100 条）；机器人手上安装与人类手套相同 320-taxel 布局的压阻阵列。",
+        "datasets": "自建 HumanTouch：约 100 小时 egocentric 人类双手交互数据（50 个日常任务，另有 4 个下游任务的人类 demo），采集设备为 Moxian 压阻手套 + MANUS finger tracker + VIVE wrist tracker + 头戴 RGB 相机；未使用 OXE/DROID/Ego4D 等公开数据集。",
+        "compute": "论文未明确说明（仅知视频专家为 Wan2.2-TI2V-5B，5B 参数；触觉专家为轻量 DiT）。",
+        "results_headline": "固定 5h 真机数据、人类数据 0→100h 时，held-out 机器人域 visual PSNR 23.47→27.10、Trajectory Accuracy 0.89→0.96、Geometry Error 0.13→0.10，触觉 PSNR 24.81→29.18、Contact-IoU 0.42→0.59、Contact-F1 0.55→0.71；作为 policy evaluator 时 WM-Mix 平均 Pearson 0.844（WM-Robot 0.646）、MMRV 0.017（vs 0.025）；但用合成轨迹替代一半真机数据训 policy 多数变差（FTP-1 四任务均值 0.694 vs 全真机 0.731，π0.5 0.625→0.494，X-VLA 0.500→0.400）。",
+        "baselines": [
+          "Grid tactile tokenizer",
+          "V-only（仅视频 + cross-attention 动作注入）",
+          "Cross-Attn（联合视觉-触觉 + cross-attention 注入）",
+          "WM-Robot（仅机器人轨迹 adapt 的 world model）",
+          "FTP-1",
+          "π0.5",
+          "X-VLA"
+        ],
+        "limitations": "作者承认合成轨迹虽提升 world model 作为 evaluator 的一致性，但作为 policy 训练数据对多数 policy/task 反而掉点（X-VLA 在 Stand Bottle 得 0），且 Stand Bottle 上仍存在 policy 排名反转；此外触觉增益主要在 50–100h 才出现，真机数据仅 5h/10 任务，泛化边界未充分验证。",
+        "code_release": "论文未提（未见 github 链接或开源声明）。",
+        "relevance_detail": "三点直接可迁移：(1) Sec. III-B 的 anchored residual tactile latent（预测 z_t − z_0 而非绝对 latent）是解决“静态背景主导预测、真实变化被淹没”的具体做法，可直接借到 V3/LWv2 的 future latent prediction target 设计上；(2) Table I 的 action conditioning ablation 显示 cross-attention 注入动作会在高层动力学指标上引入跨模态干扰（Trajectory Accuracy 0.88→0.85），换成 AdaLN 后回到 0.89 且 Contact-IoU 0.39→0.42，对“action head 接在哪、动作如何注入”这一当前问题给出了有数值的对照；(3) MoT 双模态 joint attention + 模态专属 AdaLN/FFN 的双流架构，与 VLA 内 latent world model 的视频流/latent 流设计同构，且论文用 JEPA Similarity 作为 world model 评估指标（Table I），可直接复用为评估口径。另外 Table IV/V 关于“预测质量好 ≠ 合成数据对 policy 训练有用”的双面结果，对任何用 world model 生成数据的工作都是重要负向信号。",
+        "followup": "重点看 Table I（human scaling 与 V-only/Cross-Attn/Robot-only 动作注入消融）、Sec. III-B（残差 latent + dual-rate conditioning）以及 Table IV/V（合成数据作为 policy 训练数据的失败模式）。"
+      }
+    },
+    {
+      "rank": 7,
+      "key": "arxiv:2609.19878",
+      "title": "Uni-LaDiR: Latent Diffusion Unifies Multimodal Reasoning",
+      "title_zh": "Uni-LaDiR:隐扩散统一多模态推理",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [
+        "Haoqiang Kang",
+        "Yizhe Zhang",
+        "Nikki Lijing Kuang",
+        "Yian Ma",
+        "Lianhui Qin"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19878",
+      "url": "http://arxiv.org/abs/2609.19878v1",
+      "published": "2026-09-17",
+      "tldr": "Uni-LaDiR 用统一编码器把不同模态的教师推理步骤映射到共享隐空间 thought token,并用扩散模型预测下一块 thought token,联合训练编码器与推理器,在 11 个 VLM 基准和 2 个 VLA 套件上分别取得 7.3% 与 6.1% 的相对提升。",
+      "why": "它把扩散式下一块预测引入隐空间推理链,并证明同一机制可迁移到机器人动作,对隐空间预测目标与动作头设计的耦合方式有参考价值。",
+      "hits": [
+        "H:VLA",
+        "H:robot manipulation",
+        "M:vision-language model"
+      ],
+      "deep": {
+        "problem": "现有多模态 Chain-of-Thought（显式图像/程序，或模态特定的 latent token）把各模态的 thought token 拼接或交错在一条 LLM 序列里，导致中间推理每一步既要决定推理状态如何演化、又要决定它在下一个模态表示里如何表达，把跨模态表示转换与推理动力学纠缠在一起。",
+        "method": "Uni-LaDiR 用一个 unified encoder（共享 LLM backbone）把不同模态的 teacher reasoning step（文本 CoT、图像、3D 点云、robot state）统一编码成同宽度、同投影的 thought token block z_i，并对每个 block 施加 downstream grounding 监督：用前缀 z_<i 预测下一个 teacher 目标、用完整 z_1:K 预测最终答案或动作（文本用 CE，连续特征用 L2，VLA 动作走 flow-matching action head），而不是重建源模态。同时用同一个 shared backbone 做 latent diffusion（flow-matching）预测下一个 thought block 的条件分布，训练时对 clean latent 做 stop-gradient，使 L = L_ground + λL_diff 既让 token 对下游有用、又可从上下文预测；推理时不需要 teacher 观测，逐块去噪生成 z_1..z_K 后输出答案/动作。",
+        "key_contributions": [
+          "提出统一 latent reasoning space：同一 unified encoder、同一可学习 embedding q、同一 block 宽度把文本/图像/3D/机器人状态的 teacher step 映射为共享 thought token，取代「编码后按模态拼接」的范式。",
+          "设计 reasoning sufficiency + context predictability 的双目标训练：downstream grounding（预测后续 step 与最终输出）保证信息量，latent diffusion 保证可从推理时可用上下文生成，并用 shared backbone + stop-gradient 联合优化。",
+          "在 11 个 VLM benchmark 与 LIBERO / RLBench 两套 VLA 上验证统一空间的有效性，并给出「共享模态越多增益越大」的证据（见 Figure 3）。",
+          "三组消融分别锁定 grounding 目标、联合训练、扩散目标三个设计选择：downstream utility 优于 reconstruction，joint training 优于 frozen targets / 两阶段，flow matching 优于 L2 与 cosine。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "RLBench",
+          "VisualPuzzles",
+          "ChartQA",
+          "V*",
+          "BLINK-Jigsaw",
+          "MMVP",
+          "SAT",
+          "CV-Bench",
+          "MathVista",
+          "MathVision",
+          "VisuLogic",
+          "EMMA"
+        ],
+        "real_robot": "未做真机实验。只在 LIBERO 与 RLBench 仿真中评测（RLBench 10 个任务报 success rate 与 16.5 Hz 控制频率）；作者在 Ethics Statement 中明确说明仿真性能不能代表真机安全与可靠性。",
+        "datasets": "VLM 侧训练用 Zebra-CoT（交错文本+视觉推理步骤，backbone Qwen2.5-VL-7B）；VLA 侧正文未明确给出训练数据来源（未提 OXE / DROID / 具体示教规模），只说明 teacher CoT 为 future images、3D point clouds、robot states，动作为任务输出。",
+        "compute": "论文未明确说明训练算力（无 GPU·days / batch / 训练步数）。模型规模有给：VLM 主实验为 Qwen2.5-VL-7B；VLA backbone 为两个 Janus-Pro-1.5B 专家组成的 MoT（共 3.3B 参数）+ flow-matching action head。",
+        "results_headline": "VLM：四个数学/逻辑 benchmark 平均 49.03% vs 最强 latent baseline ILVR 45.68%（+7.3% 相对），七个 vision-centric 平均 76.31% vs Mirage 75.05%（+1.7%），相对 Qwen2.5-VL base 分别 +34.7% / +18.1%；VLA：RLBench 平均成功率 87.0% vs LaST0 82.0%（+6.1% 相对，10 个任务 9 个提升、Plants +16.7%），LIBERO 99.15% vs PearlVLA+PRL 98.7%（+0.45 个百分点），无 action chunking 下 16.5 Hz（比 LaST0 快 7.1%，是 CoT-VLA 的 15.0×）。",
+        "baselines": [
+          "Qwen2.5-VL-7B (base)",
+          "DeepEyes",
+          "PixelReasoner",
+          "Vision-R1",
+          "Open-Vision-Reasoner",
+          "LVR",
+          "Mirage",
+          "CoVT",
+          "Monet",
+          "VaLR-M",
+          "SLVR",
+          "Mull-Tokens",
+          "ILVR",
+          "OpenVLA / OpenVLA-OFT",
+          "SpatialVLA",
+          "CogACT",
+          "π0.5",
+          "HybridVLA",
+          "UniVLA",
+          "CoT-VLA",
+          "FlowVLA",
+          "FUTURE-VLA",
+          "FiS-VLA",
+          "LaST0",
+          "AVA-VLA",
+          "PearlVLA (+ PRL)",
+          "ConsisVLA-4D"
+        ],
+        "limitations": "作者未设专门 limitation 章节；可读出：训练仍依赖 teacher reasoning step（蒸馏式监督），推理才摆脱 teacher；downstream grounding 并非全任务受益（MathVista 反而下降 4.20 个点）；LIBERO 上只比 PearlVLA+PRL 高 0.45 个点，接近饱和；全部结论来自仿真，未验证真机迁移，且未报告 VLA 训练数据与算力。",
+        "code_release": "",
+        "relevance_detail": "这篇和 V3/LWv2 的接口非常具体：它把「预测未来 teacher latent（而非重建源模态）」当作 grounding 目标，正是 JEPA 式未来 latent 预测的抗 collapse 做法，且 Figure 4 直接量化了 reconstruction vs downstream utility 的差异（六 benchmark 平均 +5.4% 相对，V* +26.0%，RLBench +7.4%）；Figure 5 给出 frozen targets / 两阶段 / joint training 的对照（joint 比两阶段 +11.3% 相对、比 frozen +21.9%），为「predictor 与 target encoder 是否共享权重/是否冻结」提供直接证据；Figure 6 说明 latent block 的预测头用 flow matching 明显优于直接 L2 与 cosine（+14.9% / +19.5%），对应你在 predictor 目标函数上的选择；动作头方面它把 flow-matching action head 挂在完整 latent thought 序列之后（Section 3.3），是「action head 挂哪里」的一种已验证方案；Section 4.3 / Figure 3 还给出共享空间覆盖更多模态时增益递增（RLBench 单模态 82.0 → 全共享 88.0）的证据，可迁移到多源感知输入的统一 latent 设计。",
+        "followup": "重点读 3.3–3.4 的 grounding + stop-gradient 联合训练推导、Appendix A.1 的 construction / grounding / diffusion 三种 attention mask，以及 Figure 4/5/6 三组消融与 Table 2 的 success–Hz 效率列。"
+      }
+    },
+    {
+      "rank": 8,
+      "key": "arxiv:2609.20034",
+      "title": "Astronex-World 1.0: Real-Time Interactive World Model Foundation",
+      "title_zh": "Astronex-World 1.0:实时交互式世界模型基础",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [
+        "Xin Zhou",
+        "Cong Miao"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20034",
+      "url": "http://arxiv.org/abs/2609.20034v1",
+      "published": "2026-09-17",
+      "tldr": "Astronex-World 1.0 基于 Wan2.2-TI2V-5B 构建可控视频世界模型,用 PRoPE 注入相机内外参、64 维动作流调制每层 Transformer,并提供双向与块因果两种版本,因果模型在单张 L20 上以 24fps 实时流式生成 832x480 视频。",
+      "why": "它给出了动作条件视频世界模型的完整训练配方(相机/动作控制、块因果注意力与 KV 缓存、少步蒸馏、DMD 分布匹配)和极低算力复现路径,对动作条件世界模型的工程实现很有借鉴意义。",
+      "hits": [
+        "H:embodied intelligence",
+        "H:world model"
+      ],
+      "deep": {
+        "problem": "如何把预训练的双向视频 diffusion Transformer 转成可实时交互的因果世界模型——在只有帧对齐相机轨迹、64 维连续动作和事件文本的条件下预测未来视觉状态——并在小算力（2×L20）下追平参数量大 2–4 倍的模型。",
+        "method": "以 Wan2.2-TI2V-5B（30 层 DiT，5.35B）为视觉先验，同时发布 bidirectional（全时空注意力）与 causal（block lower-triangular 注意力 + cross-block KV cache，推理 block=8 latent frames、局部窗口 20 帧 + 4 帧 persistent sink）两种形态。PRoPE 把相机内参/外参注入全部 30 层 self-attention；64 维连续 action + 32 个 embodiment ID 经两层 MLP 映射为每层 attention/FFN 的 shift/scale/gate 调制（与 timestep 调制相加，action 投影零初始化）；event 通过在 rollout 第 s 个 latent frame 重新编码 prompt p⊕e 的 cross-attention K/V、同时保留前缀 self-attention cache 实现。训练走五阶段：I 双向控制适配（camera→action→camera recovery）、II block-causal teacher forcing 转换、III online UniPC 轨迹蒸馏（25→12 步）、IV mixed-domain causal SFT + rolling forcing、V asymmetric DMD/DMD2（双向模型当 real score）+ motion preservation 项。",
+        "key_contributions": [
+          "一个共享 5B 可控视频 backbone 的 bidirectional + causal 双发布形态，causal 端支持 KV 缓存、8 步 UniPC、832×480@24fps 单卡 L20 实时流式生成。",
+          "统一控制接口：PRoPE 注入完整相机内外参、64 维 action + embodiment ID 调制每一层、可在 rollout 指定位置插入 text event，并保留可后训练的 [F,64] action-sequence 输出头。",
+          "五阶段可复现训练配方（控制适配→block-causal 转换→在线轨迹蒸馏→混合域 causal SFT→asymmetric DMD），全部在 2×NVIDIA L20 48GB 上完成。",
+          "在 WBench Full 289 上以 5B 达到 70.0，高于 13.6B LongCat-Video（69.9）与 14B Helios（69.7），距 22B LTX-2.3（70.9）仅 0.9 分。"
+        ],
+        "sim_benchmarks": [
+          "WBench Navi 158",
+          "WBench Full 289",
+          "VBench 1.0 T2V",
+          "VBench++ I2V"
+        ],
+        "real_robot": "未做真机实验。仅用 DROID 真机操作轨迹数据离线训练 64 维 action 条件分支（Stage I-b），论文把机器人/自驾控制列为需要 domain data 后训练（Section 8.7）的未来工作。",
+        "datasets": "Control2V（minWM 发布，相机控制主力数据，贯穿 Stage I–V）、DROID（真机动作 + embodiment 条件）、CrossFPS（第一人称/游戏动作）、DrivingDojo（驾驶）、NVIDIA PhysicalAI（合成具身机器人场景，作用接触/操作动力学）。",
+        "compute": "全部五阶段在 2×NVIDIA L20 48GB 上完成，bfloat16 + FSDP + gradient checkpointing，LoRA rank 64 / alpha 128，训练张量形状 [1,20,48,30,52]，模型 5,351,000,000 参数；推理单张 L20 实时。未给出 GPU·days。",
+        "results_headline": "WBench Navi 158 73.5、Full 289 70.0（Quality 78.3 为对比表最高、Consistency 82.4、Interaction 仅 47.6、Physical 68.1），超过同源于 Wan2.2-5B 的 YUME 1.5（68.9）、4B Kairos 3.0（65.7）、13.6B LongCat-Video（69.9）、14B Helios（69.7），距 22B LTX-2.3（70.9）0.9 分。",
+        "baselines": [
+          "YUME 1.5",
+          "Kairos 3.0",
+          "HY-Video 1.5 (WorldPlay)",
+          "LongCat-Video",
+          "Helios (distilled)",
+          "LTX-2.3"
+        ],
+        "limitations": "作者承认复杂交互弱（Full Interaction 47.6，text-switch 只暴露一个最早事件切换点、多事件被合并）；block-causal 下仍有长时颜色漂移、结构重绘与细节丢失（sink 只延迟不消除）；DMD 蒸馏显著抑制主体运动（内部 basketball 诊断残差幅度 88.8px→16.6px，仅剩 19%）；无显式物理状态、深度、碰撞或 3D 场景表示，视频连贯不等于物理正确。",
+        "code_release": "开源。GitHub https://github.com/Astronex-Robotics/Astronex-World ，权重 Hugging Face https://huggingface.co/Astronex-Lab/Astronex-World ，另附项目页 https://world.astronex.com.cn 。",
+        "relevance_detail": "三点具体可用：① Section 5.3 给出了「action 条件怎么挂、action head 挂哪」的可对照设计——64 维 action + embodiment ID 经两层 MLP 生成每层 attention/FFN 的 shift/scale/gate（零初始化以保持基座行为），并额外保留一个把每 latent frame 的 pooled visual token 经 LayerNorm-MLP 解成 [B,F,64] 动作序列的 inverse-dynamics/action-decoder 头，正是 V3/LWv2 中 action head 位置与 action conditioning 强度问题的现成 ablation 模板。② Section 6.7 + Table 9 的 DMD 运动坍缩诊断（残差幅度 88.8px→21.2px→16.6px）与 VBench Dynamic Degree 仅 0.254 是分布匹配目标压掉运动的实证，对 JEPA 式未来 latent 预测中 predictor 退化为条件均值/表征 collapse 的风险是直接警示，且他们用显式 motion 保持项只部分缓解。③ Stage II–IV（block-causal teacher forcing → online UniPC 轨迹蒸馏 → rolling forcing 自历史 SFT）是一套能在 2×L20 复现的「双向→因果+少步」recipe，可用于把离线世界模型改造成闭环 rollout；event 通过只重建 cross-attention K/V、保留前缀 self-attention cache 来保证编辑局部性的机制，也可迁移到动作/事件条件化的长程 rollout。注意它是像素级生成式视频世界模型而非 latent 预测模型，与 V3/LWv2 的连接点是 action 接口设计与坍缩诊断，不是表征学习本身。",
+        "followup": "优先看 Section 5.3（action/action-output 接口）、Section 6.7 + Table 9（DMD 运动抑制诊断），再看 Table 3/4 的五阶段超参与 Section 9 的失败案例（Figure 10 漂移样例）。"
+      }
+    },
+    {
+      "rank": 9,
+      "key": "arxiv:2609.20776",
+      "title": "GeoAAC: Geometry-Based Adaptive Action Chunking from Denoising Trajectories in VLA Policies",
+      "title_zh": "GeoAAC:从 VLA 策略去噪轨迹中做基于几何的自适应 action chunking",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 9,
+      "novelty": 7,
+      "authors": [
+        "Xin Chen",
+        "Sen Chen",
+        "Yujuan Ding",
+        "Jian Liu",
+        "Guoqing Wang",
+        "Wei Ye",
+        "Heng Tao Shen",
+        "Yi Bin"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20776",
+      "url": "http://arxiv.org/abs/2609.20776v1",
+      "published": "2026-09-17",
+      "tldr": "论文发现 flow matching 去噪轨迹中 action prefix 的几何变化量与预测不确定性正相关，据此构造 horizon-wise 几何 profile，在单次生成内无需额外训练地自适应决定 action horizon。",
+      "why": "它给出了一种零训练成本、从生成过程内部读出预测可靠性的机制，可直接迁移到任何 flow/diffusion 策略（含 VLA 的 action head 设计）来判断何时该闭环重规划而非继续开环执行。",
+      "hits": [
+        "H:VLA",
+        "M:uncertainty"
+      ],
+      "deep": {
+        "problem": "基于 Flow Matching 的 VLA 策略普遍使用固定 action horizon(执行多少步预测动作后再重规划),但同一任务的不同阶段对动作连续性、控制精度与闭环反馈的需求不同,固定 horizon 必然在某些阶段失效。",
+        "method": "GeoAAC 在单次 Flow Matching 去噪过程中提取 velocity 预测的几何变化:对每个 action prefix(前 k 个动作)计算相邻去噪步速度差的归一化模长 b_k^(t),用位置相关时间权重 w_t = s̄_t(1-s̄_t)^2 / mean 做 temporal correction(强调中间去噪阶段、压制后期噪声),聚合成 horizon-wise geometric profile Ũ=(Ũ_1,...,Ũ_H)。再算相邻 prefix 的相对几何增长 r_k,仅保留正增长 e_k,构造归一化累积分布 F_k,取 F_k=0.5 的中位数(线性插值)作为执行边界,并用 motion-aware 下界 k_motion(k_min 与动作幅度 M(A) 决定)兜底,最终 k*=max(k_50, k_motion)。整个过程无需额外训练、无需多次采样。",
+        "key_contributions": [
+          "实证发现 Flow Matching 去噪轨迹的 prefix-wise 几何变化 U_k 与重复采样得到的预测不确定性 R_k 正相关(Spearman ρ≈0.5–0.7,跨所有 prefix 长度),把去噪几何确立为 process-level 可靠性信号。",
+          "提出 GeoAAC:用时间加权修正 + 累积相对增长中位数从单次生成中选出 action horizon,训练-free、单次推理即可。",
+          "在 GR00T N1.5 与 π0.5 两个 flow-based VLA 上跨 LIBERO / LIBERO-Pro / RoboCasa365 三个仿真 benchmark 与真机任务验证,一致优于 fixed horizon 与 MS / SA 自适应基线。"
+        ],
+        "sim_benchmarks": [
+          "LIBERO",
+          "LIBERO-Pro",
+          "RoboCasa365"
+        ],
+        "real_robot": "双臂平台:两条 PiperX 机械臂 + 3 个 Intel RealSense D435i(1 个第三人称视角 + 2 个腕部视角),50 Hz 控制。三个任务:酒精灯熄灭、橡胶管拔脱、试管开盖;每任务采集 50 条遥操作示教(共 150 条轨迹)训练,每方法每任务 30 次 trial(共 180 次)。base policy 为 Qwen3-VL-2B-Instruct 视觉语言 backbone + Flow Matching action expert,预测 horizon H=50。",
+        "datasets": "仿真用 LIBERO(40 任务,每任务 50 rollouts)、RoboCasa365(target/atomic seen split 的 18 个单技能任务,50 rollouts)、LIBERO-Pro(10 个 LIBERO-Object 任务 × 三种位置扰动);真机用自采遥操作数据(每任务 50 demos)。预训练数据论文未明确说明。",
+        "compute": "论文未明确说明(未给出 GPU·days 或训练规模;仅说明 GR00T N1.5 用 8 步/LIBERO、4 步/RoboCasa365 去噪,H=16,π0.5 用 H=10、10 步)。",
+        "results_headline": "GR00T N1.5 在 LIBERO 平均 95.5%(vs 最佳 fixed-8 94.7%、MS 94.6%、SA 93.8%),RoboCasa365 平均 75.1%(vs 最佳 fixed 66.4%,+8.7pt,MS 71.1%、SA 68.9%);π0.5 在 LIBERO 98.0%(vs fixed-5 97.1%,Long suite 93.2→96.4),LIBERO-Pro 平均 36.2%(vs 30.9%,+5.3pt);真机平均成功率 53.3%(Fixed-50)→74.4%,其中拔管任务 76.7%→100%。",
+        "baselines": [
+          "Fixed action horizons(h=2/4/8/12/16,真机 Fixed-50)",
+          "MS(multi-sampling-based adaptive chunking)",
+          "SA(self-attention-based adaptive execution horizon)"
+        ],
+        "limitations": "作者承认当前只利用 Flow Matching 生成过程内部的几何信息,尚未解决“何时应获取任务相关信息”的问题;可读出的局限还包括:方法仅适用于 flow/diffusion 类生成式 action head(非 flow 策略不适用),k_min 与参考尺度 α 为跨任务固定的超参,真机仅 3 个任务、每任务 30 trials 且仅与单一 Fixed-50 对比,统计证据有限;几何量与不确定性的相关性只是中等(ρ≈0.5–0.7)。",
+        "code_release": "论文未提",
+        "relevance_detail": "三点具体价值:(1) 它给出一个训练-free、单次推理即可用的预测可靠性代理,只用去噪轨迹的 prefix 几何,对任何 flow matching action head 即插即用——若在 V3/LWv2 里给 Qwen3-VL 挂 Flow Matching action head,可直接复用 Sec. III-B 的 b_k^(t) 与 Eq.(5) 做执行长度自适应,也可作为 latent 预测是否可信的门控信号;(2) 其真机 base policy 正是 Qwen3-VL-2B-Instruct + Flow Matching action expert,与你的 backbone 路线高度重合,Table IV 说明仅改执行 horizon 就能把成功率从 53.3% 拉到 74.4%,是很强的“推理侧收益”证据;(3) Fig. 3/Fig. 4 的 prefix-wise 几何–不确定性相关性分析与 temporal weight w_t 设计,对 JEPA 式 latent predictor 的 collapse/不确定性度量也有可迁移的诊断思路。",
+        "followup": "重点看 Sec. III-B–III-C 的 Eq.(2)–(13)(尤其 w_t 的 temporal correction 与中位数边界)以及 Fig. 3/Fig. 4 的相关性分析、Fig. 5 按 action primitive 统计的平均 horizon。"
+      }
+    },
+    {
+      "rank": 10,
+      "key": "arxiv:2609.20377",
+      "title": "MM-Future: Multi-Mode Joint World-Action Modeling for Autonomous Driving",
+      "title_zh": "MM-Future:面向自动驾驶的多模态联合世界-动作建模",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [
+        "Shuai Liu",
+        "Hechangle Gong",
+        "Hao Jiang",
+        "Runlin He",
+        "Junxiang Zhan",
+        "Kai Huang",
+        "Sheng Yang",
+        "Shaoqing Ren"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20377",
+      "url": "http://arxiv.org/abs/2609.20377v1",
+      "published": "2026-09-17",
+      "tldr": "用模态感知扩散 Transformer 让多个「场景-动作」假设对内部双向共演化，并以未来条件打分器对轨迹候选排序。",
+      "why": "它把世界模型与动作生成做成多假设配对并显式建模双向耦合，这种「多模态未来 + 动作联合扩散」的结构对 V3/LWv2 中动作条件化潜空间预测与多假设 rollout 设计有直接借鉴意义。",
+      "hits": [
+        "M:planning",
+        "M:uncertainty"
+      ],
+      "deep": {
+        "problem": "自动驾驶需要在多模态不确定性下同时推断场景演化与自车决策，但现有 world-action model 要么是级联式（有 mode 覆盖但只能单向条件），要么是联合式（有双向耦合但只生成单一 scene-action 对），二者不能兼得。",
+        "method": "MM-Future 把每个驾驶结果表示为一个成对的 scene-action 假设。MM-Encoder 用 DINOv2-S（rank-32 LoRA）+4 层 chunk-wise attention query，把多视角视频压成 planning-oriented 的 MM-Tokens；一个 modality-aware diffusion Transformer（16 层、width 1024，共享 attention 做 scene-action 双向交互，AdaLN/FFN 分模态）以 mixture conditional flow 从 K-means 得到的 multi-Gaussian action prior 与独立 scene 噪声出发，独立 flow time 联合生成 M 对 (τ̂, X̂+)。训练用 Best-of-Many 监督（同一 winner mode 索引同时监督 action 与 scene 两路，避免塌向条件均值），并用 EMA target encoder（decay 0.999）+ stop-gradient 提供未来目标。最后 future-conditioned proposal scorer 用历史 MM-Tokens 与各自配对预测未来（block-diagonal attention）给候选轨迹打分。",
+        "key_contributions": [
+          "提出 multi-mode joint world-action 建模：从单结果 clip 出发、用 mixture conditional flow 学出多对 scene-action 假设，同时具备 mode 覆盖与双向耦合。",
+          "提出 planning-oriented 的紧凑场景表示 MM-Tokens，把多视角稠密 patch 压成 chunk 级 query token，使多模态 rollout 成本不再随 horizon 与 mode 数线性膨胀。",
+          "提出 future-conditioned proposal scorer，用共享历史 + 每个候选各自的预测未来来排序轨迹，实现 future-aware 选轨。",
+          "消融证明 multi-mode 覆盖、modality-aware 双向交互、paired-future 打分三者互补，且 multi-mode 训练收敛更快（0.80 PDMS 从 17.5k step 降到 3.8k step）。"
+        ],
+        "sim_benchmarks": [
+          "NAVSIM-v1 navtest",
+          "NAVSIM-v2 navtest",
+          "HUGSIM (436 scenarios, zero-shot closed-loop)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "NAVSIM navtrain / trainval split（含 front、front-left、front-right、back 四路视角，2 秒历史、预测未来 4 秒 @2Hz，分辨率 336×560）",
+        "compute": "论文未明确说明训练总算力；仅给出推理延迟（单张 NVIDIA H800、batch size 1、bf16：32 hypotheses 132 ms，主结果配置 64 proposals 233 ms）。训练为 AdamW 25 epochs、batch size 64、lr 2e-4、weight decay 0.01。",
+        "results_headline": "NAVSIM-v1 navtest 达 94.0 PDMS（超过最强 WAM baseline DriveFuture 3.3 点、超过 DrivoR 0.3 点，matched train-only 下 93.4 vs 93.1）；NAVSIM-v2 达 91.5 EPDMS（超 UniTeD 1.4 点、超 DriveFuture 1.6 点）；HUGSIM 零样本闭环平均 HD-Score 32.3（超 Latent-WAM 3.4 点，Medium 难度 RC 51.5 / HD-Score 40.0）。",
+        "baselines": [
+          "DiffusionDrive / DiffusionDriveV2",
+          "MeanFuser",
+          "UniTeD",
+          "DrivoR",
+          "DriveSuprim",
+          "GaussianFusion",
+          "DriveWorld-VLA",
+          "IRR-Drive-4B",
+          "DriveFine",
+          "AutoVLA",
+          "DriveVLA-W0",
+          "ReCogDrive",
+          "Latent-WAM",
+          "GraphWorld",
+          "DriveFuture",
+          "Epona",
+          "WoTE",
+          "Latent-TransFuser",
+          "VAD / UniAD"
+        ],
+        "limitations": "MM-Tokens 是纯隐式的，编码了哪些场景结构难以解释，作者计划加辅助 perception 模块来可视化和做失败诊断；另外多模态生成在 paired + 32 modes 时延迟从 81 ms 涨到 132 ms，与精度存在 trade-off。",
+        "code_release": "论文未提",
+        "relevance_detail": "这是一篇把「未来预测」和「动作生成」在同一生成过程里双向耦合、并显式做多假设的工作，对 V3/LWv2 有直接可迁移的机制：(1) 用 EMA target encoder + stop-gradient 构造未来 latent 目标（见 Method 的 Planning-Oriented MM-Tokens 与图 2），(2) 用 Best-of-Many 只监督 winner mode 来避免 JEPA 式多假设预测塌向条件均值（Eq. 6），这正是 latent world prediction 里 representation collapse 问题的工程解，(3) 用 K-means 多高斯先验初始化 action 噪声做了动作条件化的 mode 分解，(4) Block C 消融显示「打分时同时看历史和配对预测未来」比只看历史 PDMS 92.9→93.3、TTC +0.5，可作为「world prediction 是否真的帮到 action head」的对照证据，呼应你关于 action head 该挂在哪里的问题。",
+        "followup": "重点看 Method 的 Best-of-Many supervision（Eq. 5-6）与 Table 3 的 Block A（mode 数 1→32 的 PDMS 84.1→92.9、paired vs action-only 的 +0.6~1.0）以及 Figure 4 的收敛曲线，附录中 future MM-Tokens 的 action coherence 统计（RMS 距离 +17.3%、cosine +38.9%）也值得看。"
+      }
+    },
+    {
+      "rank": 11,
+      "key": "arxiv:2609.19745",
+      "title": "Region-Level Policy Optimization for Fine-grained MLLM Perception",
+      "title_zh": "面向细粒度 MLLM 感知的区域级策略优化",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Yuheng Shi",
+        "Xiaohuan Pei",
+        "Minjing Dong",
+        "Chang Xu"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2609.19745",
+      "url": "https://arxiv.org/abs/2609.19745",
+      "published": "2026-09-18",
+      "tldr": "论文通过受控诊断发现定位 RoI 比识别内容能容忍约 3-4 倍更强的 token 压缩，于是用冻结 MLLM reader 对候选区域的移除/添加如何改变答案似然作为奖励，以区域级 RL 优化轻量 proposal 网络，实现稀疏编码下更少视觉 token 的更高精度。",
+      "why": "「定位与识别对分辨率需求不同」这一诊断结论，以及用答案似然变化作为区域级奖励、无需标注的 RL 优化思路，可迁移到机器人中需要从高分辨率观测里挑出关键证据（如接触点、可操作区域）的感知前端。",
+      "hits": [
+        "M:reinforcement learning",
+        "C:token compression",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "MLLM 提升细粒度感知通常靠提高输入分辨率，但新增视觉 token 使 vision encoder 与 LLM prefilling 成本膨胀。论文要解决的核心问题是：细粒度感知中「定位 RoI」与「识别内容」对分辨率的需求并不相同，如何据此把分辨率非均匀地集中在证据上，并让轻量 RoI 预测器获得 answer-level 监督（区域选择是离散操作，梯度无法从答案回传到 RoI map）。",
+        "method": "建立在自蒸馏 RoI 预测器 SD-RPN 之上：把 RoI map 经平滑/二值化/连通域得到的coherent region 当作 action，冻结的 MLLM reader 对 masked image I[M] teacher-force gold answer，用 log-odds 的 geometric-mean 答案概率 h_φ(M) 作为 functional score，区域贡献取 leave-one-out Δ=h_φ(M_ref)−h_φ(M_ref⊖R)。据此分两组做 region-level RL：subtractive 组用 control region 标定样本级噪声 margin b，以 softmax 移除策略 π_sub=exp(−z_k)/(1+Σexp(−z_j)) 把 credit 压回 RoI logits；additive 组用 6 个中间层 response-to-image attention map 生成的补充区域做独立 inclusion 决策。总损失含 KL anchor、单区域时的 BCE 锚与 attainability weight，只更新 RPN 参数。推理时 sparse visual encoding 按前景占比 ρ_fg 以 η=min(√(1/ρ_fg), η_max) 放大，只编码前景 token 并复用 source KV cache。",
+        "key_contributions": [
+          "受控诊断（ZoomBench + Qwen3.5-4B，n=238）量化出定位比识别可承受约 3–4× 更强的 token 压缩，为 resolution-decoupled 推理提供定量依据。",
+          "Vision-RL2：把连贯区域作为 action、用冻结 reader 的 functional contribution 作为 region-level reward，在 dense RoI map 上无区域标注、无 response sampling、无 reasoning trajectory 地训练 decode-free 预测器。",
+          "sparse visual encoding：只对前景 token 以 η× 更细粒度编码、背景 token 不进入 vision encoder 与 LLM，位置编码仍按完整 bbox 网格分配。",
+          "在 6 个细粒度 benchmark × 4 个 backbone 上，每个 token budget 都优于 base 与 SD-RPN，并用约 4× 更少视觉 token 超过 base 最大 budget 精度，同时只训练比全量 finetune 少一个量级的参数。"
+        ],
+        "sim_benchmarks": [
+          "V* Bench",
+          "ZoomBench",
+          "HR-Bench 4K",
+          "HR-Bench 8K",
+          "MME-RealWorld (EN/CN, Lite)",
+          "InfoVQA",
+          "OCRBench",
+          "ChartQA",
+          "DocVQA",
+          "TextVQA"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "RL 训练池为 VisualCoT 训练语料中的 7K QA（InfographicVQA 5K + TextVQA 1K + DocVQA 1K），并按初始 SD-RPN 下 region-removal reward 的标准差从每个 10K 候选 split 中取前一半；SD-RPN 预训练同源。评测使用上述细粒度感知 benchmark。",
+        "compute": "论文未明确说明 GPU 数量与 GPU·days。训练细节：4 个 backbone（Qwen3.5-4B/9B、Qwen2.5-VL-7B、Gemma-4-12B）全部冻结，只训练挂在第 B 个 frozen block 之后的 3 个可训练 block（B=21/18/27）；AdamW、global batch 32、peak lr 1.5e-5、cosine decay、训练 1 epoch；训练时 source image 限 576 visual token。效率测试在单张 RTX A6000 上用 lmms-eval 完成。",
+        "results_headline": "Qwen3.5-9B 上六 benchmark 平均 80.1，超过 Gemini-3.1-Pro 的 79.3 与全量微调的 Vision-OPD-9B 78.7，V* Bench 95.3 / ZoomBench 68.4 为全表最佳；4B 模型在 576 token 限制下比 base 在 4096 token 时高 3 分以上而只耗约 1/4 token，并以 4.2× 更少视觉 token 追平 SD-RPN 在 4096 token 的精度；消融显示 region-level RL 单项 +3.0、加 sparse encoding 再 +1.5、相对冻结 base 共 +14.9。",
+        "baselines": [
+          "Base MLLM (Qwen3.5-4B/9B, Qwen2.5-VL-7B, Gemma-4-12B)",
+          "SD-RPN",
+          "Vision-OPD",
+          "ZwZ",
+          "DeepEyes / DeepEyesV2",
+          "Thyme",
+          "P2R",
+          "ViCrop (attention routing)",
+          "Self-Dec. (coordinate decoding)",
+          "VisionZip",
+          "DART",
+          "GPT-5.4 / Gemini-3.1-Pro / Qwen3-VL-235B / Qwen3.5-397B / Kimi-K2.6（大模型参考）"
+        ],
+        "limitations": "reader 全程冻结，在 MME-RealWorld EN/CN 上落后于全量微调的 Vision-OPD，作者自承这是刻意放弃「适配 reader 本身」的收益；方法依赖 SD-RPN 监督初始化与 response-to-image attention 蒸馏，且 additive 组仍需训练期 attention map，若 base 模型的 grounding/attention 质量差，reward 信号可靠性未做验证。验证范围限于静态细粒度 VQA（OCR、图表、高分辨率场景），未涉及动作、时序或交互环境。",
+        "code_release": "已开源：https://github.com/YuHengsss/VisionRL2",
+        "relevance_detail": "这不是机器人论文，但它的核心机制值得迁移：当上游选择（区域/patch/token 子集）到下游输出之间存在不可微的离散选择时，可以用冻结的下游模型以「移除该单元后 gold 答案 likelihood 的变化量」作为 region-level reward，再用带噪声 margin 标定的策略损失把 credit 压回稠密打分图——这正是一套通用的 credit assignment 模板，可用于任何「决定把计算/分辨率花在哪里」的接口，包括 VLA 里的视觉 token 预算分配、关键帧或子目标区域选择。若 V3/LWv2 中遇到类似「选了哪些 patch/history 进入 predictor 但梯度回不去」的结构，Sec. 3.3 的 leave-one-out 贡献估计 + control-region 噪声标定 + subtractive/additive 双组设计（Table 2 奖励轴/动作轴/credit 轴消融）是可以直接照搬的配方；此外 Sec. 3.4 的 sparse encoding（按前景占比放大分辨率、位置编码仍按完整网格分配）对任何 token 受限的多视图编码也有参考价值。",
+        "followup": "重点读 Sec. 3.3 与公式 (4)–(8)（噪声 margin 与两类 credit channel 的匹配设计）、Table 2 的三轴消融，以及 Appendix C 的 localization-vs-recognition 诊断协议。"
+      }
+    },
+    {
+      "rank": 12,
+      "key": "arxiv:2609.19717",
+      "title": "Learn Your Own Thoughts: Abstract Token Curriculum",
+      "title_zh": "学习你自己的思考:抽象 Token 课程",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [
+        "Khashayar Gatmiry",
+        "Avrajit Ghosh",
+        "Parsa Mirtaheri",
+        "Jason D. Lee",
+        "Nika Haghtalab",
+        "Emmanuel Abbe",
+        "Peter Bartlett"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19717",
+      "url": "http://arxiv.org/abs/2609.19717v1",
+      "published": "2026-09-17",
+      "tldr": "提出 Abstract Token Curriculum(ATC),通过逐步提升问题复杂度的课程分布,让模型在连续表示空间中自发形成内部抽象\"思考\",无需显式 CoT 监督,并在 parity 学习上给出注意力聚焦的理论分析。",
+      "why": "它把\"连续隐空间思考\"从工程技巧上升为有理论支撑的课程学习机制,对 latent 预测中如何避免表示塌缩、如何设计渐进式训练分布有直接可迁移的启发。",
+      "hits": [
+        "M:curriculum learning"
+      ],
+      "deep": {
+        "problem": "现有 CoT 需要显式的中间推理 token 监督和人工设计任务专属 scratchpad，成本高且难以迁移；本文想让模型仅靠答案监督、通过课程学习自发产生连续隐空间中的抽象“思考”token。",
+        "method": "提出 Abstract Token Curriculum (ATC)：把输入分布按难度排成 D1…Dk，逐阶段把上一阶段最后一个 hidden embedding 作为新的连续 CoT token z_i 追加到上下文中，只用线性/语言 head 监督最终答案，同时逐步增加 latent thought 预算。为解决长链训练中的表示遗忘与显存问题，引入 curriculum backtracking（回退到最早失败的难度重训）、truncated backpropagation（只对最后 b 个 latent pass 反传，同时 detach recurrent state 与 KV cache）以及 candidate dropout（在 75% 训练样本上遮住候选答案，防止直接抄答案）。理论上证明 parity 任务中单步 key 梯度下降即可让注意力 99% 集中在最近的 CoT token 上，称为 Attention Simplicity Bias。",
+        "key_contributions": [
+          "提出 ATC：不需要中间步骤监督、不需要人工 scratchpad，仅靠任务级答案监督就能学出连续隐式 CoT。",
+          "证明并实证 Attention Simplicity Bias：对 parity，one-layer attention 单步 key 梯度更新后注意力以 ≥99% 概率集中在最近 thought token 上（Theorem 1）。",
+          "提出 curriculum backtracking + truncated backpropagation 组合，b=5 时显存降到 0.27×、时间降到 0.63×，精度仅从 99.9% 降到 97.4%（无 backtracking 会崩到 51.0%）。",
+          "在 graph reachability 与多位数加法上验证：ATC 达到/超过带中间监督的 Coconut，且首次摆脱对离散 CoT 轨迹或中间状态标签的依赖。"
+        ],
+        "sim_benchmarks": [
+          "parity (subset parity over 20 bits)",
+          "shortcut-controlled graph reachability (twin random trees)",
+          "multi-digit addition with carry"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "全部为合成数据：parity 20 bits、图可达性 100,000 训练图 / 1,000 curriculum gate / 5,000 held-out 测试图（每组件 20 节点）、加法 20,000 训练 / 2,000 测试；未使用 OXE/DROID 等真实数据集",
+        "compute": "图任务：单张 H100 80GB 每 arm，GPT-2 架构 2 层 / 8 头 / width 768，15.0M 参数，预算 800 epoch（实际 103 epoch 完成）；加法任务：2 层 / 4 头 / width 256，400 epoch。总 GPU·days 未说明",
+        "results_headline": "图可达性（chance 50%）：ATC 99.9%，Coconut（set accuracy 门控）99.9%、固定 schedule 97.6%，Discrete CoT 63.5%，No-CoT 48.3%；ATC 在 epoch 51 达 95% 验证精度，Coconut 分别需 132 和 468 epoch；八位数加法 exact match：ATC 98.7%（+BT 99.0%）vs Coconut 0%。",
+        "baselines": [
+          "No-CoT",
+          "Discrete CoT (shortest path)",
+          "Full CoT without curriculum",
+          "No-CoT + data curriculum",
+          "Coconut (fixed stage schedule)",
+          "Coconut (intermediate-accuracy gated)"
+        ],
+        "limitations": "理论只覆盖 parity、one-layer attention、仅对 key 参数做单步全批量梯度更新的理想化设定（假设上阶段表示与目标相关系数为 1）；实验全是小规模合成任务，作者自己指出在需要组合多个中间结论、修订早期选择的长程推理（如数学证明）中，'最新 thought 足够概括' 是否成立仍未知。",
+        "code_release": "论文未提",
+        "relevance_detail": "把 ATC 当作 latent 推理链的训练方法学来读很有价值：(1) 它用'任务难度课程 + 连续 token 预算同步增长'来无监督地诱导中间表示，这套 curriculum 设计可迁移到 Latent World Model 的 future latent 预测训练，尤其是当没有显式 future 标签时；(2) curriculum backtracking 直击'后期训练破坏早期 latent 表示'这一问题——与 latent 预测中的 representation collapse / 灾难性遗忘是同一类失效模式，Table 2 给出了 full-BP vs b=5 截断的定量权衡；(3) candidate dropout 用遮挡捷径（ρ=0 时模型直接抄答案、课程卡在 stage 0）来逼迫真实计算，这个 trick 对任何存在 trivial copy 解的 latent 预测/动作预测任务都直接可用；(4) Figure 4-6 的干预式探针（corrupt 前 k 个 thought、pin 单个 thought）是验证'哪一步 latent 真正承载信息'的现成实验范式，比只看 loss 更有诊断力。注意它的实验域是合成推理任务，不是机器人，价值在机制与训练配方而非 benchmark 结论。",
+        "followup": "重点看 Theorem 1 与 Appendix-C（注意力集中的证明条件）、Table 2（截断/回退的精度-成本权衡）、Table 3 与 Figure 4-6（candidate dropout 与干预式 latent 探针）。"
+      }
+    },
+    {
+      "rank": 13,
+      "key": "arxiv:2609.20510",
+      "title": "Truncated automatic sparse differentiation for machine learning interatomic potentials",
+      "title_zh": "面向机器学习原子间势的截断自动稀疏微分",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [
+        "Marcel F. Langer",
+        "Adrian Hill",
+        "Michele Ceriotti"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20510",
+      "url": "http://arxiv.org/abs/2609.20510v1",
+      "published": "2026-09-17",
+      "tldr": "利用 MLIP 的局部感受野导致的 Hessian 稀疏性与随距离衰减特性,提出自动稀疏微分(ASD)并进一步截断小的高阶项,在几乎不影响可观测量预测的前提下获得数量级加速。",
+      "why": "「利用物理局部性把稠密高阶导数计算稀疏化并可控截断」是一个干净的工程机制,对需要二阶信息或长时程可微仿真的具身/世界模型训练有直接借鉴价值。",
+      "hits": [],
+      "deep": {
+        "problem": "MLIP（机器学习原子间势）的高阶导数，尤其 Hessian，对决定振动性质（声子、热容）至关重要，但 dense AD 需要 3N 次 O(N) 的 HVP，总代价 O(N²)，使大体系（>~1900 原子）在实验上不可及。",
+        "method": "利用 MPNN 类 MLIP 的有限感受野带来的 Hessian 稀疏性，做 automatic sparse differentiation (ASD)：用邻接矩阵幂和 A^(K)=Σ A^k 的布尔算术闭式导出精确稀疏模式（node-readout 的 MACE 为 K=2L，edge-readout 的 PET 为 K=2L+1），再用 star coloring 把 3N 次 HVP 压缩为 c 次（在原子图上着色、每原子 3 个坐标赋色 3c+d，用 asdex 做着色与解压）。进一步提出 truncated ASD：把模式截断到 k<K 跳，得到更少颜色与更少 HVP，用可控近似换数量级加速。",
+        "key_contributions": [
+          "证明 MPNN MLIP 的 Hessian 稀疏模式可由输入图的邻接矩阵幂和在布尔算术下闭式给出，并在 96 组手工结构上验证 K（MACE=4、PET-XS=5、PET-S=7），K 跳之外严格为零。",
+          "证明精确 ASD 能逐个条目地复现 dense Hessian（相对 Frobenius 误差 ≤5×10⁻⁴，通常 ~10⁻⁶），但真实加速有限（中位 1.7×(MACE)、1.4×(PET-XS)、1.2×(PET-S)），因为当前 foundation MLIP 的感受野与 MOF 单胞尺度相当。",
+          "提出 truncated ASD：Hessian 块范数每跳约衰减 2 个数量级（MACE）或 >1 个数量级（PET），截断到低跳数可得中位 11×(MACE k=2)、13×(PET-S k=3) 的加速，而 CV 相对误差 <0.1‰。",
+          "指出 message-passing 深度/感受野不只是精度选择，而是直接决定高阶导数稀疏性与性能的设计杠杆。"
+        ],
+        "sim_benchmarks": [
+          "Moosavi et al. 2022 porous-materials benchmark（233 结构：214 MOF / 9 COF / 9 zeolite，含 12 结构分层子集）",
+          "巨型 MOF 单胞：MIL-101 (3604 原子)、MIL-100 (2788)、MOF-210 (1854)、MOF-177 (808)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "不训练新模型，只用现成 foundation MLIP 推理：MACE-MP-0 medium（Materials Project PBE(+U) 弛豫轨迹训练）与 PET-MAD-1.5（自 PET-OMat 微调；预训练于 OMat24，微调于 r2SCAN 的 MAD-1.5）。结构来自 Moosavi et al. 2022 的多孔材料集与 RASPA2 结构库。",
+        "compute": "单张 H100 GPU，全程单精度并禁用 TF32（TF32 会带来约 4 个数量级的力误差）；模型参数量未说明，规模为 MACE-MP-0 medium (L=2, 6 Å cutoff)、PET-XS (L=2)、PET-S (L=3)；着色阶段在整个 benchmark 上由 22.8 h 降到 1.2 h（原子图着色比坐标图着色中位快 17×）。",
+        "results_headline": "MIL-101 (3604 原子) 上 MACE 截断到 k=2 由 3529 s 降到 265 s（13.3×）而 CV 误差仅 −0.18‰，PET-S 截断到 k=3 由 1248 s 降到 112 s（11.1×）、误差 <0.01‰；但精确 ASD 的中位加速只有 1.2–1.7×，PET-XS 因绝对速度快、超胞小，截断后只剩 ~1.6× 加速。",
+        "baselines": [
+          "dense AD（Gönnheimer et al. 2025 的 dense Hessian，A100 上限约 1900 原子）",
+          "HIP：不做 AD 直接从 SE(3)-equivariant 特征预测 Hessian",
+          "有限位移/超胞力常数方法（Phonopy 等常规格点动力学做法）"
+        ],
+        "limitations": "作者承认精确 ASD 在当前 foundation MLIP 上几乎没有可用稀疏性（感受野≈单胞尺寸，稀疏性只来自孔隙度），加速有限；截断误差缺少理论分析，作者预期对 Phonon linewidth 这类恰恰加权远距离耦合的 observable，截断不会像对热容那样良性；此外 PET 的自适应 cutoff 力项与 TF32、D3 修正等工程细节也会引入与截断同量级的误差。",
+        "code_release": "开源：Zenodo 存档 https://doi.org/10.5281/zenodo.22813524，镜像 https://github.com/sirmarcel/tasd4mlip-archive（含 JAX 版 MACE、实验脚本、结构、run records 与所有观测值）；生产实现将进入 pet-jax。",
+        "relevance_detail": "这是材料化学论文，与具身智能无直接关系，但机制可迁移：它给出从 message-passing 图结构用邻接矩阵幂和闭式推导高阶导数精确稀疏模式的通用做法，并用 star coloring 把 3N 次 HVP 压到 c 次、再通过\"截断到 k 跳、误差由距离衰减控制\"换取数量级加速（Section 4 + Figure 2 的 k 扫描，Table 1 是每结构加速与 δCV）。对任何在 GNN/MPNN 骨架上做 latent 预测或二阶信息（Hessian/曲率、二阶优化、曲率监督）的工作，这提示了两个可复用点：一是感受野/层数直接决定二阶结构的稀疏性与代价，二是可以安全丢弃小而非零的远距离耦合项——这与 latent 世界模型中对远时域/远空间项做截断近似同源。与 V3/LWv2 无具体接口，价值在于稀疏二阶导数的工程视角。",
+        "followup": "深读 Section 4（sparsity detection 的 A^(K) 公式与 truncated ASD 的双重误差来源）、Figure 2 的 k-扫描，以及 Appendix D（原子图着色 17× 加速）和 Appendix H（丢弃耦合 vs 颜色污染两类误差分解）。"
+      }
+    },
+    {
+      "rank": 14,
+      "key": "arxiv:2609.20530",
+      "title": "Relational Attention for Data-Efficient Language Modeling",
+      "title_zh": "面向数据高效语言建模的关系注意力",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [
+        "Adrian Brasoveanu",
+        "Ece Takmaz",
+        "Jakub Dotlačil"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20530",
+      "url": "http://arxiv.org/abs/2609.20530v1",
+      "published": "2026-09-17",
+      "tldr": "在 BabyLM 挑战中把标准自注意力换成分离「物体级词法特征」与「结构关系信息」的 Dual Attention Transformer,并加入 Next-Latent Prediction 目标,在 100M 词严格赛道上取得 55 队中第 6 名。",
+      "why": "关系注意力与 NextLat 的「把历史增量压缩进稠密信念状态」目标,与 JEPA 式潜空间预测和表征解耦问题高度同构,对 V3/LWv2 中 predictor/target 设计与表征坍塌的权衡有直接启发。",
+      "hits": [],
+      "deep": {
+        "problem": "在低数据量（BabyLM strict-small 10M 词 / strict 100M 词）的语言建模场景下，标准 self-attention 把关系信息与物体级词法特征纠缠在一起，且不像 RNN 那样有把序列历史压缩成稠密摘要的内在压力，因此数据效率与 out-of-training-sample 泛化都差。作者要回答：relational attention 在纯关系任务上的数据效率能否迁移到完整语言建模与语言学评测上。",
+        "method": "架构上把标准 self-attention 换成 Dual Attention Transformer (DAT)：并行保留 sensory self-attention，另加 relational attention，其路由的不是 value 特征而是成对关系向量 r(xi,xj)（dr 个比较通道）加标识来源的符号 s_ij，即 RelAttn(xi,x)=Σ αij(r(xi,xj)Wr + s_ij Ws)；比较了 full RA、DisRCA、RCA 三种关系注意力类型，以及绝对位置符号、学习式相对符号、symbolic attention 等符号机制，并提出参数无关的 RoPE-based relative symbols（用 RoPE 生成相对符号而非位置编码）。训练上叠加 Next-Latent Prediction (NextLat)：小动力学模型 δψ（LayerNorm + 3 层 GELU MLP，宽 2d）从 h_t 与 x_{t+1} 预测 ĥ_{t+1}，总损失 L = L_NTP + 1.0·L_h(Smooth L1 on hidden) + 0.5·L_KL(token 空间 KL)。关键在于 target 被 detach（sg[·]）、KL 项中 LM head 冻结，使唯一梯度路径经过预测状态，避免表征坍缩；动力学模型训练后丢弃，推理与架构不变。",
+        "key_contributions": [
+          "首次在 BabyLM 全评测套件下系统检验 relational attention 语言模型：架构是结构泛化的主导因素，最好 DAT 配置 BLiMP 70.66% vs 最好标准 Transformer 68.16%（约 2.5 点），增益集中在 island effects、主谓一致等结构域，且来自'增加关系流'而非'增大关系流'。",
+          "NextLat 是次要但显著的干预：在人类阅读/EEG 指标回归上显著优于 NTP（t=5.22, p<0.001），并提升 7 个 (Super)GLUE 任务中的 5 个（MultiRC +5.7pp、WSC +3.8pp），且与架构存在显著交互（χ²(1)=10.81, p=0.001）。",
+          "提出参数无关的 RoPE-based relative symbols：在 5 seed 全功率比较中对齐学习式相对符号库（69.43% vs 69.34% BLiMP），省掉 (2Δ+1)d ≈ 1.05M 参数及最大偏移表；仅 relational-symbolic 变体显著更差。",
+          "100M 词下实验给出缩放结论：RA/RCA/DisRCA 在 10M 词基本可互换（χ²(2)=3.50, p=0.174），100M 词下 full RA 领先 RCA（BLiMP 79.30 vs 78.44、EWoK +1.7、entity tracking +3.7），但 RA 也最不稳定（一组训练发散）。"
+        ],
+        "sim_benchmarks": [
+          "BabyLM strict (100M words)",
+          "BabyLM strict-small (10M words)",
+          "BLiMP / BLiMP supplement",
+          "EWoK",
+          "Entity Tracking",
+          "COMPS",
+          "GlobalPIQA",
+          "(Super)GLUE"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "BabyLM strict / strict-small 语料，来自六个发展心理学上合理的英文来源：CHILDES、OpenSubtitles、Simple Wikipedia、Gutenberg、BNC spoken、Switchboard；分别 10M 与 100M 词，BPE 词表 16,384（GPT-BERT recipe）。",
+        "compute": "论文未明确说明 GPU·days；只提到使用 UC San Diego 的 National Research Platform (NRP) 与荷兰 SURF 集群算力。模型规模：strict-small 骨干 12 层 768 维、tied ≈123.3M / untied ≈135.9M 参数（NextLat 辅助动力学模型约 5.9M，训练后丢弃）；strict-track 提交为 191.2M（18L/768d）与 304.3M（16L/1024d）。",
+        "results_headline": "strict (100M 词) 赛道最好模型总体第 6/55、NLP 任务子集第 3/55，EWoK 59.54 为 strict 赛道最高；其 BLiMP 79.49、supplement 70.96、GLUE 71.43 均超 GPT-2 baseline（74.73/65.00/67.75）；strict-small 上 DAT 最佳 70.66% BLiMP vs 标准 Transformer 68.16%，NextLat 模型 BLiMP 72.34（baseline 65.23），排名 8/127。",
+        "baselines": [
+          "官方 GPT-2 baseline（98M, AdamW）",
+          "标准 Transformer（12 个 self-attention head，同深同宽）",
+          "GPT-BERT 等 BabyLM 数据/目标侧方法",
+          "AdamW vs Muon/LambW 优化器 recipe 对照"
+        ],
+        "limitations": "统计上 GLMM 只用聚合计数、未加 observation-level random effect，存在 overdispersion，p 值可能偏松；多数实验组只有 3 个 seed、strict-track 提交为单 seed，seed 波动（如 Muon/LambW NTP 三 seed BLiMP 79.81/79.20/78.78、entity tracking 有一个 33.63 的极端离群）可与 NTP-vs-NextLat 差异同量级；DAT 与标准基线在激活函数、初始化、符号机制上并未完全对齐，且无 head 数独立匹配的 baseline；未评生成质量，human-likeness 仅来自 205 句单一资源。",
+        "code_release": "开源：https://github.com/abrsvn/babylm_dat_2026（含模型实现、训练/评测脚本、配置与分析代码），提交 checkpoint 也已上传 HuggingFace Hub 并从官方 leaderboard 链接。",
+        "relevance_detail": "真正有价值的是 Section 2.4 的 NextLat 设计，它对 LWv2 这类 VLA 内 latent 未来预测非常具体：预测器是 δψ = LayerNorm([x_{t+1};h_t]) + 3 层 GELU MLP（宽 2d），只在 skip 上保留残差、dropout 只加在进入 δψ 的 h_t 上；target 必须 detach（sg[h_{t+1}]）、KL 项冻结 LM head，从而把唯一梯度路径限制在预测状态上以防表征坍缩——这正是 predictor/target 设计与 collapse 抑制的可直接借鉴方案，且 L_h 在每个不跨文档边界的位置都生效，可迁移为'处理上下文时也塑形 latent'的密集监督。此外 4.4/4.5 节给出负面但重要的结论：更大的关系流反而降低 BLiMP（斜率 -1.827, p<0.001），说明新增预测/关系分支的容量配比需要 sweep 而非默认加大；Limitations 中 seed 波动大于目标间差异也提示 LWv2 的消融必须多 seed 才能下结论。",
+        "followup": "优先精读 Section 2.4 与 Eq.5（NextLat 的 detach / 冻结 head / 双损失的实现细节），再对照 Limitations 的 seed 波动段落与 Appendix E 的 Table 9、Table 12、Table 18 判断效应量是否可信。"
+      }
+    },
+    {
+      "rank": 15,
+      "key": "arxiv:2609.20769",
+      "title": "FlowSGS: Improving Flow Matching Priors for Inverse Imaging with Stochastic Interpolants",
+      "title_zh": "FlowSGS:用随机插值改进逆成像中的 Flow Matching 先验",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [
+        "Tianao Li",
+        "Xinhui Qian",
+        "Emma Alexander"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20769",
+      "url": "http://arxiv.org/abs/2609.20769v1",
+      "published": "2026-09-17",
+      "tldr": "论文用 Split Gibbs Sampling 把后验拆成似然步与先验步，似然步走 Langevin 动力学、先验步借助 Stochastic Interpolants 的逆时 SDE 嵌入预训练 flow 模型，并加入时间步校正以减少网络评估，首次在非线性逆问题（Fourier 相位恢复）上验证 flow 先验。",
+      "why": "把生成式先验作为可插拔后验采样模块、并显式处理非线性前向模型的做法，可迁移到以观测（动作/视觉）为条件的世界模型后验推断与轨迹级采样中。",
+      "hits": [],
+      "deep": {
+        "problem": "现有基于 flow matching 的逆问题求解器大多假设前向模型线性，或在后验采样时做了简化近似（如单步梯度引导、轨迹 steering、变分近似），无法真正从贝叶斯后验采样，也从未在非线性逆问题上验证过。",
+        "method": "提出 FlowSGS：用 Split Gibbs Sampling (SGS) 把后验拆成 likelihood step 与 prior step，likelihood step 用 Langevin dynamics 采样（支持线性与非线性前向模型），prior step 借助 Stochastic Interpolants (SI) 框架，用预训练 flow 网络的 reverse-time SDE 完成。关键干预有四步：Line 4 按当前耦合参数 ρk 做 timestep conversion tk=(σt/αt)^{-1}(ρk)，Line 5 把 zk 缩放为 x_tk=α_tk zk 以匹配噪声水平，Line 6 用 Euler-Maruyama 解 SDE，并额外提出 timestep correction（首个 Euler 步用自适应步长从精确 tk 出发）以降低离散步误差；扩散系数 wt=0 退化为 probability-flow ODE，wt=2λtσt 时严格退化为 PnP-DM。",
+        "key_contributions": [
+          "Theorem 1 证明 SGS 的 prior step 等价于从 t* 时刻（σt*/αt*=ρk）运行 SI reverse-time SDE，把此前只对 diffusion 成立的结果推广到任意高斯概率路径。",
+          "Corollary 1 证明 PnP-DM 是 FlowSGS 在 EDM schedule 与 wt=2λtσt 下的特例，Corollary 2 把 PnP-DM 的 O(1/K) 非渐近收敛保证迁移到 flow prior，且对 wt 的要求更宽松（用户可选而非固定于前向过程）。",
+          "提出 timestep correction 与 noise-level 匹配的 timestep conversion/scaling，使 prior step 只需 32 步离散即可稳定，而 PnP-DM 需要 100 步。",
+          "首次在 flow-based 逆求解器上给出非线性 Fourier phase retrieval 的实验，并展示能正确恢复 bimodal 后验（PnP-DM/DAPS 也能，DPS/FlowChef/FlowDPS 会给出错乱的旋转模态）。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "toy 问题用 CelebA（灰度 64×64，拟合 5 万张男性人脸的高斯先验）；主实验用 FFHQ 与 fastMRI 单线圈 knee（均 resize 到 256×256）预训练像素空间模型；latent 空间实验用 AFHQ 猫图 512×512 + 现成 Stable Diffusion 3.5 Medium。",
+        "compute": "论文未明确说明 GPU·days 或参数量；只说明所有 diffusion/flow 模型用 Inversebench 的 NCSN++ 架构、Adam 训练 500 epochs 并做 EMA，每个任务同一训练集/架构/优化参数。",
+        "results_headline": "运动去模糊 PSNR 29.22 / SSIM 0.836（vs DPS 28.14、PnP-DM 28.53），高斯去模糊 30.09（vs FlowDPS 29.78），4× 超分 29.49（vs DAPS 28.99、DPS 28.97），CS-MRI Cartesian 32.84（vs PnP-DM 32.27），Fourier phase retrieval 37.52 PSNR / 0.940 SSIM（vs DAPS 35.77、PnP-DM 35.48），且 prior step 步数 32 vs PnP-DM 100。",
+        "baselines": [
+          "DPS",
+          "PnP-DM",
+          "DAPS",
+          "PnP-Flow",
+          "FlowChef",
+          "FlowDPS"
+        ],
+        "limitations": "作者承认采样成本高于其他 flow-based 方法（Langevin 需多步、latent 空间还要对 decoder 反传梯度，只给出 hybrid pixel/latent Langevin 作为未来工作）；只处理 non-blind 逆问题（前向模型已知），未覆盖 semi-blind/blind 设定；收敛性证明只覆盖常数 ρ，而实际算法用退火 ρk，早期大 ρ 迭代不在分析范围内。",
+        "code_release": "论文提到 CelebA / FFHQ / fastMRI knee 的模型 checkpoint 放在 project page 上，但正文未给出具体 GitHub URL，代码是否开源未明确说明。",
+        "relevance_detail": "这篇不属于具身/VLA 主线，但它把 flow matching 的 velocity 场与 score 之间的转换（式 4）、以及“把预训练生成先验按噪声水平精确注入迭代采样”的做法形式化到了 SI 框架，并给出一个可直接复用的工程技巧：timestep conversion + scaling + timestep correction，使 flow prior 在 ≤16 步离散时仍稳定（Section 4.5 / Figure 5c）。对具身方向的两个迁移点具体而实用：(1) 若 V3/LWv2 或未来 world model 的解码/生成头用 flow matching（而非纯回归），这套噪声水平匹配与 timestep correction 能直接缓解低 NFE 时的离散步误差；(2) Section 4.4 关于 bimodal 后验的对比（sampling-based 方法能复现真实模态、guidance 类方法会塌到错误模态）为评估 flow/diffusion policy 的多模态动作分布提供了一个可借鉴的实验设计思路。",
+        "followup": "重点看 Section 3.1 Theorem 1 与 Algorithm 1 的 Line 4-7 推导、Section 4.5 的 timestep correction 消融（Figure 5c 的步数-性能曲线），数学细节在 Appendix A.2-A.4。"
+      }
+    },
+    {
+      "rank": 16,
+      "key": "arxiv:2609.19990",
+      "title": "QCPruner: Query-Conditioned Population Coverage for Visual Token Pruning",
+      "title_zh": "QCPruner：面向视觉 token 剪枝的查询条件化种群覆盖",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 8,
+      "novelty": 6,
+      "authors": [
+        "Shengli He",
+        "Yongchao Liang",
+        "Roumeng He",
+        "Junjie Zeng",
+        "Jiyuan He",
+        "Can Wu",
+        "Li Zheng"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19990",
+      "url": "http://arxiv.org/abs/2609.19990v1",
+      "published": "2026-09-17",
+      "tldr": "该文提出 QCPruner，用关键词匹配的查询锚点融合跨模态线索得到双边效用权重，在视觉亲和覆盖下构造单调子模的设施选址目标，实现免训练剪枝并保持 (1-1/e) 贪心保证。",
+      "why": "它把查询效用同时作用于目标与候选代表并保留子模近似保证，这一免训练、有理论保证的 token 选择机制可迁移到 VLA 中降低视觉 token 负载而不损失任务相关信息。",
+      "hits": [],
+      "deep": {
+        "problem": "在多模态大模型(MLLM)中,视觉 token 占满 prefix 导致 prefill 计算与显存开销巨大;固定 token 预算下,train-free 剪枝既要保留 query 相关的证据,又要避免保留冗余 patch。现有 ranking / diversity / coverage 方法都没有用一个共享的 per-visual query utility 同时给「被覆盖的视觉目标」和「候选代表 token」加权。",
+        "method": "QCPruner 是一个 training-free 的 in-decoder 视觉 token 剪枝器。先用 KeyBERT 从用户 prompt 抽最多 6 个关键词并做子串匹配得到 anchor 位置集合 I_anc;在第 7 层 decoder 后的 hook 上,用两个跨模态线索估计每个视觉 token 的 query utility:(a) 与 anchor 的 contextual hidden-state 余弦相似度 r_sim(取 max 聚合),(b) 该层记录的同层 pre-softmax query–key 对齐 r_attn,两者 min–max 归一化后等权平均并再次归一化得到融合 utility u。随后把 u 双边代入 facility-location coverage目标:先做 ρ-floor 校准 û=ρ+(1−ρ)u,视觉 affinity 取 c_ij=[cos(hv_i,hv_j)]_+,边权 w_ij=c_ij·û_i·û_j,目标为 F(K)=Σ_i û_i·max_{j∈K} c_ij·û_j(外层 û_i 决定 target 重要度,内层 û_j 决定代表适配度),用 greedy marginal gain Δ(k|K)=Σ_i [w_ik−cover_i(K)]_+ 选 K 个 token。该非负目标是单调 submodular,保留 (1−1/e) 贪心保证;全程不训练、不更新参数。",
+        "key_contributions": [
+          "提出 bilateral contextual query weighting:同一个 query utility 同时加权视觉 target 与候选 representative,使 visual-to-visual coverage 直接 query-conditioned(区别于 MMTok 把 query 当作独立 text-side target、CDPruner 只建模被选子集内部交互)。",
+          "不训练 MLLM 也不训练剪枝模块,仅由关键词匹配的 prompt 位置组合 hidden-state 相似度与 pre-softmax Q–K 对齐两个线索导出 contextual utility,并证明所得目标单调、submodular,保留 (1−1/e) 贪心界。",
+          "在 LLaVA-1.5 / LLaVA-NeXT / LLaVA-Video / Qwen2.5-VL 四个 backbone、12 个 token 预算上验证;并通过 visual-only、单边加权、selector 三类受控消融分离出 coverage 加权、bilateral utility 与子集选择各自的贡献。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "无预训练(方法 training-free)。评测用 LLaVA 系列在 VQAv2、GQA、VizWiz、ScienceQA-IMG、TextVQA、POPE、MME、MMBench-EN/CN、MMVet;Qwen2.5-VL 用 TextVQA、ChartQA、AI2D、OCRBench、MME、MMBench-EN/CN;视频用 MVBench、LongVideoBench、Video-MME(no-subtitle)。剪枝层与 utility floor ρ 在单独的 MMStar 1,500 条校准样本上选定后冻结。",
+        "compute": "单个 NVIDIA RTX 5880 Ada(48GB)即可完成全部评测;方法 training-free,无训练算力。论文给出模型侧开销:LLaVA-NeXT-7B 在 320/2880 token 时 full QCPruner 从 32.8 TFLOPs 降到 11.1 TFLOPs、prefill 271.4→127.5ms,但比 DivPrune(5.0 TFLOPs / 41.8ms)更贵;query-anchor 构造额外约 1.67ms/sample。",
+        "results_headline": "LLaVA-1.5-7B 在 32/576 token 保留 96.1% Avg.Rel.(最强基线 CDPruner 93.9%);Qwen2.5-VL-7B 在 256/1296 为 96.7% vs 最强基线 VisionZip 92.5%,在 128/1296 为 92.8% vs 82.9%(+9.9 点);LLaVA-Video 在 1024/10816 为 96.3% vs FastVID 94.3%;LLaVA-NeXT 320/2880 为 96.6% vs DART 95.0%。",
+        "baselines": [
+          "FastV",
+          "SparseVLM",
+          "VisionZip",
+          "DART",
+          "DivPrune",
+          "CDPruner",
+          "MMTok",
+          "PruneSID",
+          "FastVID (视频)",
+          "Top-K / MMR / visual-only coverage / CDPruner-DPP / MMTok-style (受控 selector 消融)"
+        ],
+        "limitations": "作者承认当前设计为了 retention 牺牲效率:剪枝前需要跑完 0–7 层 dense decoder,且 greedy 选择需要 O(N_v^2) 稠密 affinity 与 O(KN_v^2) 时间,因此比早期剪枝(如 DivPrune、QCPruner-Early)明显更贵;Table 5 显示 bilateral 相对 representative-only 加权只在部分设置上小幅领先(LLaVA 98.0→98.6),并非普遍 per-task 增益;视频侧是逐帧独立分配预算、不做跨帧自适应;grounding、多语言鲁棒性与更广泛 failure analysis 未做。",
+        "code_release": "论文未提",
+        "relevance_detail": "这篇属于「多模态架构 / tokenization / 高效 attention」这一类可迁移方法,不在你当前 V3/LWv2 的直接主线上,但机制值得借鉴:(1) 它把「该保留什么」写成 query-conditioned submodular coverage(Table 6 显示同一上游信号下 coverage selector 比 Top-K 在 Qwen2.5-VL 128 token 上高 23.2 点、比 MMTok-style 后端高 3.1 点),这种「用 marginal gain 选代表 token」的贪心框架可以直接搬到 VLA/VLM 的视觉 token 或 latent slot 选择,比如决定把哪些 patch/frame 送进 action head。(2) Table 5 的双边消融给出一个具体设计结论:representative 侧加权(û_j)带来的收益明显大于 target 侧加权(û_i),对你在 JEPA 式预测器里设计 predictor/target 非对称权重有直接参考价值。(3) 它用的是 Qwen2.5-VL 与 LLaVA 主干,与你手上的 Qwen3-VL 同族,Table 2 显示 Qwen2.5-VL 在紧预算下(128/1296)基线掉到 82.9 而该方法仍有 92.8,说明原生 VLM 的视觉 token 冗余很大——若 VLA 实时控制受 token 数限制,这类 training-free 剪枝是可插拔的一环。(4) 校准协议(在独立 MMStar 数据上选 hook 层与 ρ 后冻结,Figure 2 用 layer 9–11 共识作为 proxy,并诚实声明这是 internal proxy 而非独立验证)本身是很好的评测方法学示范。",
+        "followup": "重点看 Table 5(bilateral 消融)与 Table 6(selector 消融)理解收益来源,再看 Appendix C.2 的 ρ 校准协议与 Appendix A.2 的 QCPruner-Early 变体对比,以判断这套 coverage 机制在效率约束下是否还成立。"
+      }
+    },
+    {
+      "rank": 17,
+      "key": "arxiv:2609.15392",
+      "title": "ESG: Generating Physically Consistent Dynamic 3D Scenes from Text Descriptions",
+      "title_zh": "ESG:从文本描述生成物理一致的动态 3D 场景",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Xintong Fang",
+        "Zhiyuan Fang",
+        "Rengan Xie",
+        "Xuhong Zhang",
+        "Guoyuan An",
+        "Zeran Liu",
+        "Jingyan Zhang",
+        "Jiarui Guo",
+        "Yuchi Huo"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.15392",
+      "url": "http://arxiv.org/abs/2609.15392v1",
+      "published": "2026-09-14",
+      "tldr": "用 LLM 构建可机器校验的 Evolutive Scene Graph(含物理属性、空间关系与事件时间线),经能量最小化布局与可微仿真优化物理参数,生成可直接在 Unreal Engine 中执行的动态场景。",
+      "why": "把「语言→场景结构→可微仿真校验→引擎可执行」串成闭环,其事件驱动时间线与物理可行性校验机制,对具身智能中的场景生成、任务环境构建与物理常识验证都可迁移。",
+      "hits": [],
+      "deep": {
+        "problem": "从自然语言直接生成「动态」3D 场景:不仅要摆出合理的静态布局,还要让脚本化的时序事件(碰撞、定时到达、匀速行驶、刹车等)在真实物理引擎里确定性地发生,现有方法多数只做静态布局或只出渲染视频。",
+        "method": "核心表示是 Evolutive Scene Graph (ESG):一个 JSON schema 化的可机检动态场景图,含 objects O、类型化空间关系 E、语义区域 R、pose ξ、以及 point/interval 事件时间线 H=(P,I;θ)。LLM 分层构建 ESG 并用规则校验器迭代修正,资产由 CLIP embedding 检索(低置信时用 TRELLIS 生成);Stage3 用统一约束能量(relation energy + AABB/SDF 混合碰撞 + region 惩罚)做 DAG 拓扑序初始化 + 多起点 Adam 梯度下降求 pose;Stage4 把动态生成写成 event-constrained feasibility 问题,在 NVIDIA Warp 的 Newton 刚体仿真上用事件级 loss(L_task + 时间窗 L_win + 参数先验 L_p)反传优化初速度/力/时序,梯度采用 AD 默认(解析重力+软接触代理)、链式事件回退 FD;Stage5 编译成 UE C++ scene class。",
+        "key_contributions": [
+          "提出 ESG(Evolutive Scene Graph),把对象物理属性、空间关系、事件时间线与因果依赖编码成可机检的中间表示,并作为全流程共享载体逐步补全。",
+          "把动态场景生成形式化为 event-constraint feasibility 问题,提出 LLM 运动模板匹配 + 时间线感知可微参数搜索的混合优化框架。",
+          "给出结合刚体动力学与事件驱动 loss 的可微物理框架,并支持 deterministic 编译到可执行 Unreal Engine 场景类。",
+          "构建 10 场景 / 18 事件的三个复杂度分级评测协议与三个引擎原生指标(SLR / ECR / PPA)。"
+        ],
+        "sim_benchmarks": [
+          "自建 10 场景 / 18 timed events 评测集(S1–S10:单事件 / 链式事件 / 多阶段动态),规模对齐 Scene Language 与 PAT3D 的 17–18 prompt",
+          "Unreal Engine(Chaos/UE 物理,ComputePenetration、OnComponentHit 回调作为判定)",
+          "NVIDIA Warp(Newton 刚体仿真器,用于可微梯度)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "未使用公开训练数据集;资产来自 3D asset library 的 CLIP 检索索引,检索置信度不足时用 TRELLIS 按需生成,两者统一 schema",
+        "compute": "单工作站端到端平均约 350 s/场景(LLM drafting ~120 s,资产解析 ~30 s,布局+物理优化 ~200 s);未说明 GPU 型号、参数量或 GPU·days",
+        "results_headline": "10 场景 18 事件上 Event Completion Rate 16.4/18,远超 Scene Language 3.2/18、SimWorld 1.4/18 与去掉可微优化的 w/o Opt. 8.8/18;PPA 95.0% vs SimWorld 15.0% / w/o Opt. 61.0%,SLR 94%,参数误差 |Δt|=0.07s、|Δv|=0.23 m/s、|Δm|=0.02 kg。",
+        "baselines": [
+          "Scene Language (Zhang et al. 2025)",
+          "SimWorld (Ye et al. 2025)",
+          "w/o Opt.(去掉可微物理优化的自身消融)",
+          "GPT4Motion / WonderPlay / PhysGen3D(因无显式物理状态、指标不可比而被排除)",
+          "Infinigen / LayoutGPT / Holodeck / SceneCraft / PAT3D(静态或无动态输出,ECR 记 0%)"
+        ],
+        "limitations": "只支持刚体动力学,不处理形变体、流体与铰接运动;proxy 几何与 UE 运行时 collision shape 之间的偏差限制高精度仿真,作者把更丰富的物理参数化、proxy–runtime 对齐以及扩展到 human / embodied agents 列为未来工作。",
+        "code_release": "论文称 \"We will publicly release our code\",但正文与补充材料均未给出 github URL,目前属承诺开源",
+        "relevance_detail": "可直接迁移的是「把自然语言任务编译成带物理参数的事件时间线,再用可微仿真反传事件 loss 求参数」这条 pipeline:它能自动化产出物理上必然成立、可复现的仿真任务,正好对应 embodied 研究中任务/课程生成与仿真数据构造(FATE、WorldArena 一类评测)。三个消融点尤其值得看——Table 2 的 AD-default / FD-fallback 策略给出链式碰撞必须用真实物理梯度(AD-only 50% → hybrid 90%,时间 153.5s → 101.3s)、SDF refinement 把链式碰撞成功率从 1/10 提到 8/10,以及 Table 1 的分层构建 + 校验让可执行草稿率从 76.5% 到 99.0%。与 V3/LWv2 的联系是概念性的:point/interval event + 事件级监督的结构,可作为给动作条件未来 latent 预测施加「事件级」监督信号的组织模板,但它优化的是显式物理参数而非 latent,需要自己改写。",
+        "followup": "先看 Table 2(AD/FD 混合梯度)与 Supp. Mat. A.2(各类事件的 loss 定义)和 B.3(ECR/PPA 判定协议:impulse>0.1 N·s、0.2 s 后复检防隧穿)。"
+      }
+    },
+    {
+      "rank": 18,
+      "key": "arxiv:2609.15659",
+      "title": "KaiNinja: Extending Native 3D Generators to the Part Level",
+      "title_zh": "KaiNinja:将原生 3D 生成器扩展到部件级",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Ruihan Yu",
+        "Lian Fu",
+        "Muyao Niu",
+        "Zheng-hui Huang",
+        "Yu-Ju Tsai",
+        "Sho Kuno",
+        "Fengbo Lan",
+        "Yonghao Yu",
+        "Erwin Wu",
+        "Ming-Hsuan Yang",
+        "Kaipeng Zhang",
+        "Zhixiang Wang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.15659",
+      "url": "http://arxiv.org/abs/2609.15659v2",
+      "published": "2026-09-14",
+      "tldr": "针对 O-Voxel 单体积无法表示两部件接触界面的问题,提出双体积表示,把 TRELLIS.2 扩展为无需分割器的部件级生成模型,整物体 Chamfer 距离降低 40%、严格部件 F-score 提升 16%。",
+      "why": "「双体积表示以刻画部件接触界面」是解决部件级几何歧义的具体机制,对具身场景中的可交互部件资产生成、可供性与操作 affordance 建模有直接价值。",
+      "hits": [],
+      "deep": {
+        "problem": "现有原生 3D 生成器（TRELLIS.2 等）单图只输出一个融合的整体 mesh，而编辑、rigging、物理仿真的下游工作都需要每个部件是独立可用的子 mesh；常见做法是生成后再跑 3D 分割网络，既慢又受分割精度上限约束。",
+        "method": "提出 dual-volume O-Voxel 表示：对部件接触图做二染色（非二分时贪心收缩奇环），把互相接触的部件分到 A/B 两个交错的 O-Voxel 体里，使每个体维持『每 voxel 一张面片』，接触面不再塌陷。架构上把 TRELLIS.2 的两阶段 cascade 改成两流：Stage 1 layout flow 是两份独立的预训练 transformer（30 blocks, width 1536, 12 heads），每 6 层插入一个 zero-init 的共享 cross-volume attention 做联合决策；Stage 2 refinement flow 完全复用预训练权重，只靠 attention scope（20/30 层 intra-volume，10 层 global）和一个 zero-init volume embedding 区分两流。训练按 fit→merge→frozen warmup→joint fine-tune 顺序继承预训练先验，并在 joint 阶段加 λ_ov=5 的 disjointness 惩罚 L_ov=E[o_A⊙o_B]。",
+        "key_contributions": [
+          "首个把 SOTA 原生 3D 生成基础模型 TRELLIS.2 原地扩展到 part level 的方法，两阶段分别采用 fit+merge+warmup（layout flow）与不动 backbone + attention scope（refinement flow）的继承配方。",
+          "给出表示层面的论证：单个体素网格在任意分辨率下都无法表示两个部件的接触界面，并提出最小修复方案 dual-volume packing，保留开放曲面、UV、材质与 PBR 属性。",
+          "首个用 LLM agent 编写的 3D 资产（Articraft-10K，部件标签来自构建程序而非人工标注、无标注噪声）训练 3D 生成模型。",
+          "发现 packing 不只是部件的容器：相比同 backbone 在同语料上 fine-tune，整物体 Chamfer distance 还降低 38%。"
+        ],
+        "sim_benchmarks": [
+          "HY3D-Bench",
+          "Sketchfab/GitHub 外部资产集（95 个对象）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "自建统一语料 19,132 个物体，来自 articraft（8,968）、partnext（6,358）、trellis（1,931）、fusion360（1,875）；留出 1000 个跨四源测试对象（实际在六方法都跑通的 986 个上汇报）。",
+        "compute": "论文未明确说明训练总算力与 GPU·days（Appendix A 只列超参）；推理为 512 分辨率下约 24 s/物体 on 1×H100，成本测量共 986 个对象，每 GPU 一个进程（X-Part 的分割器独占 4 卡节点，117 s 墙钟按时计为 469 GPU 秒）。模块规模：DINOv3 ViT-L/16 图像编码器 + TRELLIS.2 30 blocks/width 1536/12 heads backbone，VAE 全程冻结。",
+        "results_headline": "在 986 个测试对象上全面最优：整物体 CD_W 0.0186 vs 最强 baseline Hunyuan3D-2.1+X-Part 的 0.0314（低 40%），F1^0.05_W 0.919 vs 0.814，部件 F1^0.05_P 0.692 vs 0.597（+16%），比同 backbone 同语料 fine-tune 的 TRELLIS.2@512（0.830）还高 0.089；失败率 0.7% vs 零样本基线的 3.9–6.8%。",
+        "baselines": [
+          "TRELLIS.2@1024 + X-Part",
+          "Hunyuan3D-2.1 + X-Part",
+          "OmniPart",
+          "PartPacker",
+          "AutoPartGen",
+          "TRELLIS (whole-object reference)",
+          "TRELLIS.2@512 / @1024",
+          "TRELLIS.2@512 fine-tuned on our corpus",
+          "Hunyuan3D-2.1"
+        ],
+        "limitations": "继承 PartPacker 的两体假设：当部件接触图远离二分时只能靠合并边来二染色，导致部件互相咬合密集的物体被欠分割，且部件质量依赖语料的部分标注。生成随机性使分解随 seed 变化，作者列出三种复发失败模式（layout flow 欠分割、整体塌缩到一个体、两个体各生成一份近乎重合的完整物体），其中薄壳有时逃过跨阶段去重。",
+        "code_release": "开源：https://github.com/AlayaLab/KaiNinja，项目页 https://alaya-lab.github.io/KaiNinja",
+        "relevance_detail": "对具身智能是直接的资产生成工具链：part-level、非 watertight、带材质与 UV 的独立子 mesh 正是送入机器人仿真、rigging 与关节建模所需的形式，pipeline 里没有 mask/segmenter 意味着部件边界由生成器自己决定，可减少『先整体网格再分割』这一阶的误差传播与耗时。更可迁移的是继承预训练先验的三段式配方（每个流先 fit 自己的边缘分布 → 零初始化 cross-volume attention 合并以免打扰先验 → 冻结 warmup 只训新模块再联合 fine-tune），这与 V3/LWv2 里在冻结 Qwen3-VL backbone 上挂新 predictor/action head 的顺序性问题同构，可直接对照 §3.3 与 Table 7 的消融来设计 warmup 与 zero-init 新分支策略；此外『把表示改成 dual-volume 后整物体保真度反而变好（CD 0.0300→0.0186）』是表示设计影响预测质量的实证，值得与 latent world model 的表示选择对照（§4.2 Table 2）。Appendix B 关于『任何固定体数都无法消除该限制』的论证也提示了多流表示的可分性上限。",
+        "followup": "重点读 §3.1–3.3 的双体打包与 fit/merge/warmup 训练配方，配合 Table 6（2 vs 3 体）、Table 7 与 Figure 9（disjointness 惩罚只在 Stage-1 occupancy 上起作用、对最终指标几乎无影响）以及 Appendix B 的可分性论证。"
+      }
+    },
+    {
+      "rank": 19,
+      "key": "arxiv:2609.20804",
+      "title": "An Empirical Study of Harness Design for Coding Agents",
+      "title_zh": "Coding Agent Harness 设计的实证研究",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 8,
+      "novelty": 6,
+      "authors": [
+        "Run-Ze Fan",
+        "Zihao Zhang",
+        "Simin Ma",
+        "Yebowen Hu",
+        "Shouju Wang",
+        "Kaiqiang Song",
+        "Fei Liu",
+        "Hamed Zamani",
+        "Xiaoyang Wang"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2609.20804",
+      "url": "https://arxiv.org/abs/2609.20804",
+      "published": "2026-09-18",
+      "tldr": "论文固定执行循环、只变化 planning、action space 与 context management 三个组件，在 SWE-Bench Verified 与 Terminal-Bench 2.1 上跑了 176 组匹配设置，得出上下文管理在预算收紧时收益最大、规则式 elision 先于 LLM 摘要最优、planning 对弱模型是精度脚手架对强模型只是省成本等结论。",
+      "why": "它提供了组件级消融的方法论与具体结论（如「可恢复的 elided 内容几乎无人使用」），这种把 agent 系统拆开做受控对比的实验范式可直接迁移到 VLA/世界模型 agent 的 harness 与上下文设计评估。",
+      "hits": [
+        "M:planning",
+        "M:long-horizon",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 coding agent 的 harness(控制循环+工具接口+上下文管理)通常被当作整体系统评估,导致无法判断性能差异究竟来自 planning、action space 还是 context management;论文要回答这些组件是否普遍有效,还是其收益依赖模型能力、任务类型与上下文预算。",
+        "method": "作者从零搭建一个轻量 coding harness,固定 ReAct 执行循环(每轮 reasoning→action→observation),只变化三个可独立配置的组件:(1) planning(持久 task plan + update_plan 工具,每轮注入而不写入历史);(2) action space(预定义工具集 read/write/edit/list/glob/grep/web_fetch/bash vs. bash-only);(3) context management,定义为 T0–T4 五个策略,由三个机制组合:elision M1(把陈旧工具输出替换为 stub)、recall M2(原文存外部存储,recall_event 按需取回)、summarization M3(用同一模型做 tool-free 摘要),T4 在软阈值 B1 先 elision、硬阈值 B2 再 summarize(preamble 与最近窗口保持原文)。在固定模型/任务/执行循环下做 matched-setting 消融,并对 task-paired 结果做双侧 exact McNemar + Benjamini–Hochberg 校正。",
+        "key_contributions": [
+          "给出 176 组 matched 实验设置(4 个模型 × 2 benchmark × 20 个 context-management 设置 + 2 个组件消融)的组件级 harness 消融框架",
+          "发现 context management 的收益主要来自避免 context overflow 提前终止执行:窗口从 32k 扩到 128k 时,managed–T0 成功率的平均差距在 SWE-Bench 从 35.7 缩到 2.7 个百分点",
+          "指出 T4(先规则 elision、后 LLM 摘要)在 8 个 model–benchmark 组合中的 7 个取得最低成本且成功率与 T1–T3 相当,而可恢复的 recall(M2)几乎不被调用、也不带来精度增益",
+          "刻画 planning 与 action space 的条件效应:planning 对弱模型是提分脚手架、对强模型是省成本工具;预定义工具利于 bash 弱的模型,bash-only 对 bash 强的模型更省成本,并用轨迹级 phase 标注解释机制"
+        ],
+        "sim_benchmarks": [
+          "SWE-Bench Verified",
+          "Terminal-Bench 2.1"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "SWE-Bench Verified(500 条人工核验的 GitHub issue)与 Terminal-Bench 2.1(89 个端到端命令行任务);未涉及预训练数据",
+        "compute": "未说明 GPU·days;4 个模型(Nemotron-3 30B/120B/550B、Mistral-Medium-3.5-128B)本地用 SGLang 以 BF16 部署,temperature=0、top-p=0.95、每轮输出上限 16384 token、每任务最多 300 步;作者称因算力有限 planning/action space 只在 T4/128k 下消融",
+        "results_headline": "上下文预算越紧 context management 越重要:模型平均 managed–T0 成功率差距在 SWE-Bench 上随 32k/64k/96k/128k 从 35.7 缩到 15.9/5.5/2.7 pp(T0 的 overflow 失败率 78.7%→8.7%),管理策略 overflow 恒为 0;planning 使 Nemotron-3 30B 在 SWE-Bench 从 13.6%→25.2%(+11.6 pp,但更贵),使 550B 成本降约 30%(成功率 −2.0 pp)、Mistral 成本降约 32%(−0.4 pp);bash-only 使 550B 在 SWE-Bench 成功率 +3.6 pp 且成本 −53%,但使 30B 成功率 −15.0 pp。",
+        "baselines": [
+          "T0(无 context management)",
+          "T1(elision only)",
+          "T2(elision + recall)",
+          "T3(summarization only)",
+          "T4(三机制 staged)",
+          "planning off",
+          "full predefined tool set"
+        ],
+        "limitations": "每个设置每任务只跑一次,且 Terminal-Bench 仅 89 个任务,许多对比未达显著;planning 与 action space 只在默认 T4/128k 下消融,非全因子设计;action-space 干预是捆绑式接口改动(工具可用性、prompt、文件状态跟踪、post-edit 诊断同时变),无法分离工具数量或动作粒度;模型仅 Nemotron-3 三档 + Mistral 一个,SWE-Bench Verified 仅 Python,crossover 结论需在其他模型族/harness/任务类型上复验。",
+        "code_release": "论文未提开源链接(提取文本中无 repo;harness 基于 LangGraph,benchmark 经 Harbor 驱动)",
+        "relevance_detail": "这不是具身/VLA 论文,但给长时程 agent 的设计选择提供了罕见的条件性证据:(1) 表 13 与 §3.2 显示 recall(可恢复的无损记忆)在 64 个 T2/T4 设置中 56.3% 从未被调用、median 为 0、对精度均值为 −0.36 pp——这是对\"加一套外部记忆/检索机制\"的强负面证据,直接可迁移到长时程 agent 的 memory 设计与 LWv2 这类 latent memory 组件的取舍判断;(2) 上下文管理的收益几乎全部来自\"避免轨迹被截断\"而非改变行为质量,提示评估一个记忆/预测模块时应区分'轨迹变长'与'行为变好',这是很实用的评测方法论;(3) planning 在弱模型上把 SWE-Bench 无编辑即终止的比例从 68.6% 降到 27.8%、把中位轨迹从 5 轮拉到 40 轮,说明规划脚手架的作用机制是\"防止过早停止\",对长时程规划/早停问题有参考价值;(4) 其消融协议(固定执行循环、只变一个组件、matched settings、task-paired McNemar + BH 校正)可直接借用来做 LWv2 里 predictor/target/action-head 接法的受控对比,比只报单一平均分更有说服力。",
+        "followup": "优先看 §3.2 的 Table 3/4(主结果与显著性标注)、Table 6/7 与 Figure 8/9(planning 与 action space 的轨迹级机制),以及 §2.3 + Algorithm 1 和 Limitations。"
+      }
+    },
+    {
+      "rank": 20,
+      "key": "arxiv:2609.19782",
+      "title": "Printing the Underdetermined: Materializing Multi-solutionness in Figurative Paintings",
+      "title_zh": "打印未定性:在具象绘画中物化多解性",
+      "score": 7,
+      "bucket": "explore",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 8,
+      "authors": [
+        "Yutao Ming",
+        "Teng Xu",
+        "Youjia Wang",
+        "Yunyang Liu",
+        "Fengmin Yang",
+        "Fuqiang Zhao",
+        "Jingyi Yu",
+        "Hua Yang",
+        "Yanjun Zhou"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19782",
+      "url": "http://arxiv.org/abs/2609.19782v1",
+      "published": "2026-09-17",
+      "tldr": "论文把具象绘画的 3D 解读显式建模为\"多解性\",用视频生成模型采样多条相机环绕序列、各自 3DGS 重建出带密度光晕与鬼影的高斯表示,再通过 DreamPrinting 制成实体物件。",
+      "why": "它把\"单图对应多个合理 3D 解释\"从残差误差提升为一等输出,这种显式保留多假设的思路对世界模型中的不确定性建模与多模态未来预测很有启发。",
+      "hits": [],
+      "deep": {
+        "problem": "把具象油画当作单一可恢复 3D 场景来重建时,透视、遮挡、明暗等线索本质上是欠定的(underdetermined),单张画面可对应多个合理 3D 结构;论文要解决的是——如何不把这种“多解性(multi-solutionness)”当作要正则化掉的误差,而把它作为显式输出来呈现和比较。",
+        "method": "三阶段流程:Stage 1 用现成的 image-to-video 生成模型 Jimeng Video 3.5 Pro,以不同随机种子/提示采样 K 条 360° turntable 多视角序列 V_k ~ p_θ(V|I,τ,z_k),每条序列代表一种“未观测内容”的补全假设(贡献 1);Stage 2 对每条序列独立做 3DGS 重建,用 COLMAP 估计相机位姿、MatAnyone 生成 alpha matte,损失为前景光度项 L_fg 加背景透明项 L_α(L = L_fg + λL_α),并刻意不做激进正则化以保留 diffuse/ghosting 结构;Stage 3 把 3DGS 的离散 density/color 适配成 DreamPrinting 的 Volumetric Printing Primitives,输出 CMYKWCl 供 Stratasys J850 Prime PolyJet 打印。",
+        "key_contributions": [
+          "提出“多解性”的两层框架:未观测内容(背面、被遮挡体积)导致的多解,与观测线索本身欠约束(如 bas-relief/shape-from-shading 歧义、Ames room)导致的多解。",
+          "提出 painting-to-3D 反译管线,输出多个 hypothesis-conditioned 的 3DGS 重建而非单一收敛场景。",
+          "论证 3DGS 的点密度 halo、ghosting、边界弥散可作为观测线索歧义的可见签名,而非错误。",
+          "用 DreamPrinting 把高斯点表示物化为可触摸、可比较的实体打印件,把不确定性固化为材料属性。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(论文做的是实体 3D 打印而非机器人实验:Stratasys J850 Prime PolyJet 打印 DreamPrinting 体素原语,无机器人平台、无任务、无数据规模)",
+        "datasets": "输入为 3 幅公有领域油画(Mona Lisa、Girl with a Pearl Earring、The Arnolfini Portrait,Fig.5)及 Hogarth《A Midnight Modern Conversation》局部(Fig.3);无训练数据集",
+        "compute": "论文未明确说明(仅致谢提到 ShanghaiTech HPC 平台;生成侧用商用闭源 Jimeng Video 3.5 Pro,重建侧未给参数量/GPU·days)",
+        "results_headline": "无数值指标与定量对比,仅为定性展示:同一幅画可产出多条互不相同的多视角序列与对应 3DGS,并打印成保留软边界与 ghost 结构的实体物件,作者以“从原画参考视角观察打印件的视觉相似度”作为唯一质量判据。",
+        "baselines": [
+          "传统单解重建管线(SfM/MVS + NeRF/3DGS,追求单一 coherent 场景)",
+          "含不确定性建模的重建方法(ProbNeRF、ActiveNeRF,仍把残余歧义当内部误差项)",
+          "优化式/前馈式 3D 生成(Magic3D、DreamFusion、ProlificDreamer、Zero-1-to-3、TripoSR、Hunyuan3D、CLAY)",
+          "大型 world model(OpenAI video world simulator、WorldPlay、Marble)——定性对比,非定量"
+        ],
+        "limitations": "当画面缺少明确主体/锚点时,生成模型难以合成连贯旋转序列,导致重建破碎;3DGS 会把生成伪影与真正有意义的空间歧义一并保留为 diffuse 结构,无法区分二者,因此作者只把输出当作 heuristic artifact 而非 ground-truth 空间恢复。此外当前两维多解维度无法统一到同一个打印件中(未观测内容需多个物件,观测线索只能用密度差异表达)。",
+        "code_release": "论文未提",
+        "relevance_detail": "与具身智能不是同一领域,但有两点可迁移:(1) 核心主张“多解性是合法输出、不是要收敛掉的误差”直接类比 VLA/扩散或 flow policy 的动作多模态,以及 V3/LWv2 里 JEPA 式 latent 预测的 representation collapse——Section 3.2 明确用“不做激进正则化、保留 diffuse band 与 ghosted duplicate 作为未解自由度签名”来对抗坍缩,可作为 predictor/target 设计时的反面提醒:抑制多模态会让表示退化成单解;(2) Section 5.2 承认“无法区分生成伪影与真实空间歧义”,这正是 latent 世界模型里同样要面对的判别问题(预测误差 vs 真实多假设),值得作为评估设计参考。整体属于 explore 级别的概念启发,不含可直接复用的架构或训练技巧。",
+        "followup": "看 Section 4.2–4.3 的多假设采样(不同 seed/prompt)与 3DGS 损失构造 L_fg + λL_α,以及 Section 5.2 的局限讨论;Fig.2/Fig.4 的 cue propagation 示意值得一看。"
+      }
+    },
+    {
+      "rank": 21,
+      "key": "arxiv:2609.20437",
+      "title": "A Mathematical Model of Motivated Emotional Mind - Cognitive Embodied System",
+      "title_zh": "动机情绪心智的数学模型——认知具身系统",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 4,
+      "transfer_value": 4,
+      "novelty": 7,
+      "authors": [
+        "Wiesław L. Galus",
+        "Janusz A. Starzyk"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20437",
+      "url": "http://arxiv.org/abs/2609.20437v1",
+      "published": "2026-09-17",
+      "tldr": "该文为具身智能系统提出 Motivated Emotional Mind 认知架构的严格数学形式化,刻画前馈、侧向交互与反馈构成的重入回路,以及把外感/内感信号、身体动机上下文与记忆绑定为 semblions 并竞争处理的表征选择机制。",
+      "why": "它把需求阈值、目标生成、全局情感调制学习率与探索-利用平衡纳入统一形式化,为超越标准 RL 的动机驱动智能体设计提供了理论视角,但偏理论、落地路径尚不明确。",
+      "hits": [
+        "M:reinforcement learning",
+        "M:memory",
+        "M:uncertainty"
+      ],
+      "deep": {
+        "problem": "这篇论文要为具身智能系统提出一个\"动机化情绪心智\"(MEM)的数学形式化框架,试图用可测量的变量(受体驱动的刺激、体内稳态失调、情绪调节、记忆重构)解释从初级感知到\"次级感知\"(主观体验/想象/回忆)的完整回路,并主张标准 RL 的奖励目标不足以刻画受需求与情绪驱动的行为选择。",
+        "method": "模型把系统状态定义为 s_t=(h(t), b(t), n(t)),即表征活动、整合的躯体-动机上下文、以及稳态变量。核心模块包括:(1) 异层级循环网络更新 Eq.(1),融合 feedforward / lateral / feedback / interoceptive / contextual 五路权重;(2) 稳态失调与情绪 Eq.(2)-(4),用单边越界量 Δn± 与 tanh 有界 affect A(t) 及非对称代价 C(t);(3) semblion 三元组 S_m=(μ_m, ρ_m, v_m) 做联想匹配 Eq.(6),经 Top-K 候选、lateral 联想 priming、softmax 竞争后由阈值选出胜者 W(t);(4) 自上而下重构 Eq.(13)-(14) ĥ_sens=Σ a_m μ_m,再与 feedforward 按 λ 加权融合成 h_eff,即\"次级感知\";(5) 动机化学习 Eq.(17)-(18) 用 η(t)=η0(1+κ|A(t)|) 让情绪动态调节学习率并更新 valence;(6) 程序级策略与创造性 Eq.(19)-(34),在程序空间 Π 上最小化期望折扣调控代价,并用 procedural gap 触发新程序生成。",
+        "key_contributions": [
+          "把 re-entrant loop(feedforward + lateral + feedback + interoceptive + context)写成统一的离散时间更新方程,并明确区分 re-entry(机制)、reconstruction(过程)、secondary perception(现象结果)。",
+          "提出 semblion 三元组(感知原型 μ、躯体-动机上下文 ρ、valence v)作为联想记忆单元,给出匹配—Top-K—lateral priming—softmax 竞争—阈值胜出的完整可计算选择机制。",
+          "用稳态越界而非外部 reward 定义代价函数 C(t),让有界情绪 A(t) 作为中心控制信号同时调制学习率 η(t)、valence 更新与探索率 ε(t),从而把好奇心和 exploration 变成状态依赖而非固定值。",
+          "用 procedural gap(现有程序库中不存在 Q 值足够高的程序)形式化创造力,并给出新程序生成与巩固的判据 ΔQ ≥ θ_imp 或 J ≤ θ_J。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明(纯理论文章,未使用任何数据集)",
+        "compute": "论文未明确说明(无训练或仿真实验)",
+        "results_headline": "无数值结果;全文为数学形式化与哲学论证,作者自述这是\"迈向更严格形式化的第一步\",并给出可证伪的实验预测(如扰动 feedback 通路应改变想象生动性与现象报告,而不影响快速无意识 feedforward 辨别)。",
+        "baselines": [],
+        "limitations": "作者自承只是 mesoscopic 层面的候选框架,没有任何仿真或实验验证,变量与算子(如 ψ、sim、𝒯_j)的具体形式都留给实现者选择,因此当前更像理论提议而非可复用算法;风险是未来证据可能显示意识内容并不依赖这一重构机制。",
+        "code_release": "论文未提",
+        "relevance_detail": "这是一篇认知科学/心智哲学取向的理论文章,与 VLA、机器人学习没有直接关系,但有两处机制可迁移:其一,Eq.(13)-(14) 的\"用胜出 semblion 原型加权重构出 ĥ_sens,再与 feedforward 按 λ 融合\"本质上就是一个 predict-then-fuse 的潜在重构回路,和 JEPA 式预测器产出 target 空间预测、再与观测表征融合的思路同构,其中 λ 随注意力/情绪调节可类比为预测与观测的权衡系数;其二,Eq.(24) r(t)=||h_ff - ĥ_sens||² 直接作为 novelty 信号驱动 Eq.(25)-(26) 的好奇心与探索率,这种\"用预测偏差调制探索/学习\"的写法可以为 latent world model 的 intrinsic reward 或 loss 加权提供参考。另外 Eq.(17) 的 η(t)=η0(1+κ|A(t)|) 是一种极简的\"由内部标量信号自适应调制学习率\"机制,可作为训练中动态 loss/learning-rate 调制的抽象模板。需要明确的是:全文无实验、无 benchmark、无真机,价值在概念与方程层面,不是工程可复用组件。",
+        "followup": "重点读第 5-6 节(Eq.6-14,semblion 竞争与二阶感知重构)与第 9 节(Eq.24-26,预测偏差→好奇心→探索),第 10.2 节的 testability/limitations 也值得看以判断这套形式化的可证伪边界。"
+      }
+    },
+    {
+      "rank": 22,
+      "key": "arxiv:2609.20489",
+      "title": "Resolution limits for process comparison from event data",
+      "title_zh": "从事件数据比较过程的辨识分辨率极限",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 3,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [
+        "Antony R. Lee",
+        "Peter Tiňo",
+        "Iain B. Styles"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20489",
+      "url": "http://arxiv.org/abs/2609.20489v1",
+      "published": "2026-09-17",
+      "tldr": "证明基于事件日志随机语言的过程发现无法区分并发与顺序，并刻画了数据在何种条件下可辨识并发行为。",
+      "why": "它给出「记录什么比采多少数据更重要」的可辨识性论证，对具身数据采集设计（记录时序/对象中心信息以保留因果结构）有方法论层面的启发。",
+      "hits": [
+        "M:planning",
+        "M:object-centric"
+      ],
+      "deep": {
+        "problem": "事件日志(event log)把一次执行压扁成全序 trace,导致基于 trace 的流程比较无法区分「真并发」与「两种顺序各占一半的交替」——而医院排班等运营决策恰恰依赖这一区别。论文要在采集任何数据之前,刻画这种可分辨性(resolution)的极限,并说明当 trace 无法分辨时哪种记录方式才能补回证据。",
+        "method": "把已挖掘的流程模型表示成 canonical labelled posets 上的分布(模型向量,Eq.1),并把任何比较写成「chart r(把模型改写到某个具体结构)+ geometry µ(结构上的度量)」的 pullback d=µ(r(m),r(m')),默认几何取 Fisher–Rao / Bhattacharyya angle。核心工具是三类 chart 的 kernel 计算:用 linearisation relations κ_D=e_D-Σ_w ρ(w|D)e_cw 张成 stochastic-language chart r_T 的 kernel(Thm 4.1),用 Gallai 模块分解得到注入的 block chart r_P 并用 Bühlmann–Wyner context tree 给出保真且自终止的记忆深度 k*(Thm 4.2),再给出 directly-follows graph 映射 dfg 的秩与核(Thm 4.3)。估计部分对变体权重做凸 MLE(Eq.13),并提出 estimability σ_min(A_ν) 作为 rank 失败与样本复杂度的单一诊断量。",
+        "key_contributions": [
+          "证明 trace-level 比较的根本极限:在 chain-complete 模型空间上,任何 trace-observable 比较都不是 metric,因为真并发 a;(b⊗c) 与「1/2 a;b;c + 1/2 a;c;b」产生完全相同的 stochastic language,二者之差恰由 linearisation relations 张成(Thm 4.1、Cor 4.1、Example 4.1)。",
+          "把「分辨率」变成可计算量:直接后继图 DFG 的 rank 只有 n(n-1)+#{s(x)≥2},而 stochastic language 的 rank 是 n!/∏s(x)!,所以 miner 报告的并发来自算法规则而非数据(Thm 4.3);并证明任何预先固定的 stochastic map 只会缩小、不会放大两个 law 之间的 Bhattacharyya 角(Thm 4.4)。",
+          "给出「先定决策、再定 chart、最后才碰数据」的四阶段流程,并定义 estimability σ_min(A_ν):σ_min=0 表示某个权重方向根本不改变 trace 概率(可完美拟合却完全不可辨识),非零时样本量按 σ_min^-1 放大,如 j 个并发活动给 σ_min=(j!)^(-1/2)。",
+          "在 ground truth 由构造固定的模拟临床 fleet 上验证:partial-order chart 以 ARI=1.000 恢复全部四个生成组,而走展平日志的最佳路线只到 0.633;并随文发布 proc-posets 实现包。"
+        ],
+        "sim_benchmarks": [
+          "自构造模拟多站点 clinical fleet(synthetic + 临床患者模拟器),无公开标准 benchmark"
+        ],
+        "real_robot": "未做真机实验(本文为 process mining / OR 论文,实验对象是模拟医疗流程与站点聚类)",
+        "datasets": "仅使用自构造模拟数据;作者称筛选过的公开 event log 都没有「在已知生成模型下构成该比较」的条件,因此 ground truth 必须构造而非寻找(未点名具体公开日志)",
+        "compute": "论文未明确说明",
+        "results_headline": "模拟临床 fleet 聚类恢复:partial-order chart 的 ARI=1.000,而经展平日志的最佳路线止于 0.633;并发块 j 的 estimability 为 σ_min=(j!)^(-1/2),Example 4.1 的线性相关家族在任意 θ 下 σ_min=0。",
+        "baselines": [
+          "直接后继图 / Inductive Miner(含 directly-follows Inductive Miner)",
+          "Heuristics Miner 依赖计数",
+          "Probabilistic Inductive Miner",
+          "Jensen–Shannon stochastic conformance",
+          "earth-mover stochastic conformance",
+          "behavioural profiles(Jaccard)",
+          "activity footprint(α-algorithm)",
+          "cophenetic process-tree distance / block-tree distance"
+        ],
+        "limitations": "实验只在模拟数据上完成,没有公开日志带已知生成模型可做验证;可分辨性结论依赖 chain-complete 假设与固定/均匀 scheduling law(Assumption 3.1/3.2);context tree 与状态空间 X 依赖参与比较的模型集合,新加入模型可推翻已有 merge 并需重建、重算 k* 与距离尺度;论文本身不提出 discovery 算法,也不解决真实日志中 execution 独立性假设失效(object 跨 execution、事件重复)的问题。",
+        "code_release": "随文发布 proc-posets 包(正文仅提到该包实现了第 4–5 章的计算步骤,未在可见正文中给出具体 URL)",
+        "relevance_detail": "这不是机器人论文,domain fit 一般,但提供三条可迁移的「评估/表示设计」机制:(1) 把「表示 = chart」形式化后,kernel 就精确回答了「这套表示在原理上永远分辨不出哪些差异」——Thm 4.1/Cor 4.1 说明全序轨迹无法区分真并发与平衡交替,类比于 V3/LWv2 中「按时间展平的轨迹观测能否区分并发的耦合因素」这一类问题,提示应当在选 latent/predictor 目标时就检查 kernel,而不是指望更多数据;(2) Thm 4.4 是免费的 data-processing 不等式:任何事先固定的 stochastic map(动作离散化、tokenization、降采样、label merging)只会缩小 Bhattacharyya 角,因此可用于判断某个粗粒度指标「能否看到差异」,并说明用数据拟合出来的变换不在保证范围内;(3) σ_min(A_ν) 与 Example 4.1 的 ridge 是可在采集数据前计算的不可辨识方向诊断,直接对应 latent 预测目标中「参数量改变但似然不变的退化方向/表征塌缩」,而 Thm 4.2 的 context-tree 自适应记忆深度(不预设 memory 长度、由有限搜索终止)也值得与世界模型的上下文长度设计对照。",
+        "followup": "优先读 Section 4.2–4.3(chart/kernel 与 block chart 构造)、Theorem 4.1–4.4、Section 6 的 estimability 与收敛率,以及 Section 7.1 中 trace-identical arm 的 ARI 数值对比(正文在此处被截断,需查 7.2 与附录字典表)。"
+      }
+    },
+    {
+      "rank": 23,
+      "key": "arxiv:2609.20412",
+      "title": "Stress-testing Alignment Midtraining",
+      "title_zh": "压力测试对齐中训练",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 3,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [
+        "Sid Baines",
+        "Jonathan Bostock",
+        "Maria Angelica Martinez",
+        "Andrew Draganov",
+        "David Africa",
+        "Daniel Tan"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20412",
+      "url": "http://arxiv.org/abs/2609.20412v1",
+      "published": "2026-09-17",
+      "tldr": "论文在最高 110B 参数模型与 10 亿 midtraining token 规模上系统检验 alignment midtraining 的若干假设，发现少量竞争性微调数据即可抹除其效果，且未演示的规则难以被稳健学到。",
+      "why": "以大规模对照实验质疑“中训练可解决对齐泛化”的流行假设，这种对训练阶段数据分布与泛化边界的压力测试方法，可迁移到机器人策略中训练数据组成与行为泛化的验证。",
+      "hits": [],
+      "deep": {
+        "problem": "论文要检验 alignment midtraining (AMT) 是否真能解决 post-training 的两个结构性缺陷:(i) 训练分布覆盖不足导致 OOD 泛化差;(ii) 训练数据 underdetermined,模型学不到正确动机。作者认为目前公开证据不足以支撑 AMT 有效这一流行假设,因此做系统性 stress-test。",
+        "method": "三阶段流水线:AMT(在合成的 alignment 文档 + Dolmino replay 1:1 上做全参数继续预训练,1M–1B tokens)→ IFT(Dolci-Instruct-SFT,100M tokens)→ EFT(LoRA,2M–10M tokens、2–4 epochs,8192 条演示)。用两个虚构设定做受控实验:Dispatch(AI 调度员按 Qalvori Charter 七条 clause vs Coin 利润最大化两种动机,5 条 held-in / 2 条 held-out)与 Python 4(虚构语言方言,4 held-in / 4 held-out 规则)。RL 实验用 grafting:把 AMT 的 weight delta 直接加到 instruct 模型上,再跑 GRPO/RLVR。",
+        "key_contributions": [
+          "跨 10B→110B 模型、1M→1B midtraining tokens 做规模化 stress-test,发现仅 2%(164 条,约 45K–80K tokens)冲突 EFT 数据即可反转 190M tokens midtraining 植入的动机(Charter 90%→13%,Coin 92%→46%)。",
+          "AMT 对 EFT 中未演示的 held-out 规则泛化很弱(GLM-4.5-Air 19%→53%,gemma-3-27b 26%→37%);若把 midtraining 语料中这些 clause 的 demonstration 换成同 token 量定性描述,uplift 再降为 ×0.73 / ×0.35。",
+          "把 elicitation 从 SFT 换成 RL 后 AMT 效果大幅削弱(no-thinking RL 下 Charter-midtrained 相对 control 仅 8% 差异,SFT 为 34%),且 RL 模型思考链里仍会引用只在 midtraining 出现过的 Charter 短语却照样选 Coin。",
+          "结论:AMT 只在 post-training 数据完全 specify、且 midtraining 含示范时才有正向协同,不能作为对齐分布偏移问题的鲁棒方案。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(纯 LLM 对齐研究,无机器人或具身实验)",
+        "datasets": "自生成合成 midtraining 文档(由 GPT-5.6-terra / luna、GLM-5.3-flash、Gemini-3.7/3.8-flash 生成并互审),replay 数据用 OLMo 3 的 Dolmino 预训练混合,IFT 用 Dolci-Instruct-SFT;Dispatch 与 Python 4 的 EFT/评测数据自建(8192 条 Dispatch 演示,100 个确定性 renderer 模板)。",
+        "compute": "模型规模最大 110B(GLM-4.5-Air),另含 gemma-3-4b/12b/27b、Gemma-4-12B/31B、Gemma-4-26B-A4B;midtraining 1M–1B tokens,IFT 100M tokens;作者明确说因时间与算力成本无法给多数配置跑多 seed,具体 GPU·days 未说明。",
+        "results_headline": "Ambiguous EFT 下 Charter-midtrained 90% 选 Charter、Coin-midtrained 92% 选 Coin,但只替换 2%(164 条)冲突演示后分别跌至 13% 与 46%,即约 45K 冲突 finetuning tokens 抹掉 190M midtraining tokens 的效果;而 chat eval 上两个模型几乎无差别。",
+        "baselines": [
+          "Control midtraining(Dolmino replay,无对齐文档)",
+          "Pre-midtraining base / parent model",
+          "SFT-EFT vs no-thinking RL-EFT vs with-thinking RL-EFT",
+          "Li et al. 2026 Model Spec Midtraining 复现(Appendix E)"
+        ],
+        "limitations": "只覆盖少数模型族(Gemma 3/4、GLM-4.5)且多数 cell 仅一个 seed,统计置信度有限;主设定 Dispatch 较简单、不能代表真实对齐场景的复杂度;作者的 midtraining 配方未必最优,frontier 实验室的实践可能更强,因此结论外推需谨慎。",
+        "code_release": "论文未提(正文与附录均未给 github 或 artifact 链接)",
+        "relevance_detail": "这不是具身论文,但有三点可迁移机制:(1)它验证了「上游表征/先验阶段植入的倾向会被下游极少量冲突行为数据抹除」——这正是 V3/LWv2 中 latent future-prediction 先验是否会被 action head 或少量动作 finetuning 冲掉的对口问题,图 3 的二维热图(midtraining dose × EFT 组成)也给出了可直接照搬的 stress-test 设计:固定上游 latent 预训练,只扫下游动作数据中冲突样本比例。(2)论文最有价值的度量是「表示里还在、行为上不在」的分离:Fig 2b 显示 2% Coin EFT 后模型在 chat eval 上仍同等复述 Charter、held-in/held-out 知识分几乎不变,只有 Dispatch 行为反转——评估 latent 世界模型时同样应把 probe/recitation 与 action 行为分开报告,而不是只看 action loss。(3)grafting(把预训练阶段的 weight delta 直接加到 instruct 模型上)是低成本复用先验的工程技巧;附录 §3.3 的发现——AMT 收益主要来自语料里的 demonstration,换成同 token 量的定性描述后 uplift 大降——对「世界模型训练里演示数据 vs 机制描述数据的配比」有直接借鉴意义。",
+        "followup": "先看 §3.1–3.4 与 Fig 2/3/5/6(结论核心),再查 Appendix B.1(scaling 与 seed)、B.3(完全去掉 demonstration)、F.1/F.2(数据生成与训练配置),需要复现细节时看 Appendix E 的 Model Spec Midtraining 复现。"
+      }
+    },
+    {
+      "rank": 24,
+      "key": "arxiv:2609.20349",
+      "title": "A Qualitative Model for Reasoning about Path and Support",
+      "title_zh": "关于路径与支撑的定性推理模型",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 5,
+      "transfer_value": 5,
+      "novelty": 6,
+      "authors": [
+        "Abhishek Jaiswal",
+        "Zoe Falomir"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20349",
+      "url": "http://arxiv.org/abs/2609.20349v1",
+      "published": "2026-09-17",
+      "tldr": "为积木拼搭游戏 Camelot Jr. 构建混合定性推理模型,将质心稳定性数学逻辑嵌入定性求解器,以符号化方式推理平台稳定性、路径规划与积木使用约束并生成可解释反馈。",
+      "why": "把连续物理稳定性判据(质心)与定性符号推理结合以产生可解释的规划反馈,为具身智能中物理常识推理与可解释规划的结合提供了一个轻量可复用的范式。",
+      "hits": [],
+      "deep": {
+        "problem": "如何为一个需要空间稳定性判断与路径规划的木制积木解谜游戏 Camelot Jr. 构建可解释、类人的求解智能体：既要判定多层积木结构在重力下是否稳定,又要为骑士找到通往公主的可行走路径,并给出人类可理解的推理反馈。",
+        "method": "提出 hybrid qualitative model:用网格化定性描述子表示游戏(积木为 4-tuple {N, id, O, χ}),其中朝向状态向量 O=(Axis, f, ι) 加上 Reflect/Invert/Transpose 三个离散算子构成朝向状态转移矩阵,并区分 HN/HM/HNI/HMI/VN/VM 等 ramp affordance。在符号层之上叠加数值化 center-of-mass(COM)稳定性逻辑:自顶向下递归聚合载荷,用 convex hull 约束判定稳定,用 lever rule 在多支撑(桥)情形下分配受力。路径部分把可行走格建模为 DAG,动作原语为 move-right / move-diagonal-up / move-diagonal-down,根据下方支撑块的 affordance 自动触发升降。整体求解用递归回溯搜索,配合支撑格 pruning 与几何 pruning,仅在库存用尽后统一校验全局稳定性与连通性。",
+        "key_contributions": [
+          "给出 Camelot Jr. 的完整定性空间描述子:积木 4-tuple、朝向状态向量 (Axis, f, ι)、8 种 stair-block 朝向及其可支撑/可行走 affordance 表(Table 1),并标注 VNI/VMI 等非法朝向。",
+          "构建朝向状态转移矩阵(Table 2),让回溯求解器可系统枚举合法旋转/镜像/翻转。",
+          "把符号 affordance 与数值 COM 稳定性结合:自顶向下递归载荷聚合 + convex hull 判据 + lever rule 多支撑受力分配,作为 symbolic solver 的物理校正层。",
+          "实现基于 DAG 与格点 affordance 的路径模块(4 类转移条件:flat foundation、stair platform、geometric descent Δy=-1、geometric ascent Δy=+1)与带 pruning 的递归回溯求解算法(Algorithm 1)。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明(纯符号/几何方法,无需训练数据)",
+        "compute": "未说明(无学习组件,无 GPU 训练)",
+        "results_headline": "无任何定量结果或 baseline 对比;作者仅声称该 agent 能求解游戏问题空间内的任意配置挑战,并给出 Figure 1c 的单例逐步路径演示,未报告求解率、耗时或与搜索基线的比较。",
+        "baselines": [],
+        "limitations": "全文无实验、无量化评估、无基线,稳定性与可解性只有单例示意;COM 逻辑依赖精确数值与离散网格,难以迁移到连续状态、摩擦/动力学导致的非静态平衡场景;作者也承认工作局限于该游戏并计划扩展到其它物理类解谜游戏。",
+        "code_release": "论文未提",
+        "relevance_detail": "这篇属于 explore 级别的定性推理(QSTR)工作,与具身智能的连接点在机制层而非结果层:(1) 把'结构可支撑性'形式化为 convex hull + lever rule 的递归载荷传播,这与机器人在堆叠/搭桥等接触丰富操作中需要的前向可支撑性预测是同一类物理推理,可作为学习式 world model 的符号校验器或数据生成器(见 Section 5);(2) 把可行走性拆成格子级 affordance 与自动触发的 Δy 转移(Section 6, Table 3),是一种把几何/接触约束显式编码成 action 空间的思路,可与 VLA 的动作 tokenization 对比——但论文没有学习、没有感知输入、没有真机或仿真验证,因此对 V3/LWv2 这类 latent world prediction 只有概念上的旁证,不建议投入首读。",
+        "followup": "若深读,重点看 Section 5 的递归 COM 聚合与 lever rule 公式、Section 6 的 4 类格点转移条件,以及 Table 1/Table 2 的 affordance 与状态转移表;Algorithm 1 与 Section 7 的 pruning 策略可略读。"
+      }
+    },
+    {
+      "rank": 25,
+      "key": "arxiv:2609.20068",
+      "title": "Marginal utility, matrix factorization, and the Key-Value (KV) cache: a unified information-economic framework for sovereign geo-mining inference",
+      "title_zh": "边际效用、矩阵分解与 Key-Value(KV)缓存:面向主权地质矿产推理的统一信息经济学框架",
+      "score": 4,
+      "bucket": "explore",
+      "domain_fit": 3,
+      "transfer_value": 5,
+      "novelty": 7,
+      "authors": [
+        "Caroline Gans Combe"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20068",
+      "url": "http://arxiv.org/abs/2609.20068v1",
+      "published": "2026-09-17",
+      "tldr": "把边际效用与矩阵分解的奇异值谱、表示协方差特征谱以及 KV 缓存淘汰/低秩压缩统一为同一分配规则(保留特征值超过约束影子价格的维度),并在地矿文档抽取上验证多轮推理协议与逐层 TIES 合并。",
+      "why": "其中\"逐层校准密度的 TIES 合并可消除高置信度但输出退化的模式\"这一诊断,对模型合并与表示塌缩检测有可复用的实验方法,但整体框架偏思辨、部分结果仅为预测值。",
+      "hits": [
+        "M:memory"
+      ],
+      "deep": {
+        "problem": "论文试图用一个统一的「边际效用(marginal utility)」经济学框架,把矩阵分解的秩选择、transformer 中 WVW^T 投影算子的表征谱、以及 KV cache 的存储/压缩决策视为同一个受预算约束的资源分配问题,并把该框架落到「主权化(sovereign)、低能耗」的地质矿产文档结构化抽取流水线上。",
+        "method": "核心是把 WVW^T 的特征值谱(经 Eckart–Young–Mirsky 定理解释)当作投影表征的边际效用曲线,从而把三件事归约为同一条离散阈值规则 k* = max{k : λ_k ≥ γ},其中 γ 是内存/算力预算的影子价格;据此推导 KV cache 逐 token eviction(H2O 式)与 low-rank cache 压缩的最优秩、以及多 pass 推理的序贯最优停止条件(ε_floor = ε_elbow = γc/E[μ̂₁])。工程侧用逐层 utility Φ_l(各层各 head 的 λ₁ 均值)去校准 TIES 模型合并的层间密度,并用带 CVaR 尾部风险项的多目标 scalarization 折中抽取质量、定位漂移与能耗。实际分类模块为 11.2M 参数的层级式 ResNet18。",
+        "key_contributions": [
+          "理论统一:证明矩阵分解的 SVD 谱、WVW^T 的特征谱与 KV cache 的效用–成本权衡都是同一分配问题的实例,收敛为 Proposition 2 的阈值规则 k* = max{k : λ_k ≥ γ}。",
+          "架构层:用逐层边际效用 Φ_l 校准 TIES 合并的层间密度,并诊断出 uniform-density TIES 合并的退化模式(token-identical 输出却高置信)。",
+          "评测方法:提出质量–漂移–能耗三目标 frugality scalarization,含 drift 的 CVaR 尾部风险项。",
+          "可测实证:11.2M 参数层级 ResNet18 在 973 篇铀矿勘探文档语料的 170 篇留出测试集上达到 90.0% level-1 准确率,逼近 Gemini 2.5 Pro 的 92.0%,而单卡推理延迟 2.62 ms 对比约 2000 ms。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(本文非机器人研究,任务为地质矿产文档/地图的图像–文本结构化抽取)",
+        "datasets": "搭档释放的 973 篇铀矿勘探文档语料(Orano;Athabasca Basin 与 Namibia 铀矿带,留出 170 篇测试集)、同一语料的 50 篇人工审计集、50 篇 Armorican Massif(BRGM Brittany)文档样本;另提及 200 篇分层 BRGM 语料(scale-up 阶段,尚未实测)",
+        "compute": "11.2M 参数层级 ResNet18,单张 Colab GPU 约 5 分钟训练完;全量抽取 benchmark 的 LoRA 微调与 Φ_l 校准 TIES 合并算力论文未明确说明(被 reclassified 为 projected 的 scale-up 阶段)",
+        "results_headline": "层级 ResNet18 达 90.0% level-1 / 55.9% level-2 准确率,对比 Gemini 2.5 Pro 的 92.0% / 60.0%,但每张卡延迟 2.62 ms 对约 2000 ms(约 765× 加速)且边际成本≈0;uniform-density TIES 合并出现 5 个地理上不同区域输出 token-identical 的退化模式,按 Φ_l 逐层校准后在同一诊断样本上消失。",
+        "baselines": [
+          "Gemini 2.5 Pro(50 篇人工审计口径)",
+          "Gemini 3.5 Flash",
+          "Gemini 2.5 Flash",
+          "GPT-4o",
+          "uniform-density TIES merged sovereign 模型(对照 Φ_l 校准版)"
+        ],
+        "limitations": "作者承认全量抽取 benchmark(200 篇 BRGM 语料、Φ_l 校准 TIES、LoRA 微调)只是 projected 而非实测,Phase 1 的 50 篇 Armorican 结果也是从组件模型行为投影而来;ε_floor = ε_elbow = 0.05 只来自单次 pilot 运行,尚未做 replay 重复与置信区间稳定性检验,退化模式的修复也只在 5 张卡的诊断样本上验证。理论部分作者自己声明 Proposition 1 只是 Eckart–Young 定理的经济学重述,数学新颖性有限,统一性建立在类比而非新的数学结构上。",
+        "code_release": "论文未提(全文未给出 GitHub 链接或代码可得性声明)",
+        "relevance_detail": "与具身智能主线关联较弱,基本上是 LLM 推理经济学 + 工业文档抽取的工作,但有三点可迁移:(1) 把 KV cache 的 eviction/低秩压缩写成特征谱阈值规则 k* = max{k : λ_k ≥ γ}(Section 6.2, eq. 25),这套「按谱能量分配 cache 预算」的思路可直接搬到 VLA 长上下文/长 horizon 推理的 KV 预算分配上;(2) 逐层 utility Φ_l(Section 7.2)与「把模块/动作头挂到哪一层、各层该保留多少秩」是同一类层间资源分配问题——若 V3/LWv2 在考虑 predictor 挂接层与 latent 维度预算,Φ_l 的测量方式(每层 head 的 λ₁ 均值)是一个可复用的诊断量;(3) Section 12.6 报告的 uniform-density TIES 合并产生跨区域 token-identical 输出却高置信的退化模式,以及用逐层校准消除它,是一个具体、可复现的 model merging 工程教训,对任何做权重合并/多专家融合的实验都有警示价值。但需注意本文对「表征坍缩」只做谱语言上的类比,没有 JEPA/predictor 层面的实验支撑,不能当作 V3/LWv2 的直接依据。",
+        "followup": "优先读 Section 12.6 的退化模式诊断与 Section 7.2/10.3 的 Φ_l 逐层校准,理论部分只需看 Appendix A 的 Proposition 2 证明即可判断该统一规则的真实强度。"
+      }
+    }
+  ]
+}
