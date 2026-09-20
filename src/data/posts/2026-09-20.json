@@ -1,0 +1,663 @@
+{
+  "date": "2026-09-20",
+  "kept": 13,
+  "reviewed": 13,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 163,
+    "unseen": 43,
+    "llm_candidates": 43,
+    "annotated": 13
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2609.20566",
+      "title": "OmniMimic: Dynamics-completed Motion Augmentation for Multi-style Omnidirectional Quadruped Locomotion",
+      "title_zh": "OmniMimic:面向多风格全向四足运动的动力学补全动作增强",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [
+        "Sheng Wu",
+        "Guoqiang Zhao",
+        "Zhe Yang",
+        "Fei Teng",
+        "Zhikun Zhou",
+        "Yanlin Yang",
+        "Zheng Fang",
+        "Hong Zheng",
+        "Yaonan Wang",
+        "Kailun Yang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20566",
+      "url": "http://arxiv.org/abs/2609.20566v1",
+      "published": "2026-09-17",
+      "tldr": "论文通过时间反转、约束动力学补全与矢状面镜像,把方向覆盖有限的动物演示扩展成机器人可用的运动与物理监督,再用渐进命令扩展和软门控步态专家残差训练出单一多步态策略。",
+      "why": "它给出了一套把窄分布演示数据扩增为全向监督的具体数据增强与课程方法,并验证了共享 actor 加步态专家残差的组合,对模仿学习中的数据覆盖与多技能策略结构设计有直接参考价值。",
+      "hits": [],
+      "deep": {
+        "problem": "动物(犬类)动捕演示几乎只有前进方向,导致模仿学习得到的策略在后退、侧移、转向等下命令上缺乏风格一致的监督——而纯奖励工程 RL 虽能覆盖全向命令却丢失了演示特有的步态风格。论文要在有限方向演示的前提下,学到单一策略覆盖目标全向速度区间,并保持四种步态风格。",
+        "method": "框架含三个模块:(1) DMA(Dynamics-completed Motion Augmentation):对演示序列做时间反转 + 矢状面镜像(交换 FL/FR、RL/RR,取反侧向速度与 yaw rate),再用一个 42 变量 QP(OSQP,满足完整刚体动力学 M(q)v̇+Cv+g=S^Tτ+J_c^T f、力矩上下限、摩擦锥、摆动腿零力)从正向 rollout 的力/力矩 seed 出发完成反向轨迹的接触力与关节力矩标签,并按跟踪 RMSE 与接触事件给出置信度;(2) DOCE:命令课程从“与参考帧逐帧匹配的速度”平滑插值扩展到各轴目标边界(cmax: vx,vy=2 m/s, ωz=1.5 rad/s),四个符号组合独立采样,按周期进度分箱平衡;(3) SMP:共享 actor(输入 state+command+4 维 one-hot gait code)加 4 个不带 gait code 的 gait-specialized 残差分支,由 gait-conditioned softmax 门控以 γr=0.2 混合成 a = a_sh + γr Σ w_k(z) r_k(o)。训练用 PPO + 分离的 style/task value 估计,并把物理标签以 confidence 加权的 torque guidance(式 2–3)和 event-aware physics reward(式 4)注入,两者都按半余弦 schedule 衰减/爬升。",
+        "key_contributions": [
+          "DMA:用约束动力学完成(而非简单反转)为反向/镜像参考生成机器人特定的力、力矩、接触标签,并经置信度加权注入训练。",
+          "DOCE:从演示速度分布渐进扩展到三轴目标边界的命令课程,使训练从风格一致区域平滑过渡到全向命令。",
+          "SMP:共享 actor + soft-gated 残差专家的参数高效多步态策略,兼顾可复用运动结构与步态特有修正。",
+          "在 Unitree Go2 上验证了单个仿真训练策略无需 fine-tuning 即可在真机执行 Trot/Pace/Canter/Pronk 四种步态的全向运动。"
+        ],
+        "sim_benchmarks": [
+          "Isaac Gym",
+          "Unitree Go2 仿真",
+          "Grid-9^3 (729 条固定命令)",
+          "41x41x31 = 52,111 条命令的稠密网格"
+        ],
+        "real_robot": "Unitree Go2。仿真训练策略直接零微调部署:铺装路面演示 Trot/Pace/Pronk,草地演示 Canter;项目页视频展示前进、后退、侧移与转向。未给出真机定量指标(作者在结论中承认硬件跟踪精度与可重复性留作未来工作)。",
+        "datasets": "犬类动捕演示(四步态 Trot/Pace/Canter/Pronk 的前进参考运动),论文未明确说明具体动捕数据集名称;物理标签由在 Isaac Gym 中单独训练的 reference-conditioned 跟踪策略离线采集(该策略不部署、不用于初始化最终 actor)。",
+        "compute": "actor 参数量 |θπ| = 191,372(与 dense baseline 参数匹配);4096 个并行环境;训练 2,400 次迭代(AMP 给 10,000 次以补足收敛)。GPU·days 与硬件型号论文未明确说明。",
+        "results_headline": "四步态平均上,相对 matched APEX baseline 足端位置 RMSE 降低 12.9%(0.0657→0.0572)、Grid-9^3 速度跟踪 RMSE 降低 63.1%(0.7814→0.2880);vx、vy 全步态跟踪一致率分别达 90.0%、86.2%,比 APEX 高 18.4 与 37.7 个百分点(yaw 上 APEX 86.1% 反优于本文 79.4%)。",
+        "baselines": [
+          "AMP (Adversarial Motion Priors)",
+          "APEX (Action Priors, arXiv:2505.10022)",
+          "消融变体 A/B/C/D 与 R1/R2/R3"
+        ],
+        "limitations": "运动保真度仅在参考对齐的前向/后向速度上量化,未覆盖真机全向跟踪精度与重复性;步态用离散 label 指定,且主要在平地评测。作者也承认 DMA 会带来小幅命令跟踪代价(Table IV 中 reference-command 与 grid 误差略升 1.7%/0.5%)。",
+        "code_release": "有项目主页 https://OmniMimic.github.io;论文未明确说明是否开源代码。",
+        "relevance_detail": "这是运动控制而非操作/VLA,但三个机制可迁移:(1) DMA 用带约束 QP 从正向 rollout 解出反向运动的力/力矩标签,并配 confidence 权重与事件感知 reward,是“为未观测条件合成物理一致监督”的通用配方,可类比在 VLA 数据里为缺失动作/视角补齐监督;(2) DOCE 的从演示分布到目标边界的渐进命令课程(A→B 单独把 grid RMSE 降 56.4%,Table III),对任何需要从窄数据分布外扩到目标域的训练都有参考价值;(3) SMP 的“共享 actor + 软门控残差专家”是低开销的多任务/多模式解耦方案(191k 参数、γr=0.2),与在 VLA 里如何组织 action head/专家分支的设计问题同构。真机零微调部署的 sim-to-real 结果也说明此训练配方鲁棒性较好。",
+        "followup": "重点看 Table III 的 DOCE/SMP/DMA 渐进消融与 Table IV 的 R1/R2/R3 反向物理标签对比,以及 Sec. III-A 式(1)–(4)的置信度门控与 physics reward 设计细节。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2609.20620",
+      "title": "A Simulation Platform for AUV Fault Recovery: Exploring LLM-Based Diagnostic Strategies",
+      "title_zh": "AUV 故障恢复的仿真平台:探索基于 LLM 的诊断策略",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Khalid Halba",
+        "Kylie Cooper",
+        "James G. Bellingham"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20620",
+      "url": "http://arxiv.org/abs/2609.20620v1",
+      "published": "2026-09-17",
+      "tldr": "论文提出 SPAR 闭环仿真平台,把确定性分层控制与可调用的 LLM 诊断/恢复规划器结合,在 480 次质量偏移故障试验中对比前沿模型与三个本地模型,发现模型选择主导诊断质量且诊断与操作决策表现并不耦合。",
+      "why": "它提供了用集成式试验而非单次演示来严格评估 LLM 辅助自主系统的评测方法论,并给出“诊断正确不等于决策正确”这一反直觉证据,对任何把 LLM 接入闭环控制的系统设计都有警示价值。",
+      "hits": [],
+      "deep": {
+        "problem": "AUV 在通信不可靠的长航时任务中遇到未预期故障（如内部质量前移导致重心偏移）时，现有确定性分层控制只能检测异常，无法给出物理成因与任务级处置决策；论文要研究把 LLM 作为可调用的诊断+恢复规划器，并建立能对随机模型做统计化评估的闭环仿真平台。",
+        "method": "SPAR 由四条 lane 组成：Python/Qt 编排层、实时 C 车辆仿真（改自 MIT Sea Grant Odyssey II，50 Hz 六自由度水动力、5 Hz 传感表）、被测 LLM planner、以及独立厂商的 LLM judge（claude-opus-4-6）。仿真内的误差捕获模块用 deadband/persistence/verification 三级滤波监控 4 个通道，越界即触发异常标志；编排层据此组装结构化 prompt（8 个工程域的静态参考 + 故障报告/执行器状态/时程遥测动态段，但不透露注入故障与幅值），LLM 输出排序后的候选机理 + 可执行 Odyssey II mission file，经语法与安全校验后闭环执行；continue/abort 由基于故障物理的确定性代码单独打分，与诊断分数解耦。实验变量为 3 档 prompt tier（Tier1 含控制方程与子系统上下文，Tier3 仅基础参考）、2 个 CG 偏移（0.005/0.05 m）、2 个注入阶段（descent t=300 s / cruise t=800 s），每条件重复 10 次，共 480 trials。",
+        "key_contributions": [
+          "提出 SPAR 闭环仿真架构，把真实车辆 C 代码与非预期故障的注入、诊断、mission file 生成、确定性校验、执行和 LLM-judge 打分串成一条可重复的评测链，将恢复能力从 detection 推进到 mitigation。",
+          "给出面向随机 LLM 的 ensemble 评测方法论：同一条件重复 10 次、报 Wilson 95% CI，揭示单次 demo 掩盖的方差与系统性失败模式。",
+          "在 CG mass-shift 故障上系统比较 1 个 frontier 模型与 3 个可本地部署 SLM（gemma4:12b / gpt-oss:20b / nemotron-nano-12b-v2）、3 档 prompt、2 种幅值、2 个任务阶段的表现。",
+          "发现诊断准确率与操作决策质量在该数据集中并不耦合，且诊断正确的本地模型常是遵循完整诊断流程（多子系统排查、保留竞争假设）的那一个。"
+        ],
+        "sim_benchmarks": [
+          "SPAR（自建闭环平台，基于 Odyssey II C 仿真器 + 参数化故障注入）"
+        ],
+        "real_robot": "未做真机实验。场景来自 MBARI Tethys-class LRAUV 的真实事件（电池质量前移导致 −30° 艏倾、尾舵饱和，以及 0.06°/h 的缓慢 trim 漂移），但全部实验在 Odyssey II 仿真器二进制上完成。",
+        "datasets": "未说明（无预训练/外部数据集，训练数据不适用；评估数据为 480 次仿真注入试验）。",
+        "compute": "本地模型（12B/20B 级）在单张 24 GB RTX 3090 上经 Ollama 部署；每 trial 含验证重试的中位 LLM 墙钟时间约 45 s（gemma4）到约 250 s（gpt-oss ~251 s、nemotron ~240 s）；gpt-5.5 为云端 frontier 模型，参数量未说明。",
+        "results_headline": "模型选择主导诊断：gpt-5.5 把 CG-shift 机理放进 top-3 的比例为 Tier1/2/3 的 85%/90%/85%，最好的本地模型 nemotron 为 78%/68%/60%，gemma4 为 42%/30%/38%，gpt-oss 仅 10%/28%/25%；rank-1 只有 gpt-5.5 达 75%/70%/43%；可继续工况（0.005 m）gpt-5.5 正确 continue 93%（cruise）/90%（descent），而 gemma4 全部 trial 误判为 abort；0.05 m 工况 gemma4 100% 正确 abort，但 gpt-5.5 在 descent 仅 33%。",
+        "baselines": [
+          "gpt-5.5（frontier 云端模型）",
+          "gemma4:12b",
+          "gpt-oss:20b",
+          "nemotron-nano-12b-v2",
+          "三档 prompt tier（作为对照变量，非独立 baseline）"
+        ],
+        "limitations": "每条件样本量小（模型×tier 各 n=40，幅值×阶段合并三档 tier 仅 30 trials），Wilson CI 相互重叠，作者明确表示当前样本无法分辨 prompt tier 效应，也无法分离 prompt 长度、段落顺序、流程要求与模型能力的贡献。此外只覆盖单一 CG mass-shift 故障与单一任务剖面，未使用 retrieval、agentic tool use 或 fine-tuning，且只允许单次响应、无迭代 re-prompt，gemma4 因输出不终止关闭了 reasoning 模式。",
+        "code_release": "论文未提（未见 GitHub 链接或开源声明）。",
+        "relevance_detail": "可迁移价值集中在评测与系统架构而非水下领域本身：其一，把 LLM 严格约束为 anomaly 触发后才调用的诊断/恢复 planner，实时控制仍由确定性分层控制承担、模型输出还必须过确定性 validator 再执行，这与 VLA/具身 agent 中\"学到的策略 + 确定性安全层\"的分工同构，可直接借用；其二，480 trials 的 ensemble + Wilson CI 评测协议是评估随机策略的标准做法，提示对 V3/LWv2 这类 latent 预测 + action head 系统应把\"预测/诊断指标\"与\"下游决策成功率\"分开报告——本文正是在 Table I、Fig.3(b) 上证明二者不耦合（gpt-oss 诊断最差却决策最好，gemma4 诊断中等却 100% 误 abort）；其三，Table II 的 reasoning-trace 分析给出反直觉结论：给更多工程上下文（更高 prompt tier）并不单调提升性能，弱模型会过早锁定错误假设（elevator failure，尽管执行器实际跟随指令），这一\"过早承诺\"失败模式对设计 LLM/VLA planner 的推理流程与证据核对机制有直接参考。",
+        "followup": "重点看 Table I（可控性 ground truth 与 χ=∆x/∆x_knee 判据）、Fig.3(a)(b) 的 CI 与决策矩阵、Table II 的 prompt 段落实质性使用率，以及 IV-B 关于诊断/决策解耦与\"结构化诊断流程\"的讨论。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2609.10982",
+      "title": "ReCHOIR: Contact-guided Human Object Interaction Retargeting to Diverse Characters",
+      "title_zh": "ReCHOIR:面向多样角色的接触引导人-物交互重定向",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Chaelin Kim",
+        "Seokhyeon Hong",
+        "Kwan Yun",
+        "Soojin Choi",
+        "Inseo Jang",
+        "Junyong Noh"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.10982",
+      "url": "http://arxiv.org/abs/2609.10982v1",
+      "published": "2026-09-10",
+      "tldr": "论文提出 ReCHOIR,基于部件感知运动嵌入(PAME)自编码器与接触引导重定向模块及物体运动解码器,把源人-物交互动作迁移到骨骼结构不同的目标角色,同时保持动作语义与接触一致的人-物对齐。",
+      "why": "它把接触信号编码进与身体部件对齐的隐空间并通过残差控制分支注入解码,这种“接触条件化 + 部件对齐隐表示”的设计对操作任务中的接触保持与跨形态策略迁移很有借鉴意义。",
+      "hits": [],
+      "deep": {
+        "problem": "现有 motion retargeting 方法基本只迁移人体动作，无法处理含外部物体的 human-object interaction (HOI) 序列：把源 HOI 动作迁移到骨架/体型不同的目标 humanoid 时，既要保持人体动作语义，又要保持与物体的接触一致性，还要同时生成与之对齐的目标物体运动。",
+        "method": "两阶段框架。第一阶段用 PAME (Part-Aware Motion Embedding) autoencoder 学跨骨架的人体动作先验：在骨骼图上做 GAT Conv，用 global max pooling 得到全局 token、按 6 个身体部位（hips/spine/左右腿/左右臂）做 part-wise pooling 得到部位 token，经 self-attention 后按目标骨架的 body part label 做 Copy & Align 广播到目标关节（加可学习 part-id embedding）再由 GAT decoder 解码；损失为 L_rec（旋转/位置/root）+ L_reg（速度加速度时序 + 足部接地）+ L_z（global 与 part 级 embedding consistency）。第二阶段冻结 PAME decoder，用 ControlNet 式残差条件注入：Contact Encoder 用 PointNet++ 编码物体 mesh（1024 点）、MLP 编码物体 pose 与接触线索，经 self-attention 后用可学习 part token 做 cross-attention 得到与 PAME latent 结构对齐的条件 latent P_c，与人动作 part token 相加融合（ρ_f,b = ρ_h,b + ρ_c,b）；Contact Guider（PAME decoder 的可训练副本，输出 zero-init）把残差加到冻结 decoder 各层；Object Motion Decoder 从同一融合 latent 回归目标物体位置（朝向沿用源序列）。损失 L_HOI = 人体重建 L_hrec + interaction preservation L_intp（接触点距离 + 24 个物体表面采样点的距离/方向描述子，带 interaction weight w_k,n）+ 物体正则 L_oreg（穿地/悬空/滑动/轨迹形状）。",
+        "key_contributions": [
+          "提出 ReCHOIR：首个面向异构骨架 humanoid 的 feed-forward 人物交互 (HOI) 动作重定向方法，显式以 contact 建模交互并联合输出目标人体与目标物体运动。",
+          "提出 PAME：跨骨架共享的 body-part-wise latent 动作自编码器，把全身动作结构化分解为 6 个部位 token，既能保持局部动作语义，又为后续在交互相关部位做选择性精修提供接口。",
+          "设计 contact-guided retargeting 模块：用 ControlNet 式 zero-init 残差分支把物体几何/运动/接触线索注入冻结的人体动作先验，并由 Object Motion Decoder 预测与精修后人体运动对齐的物体轨迹。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验。任务是 CG 动画中的角色重定向，目标为 20 个 Mixamo 角色（训练）与 10 个未见过的自定义骨架角色（测试），全部在虚拟 humanoid 上评估；论文仅在 related work 中提及 Yang et al. 2026 的人到 humanoid 机器人重定向工作。",
+        "datasets": "PAME 沿用 SAME 的训练集：160 种骨架类型、每条动作采 5 个角色变体、约 130 分钟 locomotion（来自 CMU/Holden 2017/OSU/SFU 2011/Trumble 2017 等公开动捕数据）。HOI 阶段用 OMOMO 与 BEHAVE 的训练 split，把源人体动作用 MotionBuilder 重定向到 20 个 Mixamo 角色构造 567 个源-目标配对样本（约 64 分钟）；测试集为 OMOMO 88 个样本（14,733 帧）与 BEHAVE 77 个样本（18,737 帧），全部 30 fps。",
+        "compute": "单张 NVIDIA RTX A5000。第一阶段 300 epochs、batch size 256、lr 3e-3（指数衰减 0.99）；第二阶段冻结 PAME 后训练 240 epochs、batch size 32、lr 1e-4，每样本 8 帧。模型参数量论文未明确说明。",
+        "results_headline": "提供的全文中 Table 1 被截断，只能读到 baseline PAME 的 PRE 0.9689 / REC 0.7207 / F1 0.8…（OMOMO-test），ReCHOIR 及其余基线的具体数值无法从现有文本确认；作者声称在 contact timing、contact location 与整体 interaction plausibility 上优于 compositional baselines，并通过消融验证各模块。",
+        "baselines": [
+          "PAME",
+          "PAME + IK（其余对比方法与消融变体因全文截断无法确认）"
+        ],
+        "limitations": "Object Motion Decoder 只预测物体平移，物体朝向直接沿用源序列（Section 3.3.3 明确说明），因为缺少配对目标 HOI 监督、且交互仅由 8 个稀疏 interaction joint 表示，联合预测物体旋转会不稳定；此外物体运动只能用间接的 interaction preservation loss 约束，没有真值，交互语义的保真度难以严格量化。",
+        "code_release": "论文未提",
+        "relevance_detail": "这是 CG 动画任务（无真机、无 RL），domain_fit 有限，但有三个可迁移机制值得看：(1) Section 3.3.2 与 Fig.5 的 \"冻结动作先验 backbone + zero-init 残差 ControlNet 分支注入条件 latent\" 与在冻结 VLA/世界模型 backbone 上加 action head 或条件分支的取舍（改哪里、是否冻结、如何 zero-init 保证初始不破坏先验）同构，可直接对照 V3/LWv2 中 action head 挂载与动作条件注入的设计；(2) PAME 的 part-wise token + Copy & Align 是\"结构化 latent 对齐到异构 embodiment\"的可复用表示技巧，与 object-centric/part-aware 潜空间设计思路相通；(3) Eq.20-23 的 contact point loss 加 distance/direction 描述子（带 interaction weight）给出了一种不依赖配对真值的接触一致性监督形式，可迁移为操作策略或世界模型中的 contact grounding 目标函数。",
+        "followup": "重点看 Section 3.3（Contact Encoder/Guider 的 zero-init 融合细节与 Eq.14）以及 Section 4.4 的消融表与 Table 1 完整数值（本次全文被截断处），必要时看补充材料中的 loss 权重表与视频。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2609.20629",
+      "title": "RTK-Vision PPO for Autonomous Micro UAV Recovery on an Airborne Carrier",
+      "title_zh": "RTK-Vision PPO:用于自主微型 UAV 在机载母舰上回收的方法",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [
+        "Aashish Sahu",
+        "R Prasanth Kumar"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20629",
+      "url": "http://arxiv.org/abs/2609.20629v1",
+      "published": "2026-09-17",
+      "tldr": "该论文提出一个 RTK 与视觉引导的 PPO 框架,让微型 UAV 从飞行中的母舰起飞、独立执行任务后返回并重新对接降落,在 MuJoCo 中训练并迁移到真机,14 次户外试验成功 13 次。",
+      "why": "它把长程 rendezvous、近距视觉对齐、气动扰动与不连续接触事件统一进一个 sim-to-real 的 RL 流程,并给出传感器噪声与 marker 延迟随机化的具体做法,对任何需要处理接触瞬间与多阶段任务的策略学习都有可借鉴的工程细节。",
+      "hits": [],
+      "deep": {
+        "problem": "如何让一架微型四旋翼从飞行中的大型母机（airborne carrier）上起飞、独立执行任务后自主返回并重新降落在已经移动的母机甲板上，并随母机一起下降；难点在于长距离 rendezvous、近距视觉、母机自身运动、旋翼尾流干扰与不连续的接触事件耦合在一起。",
+        "method": "终端回收阶段用 PPO 学一个 12 维观测→三维载机相对速度指令的策略：观测含相对位置估计 ê、子机速度、载机速度、二维码 marker 的可见性 s_V 与观测陈旧度 τ_V、归一化剩余时间、上一步动作；actor 为 2×64 tanh MLP + 3D Gaussian head，输出经 diag(1.5,1.5,1.0) 缩放的相对速度指令交给 PX4 做内环稳定。训练在 MuJoCo 中进行（4 ms 物理步长、20 Hz 控制、二次推力模型、RTK 噪声 2/4 cm、marker 1–8 步延迟 + 15% 丢帧 + 1.5 cm 噪声与偏置随机游走、高斯尾流扰动代理 + OU 阵风、课程学习覆盖前 45% 更新），先用速度反馈教师做 350 次监督 warm-start 再 PPO 24 次更新。另设与学习策略解耦的确定性 safety gate（r_xy<0.20 m、τ_V<0.60 s、载机倾斜<8°、|v_z|<0.35 m/s 且 v_xy<0.30 m/s，需连续满足 t_dwell≥0.3 s）授权下降，并用机/母双向测距的状态校验 q_dock=q_C∧q_M 持续≥0.5 s 才确认对接。",
+        "key_contributions": [
+          "系统级验证：在无外部动捕、全机载传感条件下跑通完整 deploy–mission–recover–descend 闭环，14 次户外试验成功 13 次（92.9%），而非只做终端降落。",
+          "自主性集成：回收目标锁定载机持续广播的当前 RTK 状态（不是记忆的起飞坐标），RTK 与二维码视觉重叠使用，并把观测陈旧度 (s_V, τ_V) 显式喂给策略，配合双重机载对接确认。",
+          "安全设计：提出独立于学习策略的确定性 safety gate，只有在横向对齐、观测新鲜度、倾角、速度四条件连续满足时才授权下降，失败可 abort-and-retry，从而限制策略不确定性在接触附近的后果。",
+          "学习与评估：给出 MuJoCo 中表征清楚的传感器噪声/延迟/尾流代理训练并迁移到硬件的流程，2000 个留出随机终端 episode 上 PPO 99.55% 成功、中位平面误差 6.62 cm，对比调参 PD 78.4%，并附飞行日志级失效模式分析。"
+        ],
+        "sim_benchmarks": [
+          "MuJoCo (自建母–子六自由度终端回收环境，2000 episode 留出评估)"
+        ],
+        "real_robot": "载机为 14.0 kg 六旋翼（6×360 KV，22×6 in 桨，0.95 m 圆形回收甲板 + QR fiducial），子机为 1.9 kg 四旋翼（T-Motor AIR 2216 920 KV，10×4.5 in 桨，约 0.75 m 直径，Raspberry Pi 5 + 下视 OpenMV 二维码检测 ≤30 fps + 1-D 测距），回收后整机约 15.9 kg；两机各带 RTK-GNSS 与 PX4 低层控制，无外部动捕。任务为耦合起飞→空中释放→子机独立 sortie→RTK 返航→RTK+视觉终端回收→对接校验→耦合下降；户外共 14 次试验（Exp.1 近区回收 7/7，Exp.2 载机平移后回收 6/7），子机独立飞行约 63–87 s，最大水平间距 44.11 m。",
+        "datasets": "无离线数据集，PPO 为 on-policy，训练样本全部来自 MuJoCo 中随机化终端 episode（393,216 transitions）；未使用 OXE/DROID 等真实数据。",
+        "compute": "未说明 GPU/硬件；模型极小（actor 2×64 tanh MLP + 3D Gaussian head），训练量为 128 个并行环境 × 128 步 rollout × 24 次 PPO 更新（393,216 transitions，4 epochs/update，minibatch 2048，lr 8e-5，γ=0.992，λ=0.95，clip 0.18），另有 350 次监督 warm-start 更新。",
+        "results_headline": "2000 个留出随机终端 episode 上 PPO 成功率 99.55%、平面终端误差中位 6.62 cm，同条件调参 PD 仅 78.4%；户外 14 次完整任务成功 13 次（92.9%，Exp.1 7/7、Exp.2 6/7）。",
+        "baselines": [
+          "tuned PD controller（相同随机化终端条件下的仿真基线，78.4%）",
+          "RL-dominant 混合策略消融（终端横向下达为 85% PPO + 15% 视觉伺服稳定项）",
+          "文献对照（Table I，非同条件）：Wang et al. RBF-PID 空中起降、Shen et al. 凸优化轨迹规划、Dong et al. 干扰感知优化（OptiTrack，≈13 cm，3 次试验）"
+        ],
+        "limitations": "作者承认四点：只验证单个子机，多机释放/甲板占用未涉及；MuJoCo 尾流只是可解算的扰动代理而非桨叶级 CFD，且参数未从真实飞行日志辨识；Exp.2 只有视频推断的时间而无标定的载机轨迹；二维码检测器没有独立的检测精度/位姿误差 benchmark；也缺少规模化、同条件的硬件 baseline 对比。",
+        "code_release": "论文未提（未给出 GitHub 或开源说明）。",
+        "relevance_detail": "对做具身策略的人来说有三点可迁移：(1) 把感知延迟显式建模进观测——marker 不可用时保留旧值并令 s_V=0、τ_V 递增（Sec. IV-A），这种“新鲜度通道”是低成本的真机部署技巧，任何依赖视觉/延迟观测的 VLA 或 latent world-prediction 系统（例如 V3/LWv2 上真机时处理感知延迟与 action conditioning 对齐）都可以直接借用；(2) Sec. IV-B/IV-C 给出了一套可抄的 sim-to-real 随机化配方（传感器噪声量级、丢帧率、1–8 步延迟、尾流高斯代理 + OU 阵风、课程从 45% 更新处放开），以及含 closing-rate 奖励、可见性奖励和稀疏成功项 I_succ 的奖励设计，对接触类终端任务（对接、抓取）的 reward shaping 有参考价值；(3) Sec. IV-D 的 safety gate 把“学习策略负责横向对齐、确定性规则门负责不可逆接触决策”解耦，并用 dwell/abort-and-retry 兜底，是安全关键闭环里值得复用的分层架构；Sec. V-D 还给了三类失败的日志签名（τ_V 超限、倾角 6–9° 振荡、RTK 偏置使 r_xy 卡在门限），是很好的失败模式诊断范本。相比之下算法本身（普通 PPO + 小 MLP）创新有限，主要价值在系统与工程验证。",
+        "followup": "重点看 Sec. IV-A 的 12 维观测定义（陈旧度/可见性如何编码）、Sec. IV-D 的 safety gate 四条件与 Table III 户外结果，以及 Sec. V-D 的三类失效日志签名。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2609.13430",
+      "title": "A Sharp Conservative Offset for Marching Cubes",
+      "title_zh": "Marching Cubes 的紧致保守偏移量",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [
+        "Alec Jacobson"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.13430",
+      "url": "http://arxiv.org/abs/2609.13430v1",
+      "published": "2026-09-11",
+      "tldr": "论文证明对间距为 h 的网格上 1-Lipschitz 函数,当偏移 σ > (√3/2)h 时 marching cubes 网格必然包含真实零水平集,并给出该下确界的构造性证明。",
+      "why": "这是 SDF 与网格提取之间一个干净且紧致的几何保证,对任何用隐式场做 3D 重建、碰撞检测或占据栅格的具身系统都提供了可直接引用的安全偏移准则。",
+      "hits": [],
+      "deep": {
+        "problem": "从规则网格采样的 1-Lipschitz 隐函数（如 SDF）提取 marching cubes 网格时，需要多大的等值偏移 σ 才能严格保证真实零等值面 f^{-1}(0) 完全落在提取出的网格内部（即保证 containment 安全性）。",
+        "method": "对单个网格单元 [0,h]^3 构造由八个角点凸组合定义的凸集 P（权重 α_i ≥ 0、Σα_i = 1、Σα_i f(v_i) ≥ σ），先证 MC 的高侧区域 R ⊆ conv(B) ⊆ P；再假设存在 f(p)=0 的高侧点 p，利用 1-Lipschitz 性 f(v_i) ≤ ‖v_i − p‖、Jensen 不等式（凹的 sqrt）及 E[(X_k − p_k)^2] = p_k(h − p_k) ≤ h^2/4 推出 σ ≤ √3/2 h 的矛盾。sharpness 用单元中心小球的 SDF 反例（所有角点都在高侧、MC 不发出任何三角形）证明。",
+        "key_contributions": [
+          "证明 sharp 偏移阈值 σ⋆ = √3/2 · h（单元对角线的一半）：任意 σ > σ⋆ 时 f^{-1}(0) ⊂ inside(M_σ)，且该常数作为下确界不可再降。",
+          "指出该结论无法由 trilinear 插值的等值面直接推出：MC 的平面三角形可落在 trilinear 等值面 σ 的两侧，最坏距离达 h²/√3，因此用 trilinear 界会得到过保守的 σ。",
+          "给出系列推广：各向异性网格 σ⋆ = √(h_x²+h_y²+h_z²)/2、d 维 marched cubes σ⋆ = h√d/2、K-Lipschitz σ⋆ = hK√3/2，以及用 root-finding 求边交点或用直接以 B 集替代八角点的情形。",
+          "给出应用论证：满足 containment 不变量的场景（swept volume 的机械臂安全网格、unsigned distance contouring、cage 构造）需要这种 sharp 且保守的偏移；朴素按单元中心 |f(c)| > h√3/2 做 pruning 反而松一倍。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验（论文仅在 Fig.2 用 moving robot arm 的 swept volume 图示说明应用动机：若 MC 网格切到运动物体，安全保证即失效）",
+        "datasets": "论文未明确说明（纯几何/数学证明，无数据集）",
+        "compute": "论文未明确说明（无训练、无模型参数，仅数学证明与图示）",
+        "results_headline": "定理 1 证明 σ > √3/2 h 时 f^{-1}(0) ⊂ inside(M_σ) 且为 sharp infimum；对比之下朴素地逐顶点要求 f(v) > h√3 会松一倍（1/2 因子），而在单元中心层面用 |f(c)| > h√3/2 做 pruning 无法直接转成本文所需的 containment 保证。",
+        "baselines": [
+          "trilinear 插值等值面的 σ 偏移（同一 √3/2 h 下确界但不足以证明 MC containment）",
+          "基于单元中心判定的 ray-casting / cell pruning 式 |f(c)| > h√3/2",
+          "朴素顶点判据 f(v) > h√3（松一倍）",
+          "Hou et al. 2023 unsigned distance contouring 的 MC 小偏移做法（无零等值面不穿透保证）",
+          "Sellán et al. 2021 swept volume via spacetime numerical continuation"
+        ],
+        "limitations": "结论只针对 edge-only、每个三角形留在父单元内、且网格是高/低顶点 watertight 分离器的 MC 变体；对插入单元内部顶点的变体（Chernyaev 1995、Grosso 2016）只给出充分条件（该顶点落在 P 内或为边交点的凸组合），未覆盖全部拓扑正确的 MC 变体，也没有数值或实物实验验证。",
+        "code_release": "论文未提（纯理论结果，不需要代码）",
+        "relevance_detail": "这篇给出的是可迁移到具身智能几何管线的一个锐利常数：任何用 SDF / implicit function 提取网格来做碰撞检测、可达空间或 swept-volume 安全边界的系统（论文 Fig.2 正是移动机械臂的 swept volume 场景），都可以直接取 σ = √3/2·h 作为无多余保守量的保证性偏移，而 §4 指出的朴素 h√3 判据松一倍——对需要严格 containment 的在线安全约束来说这直接决定了可行域大小。证明本身（§3 用角点凸组合集 P 做覆盖论证 + Jensen 不等式）也是一种可复用的、为离散网格提取建立硬保证的分析套路，适合迁移到任何以 grid-sampled 1-Lipschitz 场做几何/可达性判定的系统。",
+        "followup": "精读 §3 的凸集 P 与 Jensen 不等式推导，以及 §3.1 的 root-finding 边交点、各向异性/高维/K-Lipschitz 与含内部顶点变体的推广条件。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2609.18473",
+      "title": "CADSplat: Sparse-View 3D Gaussian Splatting Aided by CAD Models for Robust, Photorealistic Digital-Twin Reconstruction",
+      "title_zh": "CADSplat:借助 CAD 模型实现稀疏视角 3D Gaussian Splatting 的鲁棒逼真数字孪生重建",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [
+        "Kristof Overdulve",
+        "Lode Jorissen",
+        "Nick Michiels"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.18473",
+      "url": "http://arxiv.org/abs/2609.18473v1",
+      "published": "2026-09-16",
+      "tldr": "用 CAD 库中匹配到的形状先验约束 3D Gaussian 原语，将其锚定在模型表面并联合优化相机配准与非刚性形变场，使少于 15 视角甚至 3 视角也能重建逼真数字孪生。",
+      "why": "论文明确指出增益主要来自「固定数量 splat 绑定表面 + 单一平滑形变场」的约束方式而非 CAD 形状本身，这一先验约束机制对稀疏观测下的物体级表征学习与可微渲染式场景建模有直接借鉴价值。",
+      "hits": [],
+      "deep": {
+        "problem": "在仅有稀疏(<15)且宽基线视图的物体拍摄下,3D Gaussian Splatting (3DGS) 的重建问题严重欠定,几何容易产生噪声与漂浮物,并且缺少物体自身坐标系下的精确 camera-to-object pose。论文希望借助近似 CAD 形状先验,同时恢复照片级真实感和几何准确的数字孪生。",
+        "method": "CADSplat 先用 SAM3 分割物体轮廓,与 CAD library 离线渲染的 mask 做 silhouette matching,并用 RANSAC over Sim(3) 结合已知相对标定选出多视图一致的 CAD 模型与初始 camera-to-object 位姿。然后把约 600k 个 Gaussian primitives 锚定在检索到的 CAD mesh 表面,冻结其 means 与 quaternion,仅通过一个 8 层、宽 256 的坐标 MLP deformation field Dθ 在 canonical space 上预测偏移量来修正 CAD 与实物差异。优化分两阶段:Geometric Warmup 先用 alpha 与 GT mask 的 L1 损失优化 pose(前 3k 迭代仅 pose,后 3k 加入 Dθ),再用 24k 迭代的 Photometric Finetuning 联合优化 pose、deformation 和 3DGS 的 SH/scales/opacities;稀疏视图下额外加入 SH neighbor smoothness(K=20 个 canonical neighbors)与 stochastic splat dropout(cosine 从 0.5 退火到 0)。",
+        "key_contributions": [
+          "提出受约束的稀疏视图 3DGS 形式:固定且稠密的 splat set 锚定在可变形形状先验表面,9–13 views 达 SOTA,并可退化到 3 views。",
+          "提出基于 silhouette 的 camera-to-object registration,从 CAD library 检索模型并把已相对标定的稀疏拍摄锚定到其 canonical frame,再与重建联合 refine。",
+          "提出把 CAD 几何 warp 到物理物体的 non-rigid deformation field,以及 SH neighbor smoothness 和 splat dropout 两个外观正则项。",
+          "展示 CAD prior 带来的额外应用:camera-to-object pose、markerless AR registration、物理仿真,以及把 CAD part labels 自动转移到重建结果。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验:论文使用真实物体拍摄数据集 SCO-CAD(6 个常见物体)与 NeRS 数据集,但未在机器人平台上执行任务;仅指出方法可用于 per-image object pose estimation、AR registration 等机器人相关下游应用。",
+        "datasets": "SCO-CAD(自建,6 个真实物体,9–13 张 sparse wide-baseline 训练视图,配近似 CAD 模型);NeRS MVMC 与 NeRS Misc(公开);CAD 检索库:NeRS MVMC 用 ShapeNetCore car category 的 3,533 个模型,NeRS Misc 用其余类别。训练仅用稀疏图,评测用完整 dense 视频的 COLMAP 标定作为 GT。",
+        "compute": "模型规模:600,000 个 Gaussians,deformation MLP 为 8 层、宽 256、含 positional encoding 与 skip connection;训练共 30,000 iterations(3k pose-only + 3k pose+deformation + 24k photometric),test-time refinement 每张 held-out 视图 400 steps。GPU 型号/GPU·days 论文未明确说明。",
+        "results_headline": "SCO-CAD 六场景平均(with test-time refinement):mPSNR 28.95 vs vanilla 3DGS 26.63 / FSGS 27.18 / InstantSplat 27.90;IoU 0.942 vs 0.913 / 0.821(FSGS+SAM3)/ –;mLPIPS 0.031 vs 0.044/0.046/0.045;降至 3 views 仍 IoU 0.929、PSNR 20.71,CAD 初始化比 sphere 初始化高 +1.4 dB PSNR、+4.9 IoU。",
+        "baselines": [
+          "Vanilla 3DGS (masked)",
+          "MVS-Texturing",
+          "FSGS",
+          "FSGS+SAM3",
+          "InstantSplat",
+          "NeRS(在 NeRS MVMC/Misc 上比较)",
+          "CADNeRF(无代码,仅讨论)"
+        ],
+        "limitations": "作者承认 reduced-view 消融复用了完整 9–13 views 捕获得到的相对标定与 silhouette registration;真正 3-view 拍摄必须仅凭 3 张 wide-baseline 图完成 SfM,往往超出当前能力。另一个可读出的局限是 CAD prior 主要在极稀疏和强自遮挡时优于 sphere 初始化,且依赖能检索到近似 CAD 模型并需要 SAM3 分割 mask。",
+        "code_release": "论文称将与 6 个物体及其 CAD 模型一起 release 完整 pipeline code,但正文未给出 GitHub URL。",
+        "relevance_detail": "它把 3D 重建从无约束 3DGS 改成“固定 splat 集锚定在形状先验表面 + 单一平滑 deformation field”的受约束形式,并证明稀疏视图下增益主要来自约束方式而不是 CAD 形状本身(Table 5、Table 6)。这对 spatial/3D intelligence、object-centric world model 和稀疏监督下的表征坍塌/过拟合控制有可迁移启发:冻结 means/quaternion、用共享 deformation field 限制每个 primitive 的自由度、用 SH neighbor smoothness 做 canonical graph Laplacian、用 stochastic splat dropout 迫使被遮挡基元也获得监督;可类比到在 VLA/latent world model 中限制 predictor 自由度、加 latent smoothness 与 dropout 正则。若做机器人仿真到现实的物体数字孪生或 per-image object pose,CAD 检索 + silhouette consensus registration(section 3.2)与相机位姿联合 refine(section 3.3)也是直接可复用的工程模块。",
+        "followup": "优先看 4.5.2 的 Table 5(CAD vs sphere 初始化,揭示 CAD prior 只在 3 views 等极稀疏场景有价值)与 4.5.3 的 Table 6(逐组件消融,deformation、pose opt.、mask warmup、SH smoothness、dropout 各自贡献)。"
+      }
+    },
+    {
+      "rank": 7,
+      "key": "arxiv:2609.19872",
+      "title": "PART: Learning 3D Part Assembly and Retrieval with Transformers",
+      "title_zh": "PART:用 Transformer 学习 3D 部件装配与检索",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [
+        "Ruchao Bao",
+        "Wenzheng Wu",
+        "Chucheng Xiang",
+        "Zhongyuan Liu",
+        "Yuan Liu",
+        "Jinxin Dong",
+        "Ligang Liu",
+        "Ziqi Wang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19872",
+      "url": "http://arxiv.org/abs/2609.19872v1",
+      "published": "2026-09-17",
+      "tldr": "把「从部件库中检索部件并预测其 6-DoF 位姿以重建目标形状」建模为集合预测问题，用统一 Transformer 支持变长输出，并通过位姿估计与目标分割的对偶性联合训练。",
+      "why": "变长集合预测加检索-装配联合建模的思路，可迁移到从候选技能/模块库中选择并组合出长时程行为序列的问题，且其 8 万形状数据集与对真实扫描的泛化验证提供了可复用的评测基础。",
+      "hits": [],
+      "deep": {
+        "problem": "给定一个目标形状（点云）和一个候选零件库，需要自动检索出合适的零件并预测每个零件在 SE(3) 中的 6-DoF 位姿，把目标重建为零件装配体；相比以往“给定固定零件集合”的装配任务，检索式设定下存在组合爆炸、变长输出和连续位姿回归三大难题。",
+        "method": "把检索+装配形式化为 set prediction：用 Point Transformer v3 提取候选零件全局特征与目标点逐点特征，DETR 式 query decoder（N 个可学习 query，每个自注意力后用 CrossAttn 先看零件特征 f_C 再看目标特征 f_P）在固定容量下输出变长结果，未匹配的 query 归入 empty class。三个并行 head 分别做零件检索分类（M+1 类）、目标点云分割（N_p×N）和位姿回归（平移 t + 用 A-Matrix 10 参数间接恢复四元数 q）；训练用 bipartite matching + soft chamfer 检索损失 + symmetry-aware 旋转损失（24 个立方对称旋转中取 Chamfer<1e-3 的等价集）。推理时引入 segmentation-enhanced 后处理优化，利用“装配-分割对偶性”交替最小化 L_Shape / L_SA / L_AS，并对 24 个对称等价旋转并行优化 250 步取最优；训练采用 train-short-test-long（训练库 M=20 带随机干扰件，测试库 M'=100 甚至 1000）。",
+        "key_contributions": [
+          "首次把 3D 零件检索+装配建模为 set prediction 问题，提出统一 transformer 框架 PART，支持变长零件数输出并覆盖 100+ 零件库的秒级推理",
+          "利用装配与分割的对偶性：联合训练 + 新颖的 segmentation-enhanced 优化模块，用分割掩码精修位姿、再用位姿精修分割",
+          "引入 A-Matrix 连续旋转参数化与 symmetry-aware 损失，缓解 SE(3) 回归的奇异点与对称件歧义",
+          "构建 80K+ 形状的大规模多源数据集，并验证了向场景布局、单图目标、真实扫描（零样本）的泛化"
+        ],
+        "sim_benchmarks": [
+          "PartNet (Chair / Table / Lamp, finest-grained 分割)",
+          "3D-FRONT (scene-level assembly)"
+        ],
+        "real_robot": "未做真机实验；仅在 Redwood RGB-D 扫描数据集上做零样本泛化评测，把扫描模型采样为点云、随机取 100 个 PartNet 零件作库做检索装配，无机器人执行环节。",
+        "datasets": "PartNet（2–20 parts，官方 70%/10%/20% split）用于主 benchmark；自建 80K+ 数据集聚合 PartNet、PartNeXt、3DCoMPaT++、PartVerse-XL；场景级用 3D-FRONT；零样本泛化用 Redwood scans。",
+        "compute": "8× NVIDIA A800，AdamW，每 GPU batch size 16，lr 8e-5，weight decay 1e-4，cosine annealing；两个配置：D=384（51.9M 参数，PartNet/3D-FRONT）与 D=768（113M 参数，自建通用数据）。总 GPU·days 论文未明确说明。",
+        "results_headline": "PartNet 固定零件装配上 Chair SCD 1.19 / PA 86.44 / CA 69.90 / SR 49.86，大幅优于 3DHPA（5.52/62.34/47.18/20.24）与 SPAFormer（6.23/55.83/38.73/24.57）；检索设定下 1000 零件库 Chair SCD 1.84 vs UPRA 4.46、GA 8.27，且每形状推理仅 6.43s（UPRA 227.6s，GA 99.0s）。",
+        "baselines": [
+          "DGL",
+          "RGL",
+          "GPAT",
+          "ScorePA",
+          "3DHPA",
+          "SPAFormer",
+          "Assembler",
+          "Ours-PN (PointNet++ 无优化的消融变体)",
+          "GA (遗传算法启发式检索)",
+          "UPRA"
+        ],
+        "limitations": "不考虑零件间连接关系与物理约束（碰撞避免、结构稳定性），且只支持刚体 6-DoF，不处理零件缩放或非刚性变形；当库中缺少几何相似件或与目标尺度差异大时会失败。",
+        "code_release": "有 Project Page（https://iambrc.github.io/PART-project-page/），但论文正文未明确说明是否开源代码/权重。",
+        "relevance_detail": "属 3D/空间智能与装配式操作，和具身智能的 manipulation、affordance、SE(3) 位姿推理直接相邻。真正可迁移的是几个机制：(1) 用固定 query 数 + empty class 在固定容量模型里做变长集合输出（§3.1），对任何“输出个数随输入变化”的 action/tool slot head 都适用；(2) A-Matrix 旋转参数化 + 24 对称等价集上取小 Chamfer 的 symmetry-aware 损失（§3.2、Fig.3、Table 3 的 w/o A-Matrix / w/o Symmetry 消融），可迁移到 VLA 里 6-DoF action head 的旋转回归，避免 SO(3) 直接回归的次优解；(3) train-short-test-long 用随机干扰件增广小库再放大到 1000 件库，与 V3/LWv2 中“训练时上下文/候选规模受限、推理时放大”的问题同构，是值得借鉴的经验；(4) 推理期装配-分割对偶的交替优化（§3.3）示范了“预测两个互补量、测试时互相对齐”的 test-time refinement 范式，和 latent 预测与动作头互相约束的思路可类比。",
+        "followup": "重点看 §3.3 的 segmentation-enhanced 优化与 Table 3 消融（w/o Optimization 使 SCD 从 1.19 退化到 3.96），以及 §4.4/Fig.7 的库规模-显存-时延曲线和 train-short-test-long 实证。"
+      }
+    },
+    {
+      "rank": 8,
+      "key": "arxiv:2609.20570",
+      "title": "Walking on the Slope: Stable Bipedal Gaits with Genetic-Algorithm-Optimized Trajectories",
+      "title_zh": "斜坡行走:基于遗传算法优化轨迹的稳定双足步态",
+      "score": 4,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 4,
+      "novelty": 3,
+      "authors": [
+        "Madhav Rijal"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.20570",
+      "url": "http://arxiv.org/abs/2609.20570v1",
+      "published": "2026-09-17",
+      "tldr": "论文对 8 自由度双足机器人做 DH 正运动学、闭式逆运动学与 Newton-Euler 动力学建模,用三次样条生成轨迹并以 ZMP 判据评估稳定性,再用遗传算法优化髋高、抬脚高度与额状面倾角。",
+      "why": "它给出一个完整的经典步态规划与 ZMP 稳定性分析流程,并指出稳定性由连杆质量分布而非总质量决定,对理解传统模型控制基线仍有参考价值,但方法本身较成熟。",
+      "hits": [],
+      "deep": {
+        "problem": "如何为一个 8-DOF 双足机器人同时生成在平地与斜坡上都动态稳定的行走轨迹,并给出该标称设计在步时、坡度上的稳定工作边界(operating envelope)。",
+        "method": "用 DH 参数与齐次变换做正运动学、闭式逆运动学把髋部与摆动脚的笛卡尔轨迹(三次样条经 via points 生成)映射到关节角;关节力矩由 Newton-Euler 迭代算法递推得到,稳定性用 ZMP 判据(并简化为 LIPM 形式)检验。用 GA 优化三个自由参数——髋高 H_z、摆动脚最大抬升 S_zmax、最大 frontal 面倾角 θ_1,max,目标函数为八关节做功之和加 ZMP 可行性惩罚(w + a×10^4),群体 130、500 代、crossover 0.95、mutation 0.05。",
+        "key_contributions": [
+          "给出 8-DOF 双足(踝 2 DOF、膝 1、髋 1,恰好无冗余)的完整 DH 建模、闭式 IK 与 Newton-Euler 动力学推导,并把地面-足变换改成随坡角旋转以支持斜面行走。",
+          "用 GA 在 ZMP 可行性约束下最小化关节做功,得到 22.5° 斜坡的可稳定参数(θ_1,max=−9.18°、H_z=0.151 m、S_zmax=0.013 m)。",
+          "量化标称设计的稳定包络:平地步时最低约 0.5 s(0.4 s 时 ZMP 几乎完全落到支撑多边形外),斜坡上限约 22.5°,30° 时只能靠加长脚长(0.01 m)恢复稳定。",
+          "给出两条可迁移结论:ZMP 稳定性由各杆质量分布决定而非总质量(整体 10× 缩放 ZMP 不变,单独加倍摆动腿质量即失稳);高加速度(短步时)下 8-DOF 模型失稳而 LIPM 仍预测稳定,即 LIPM 的恒高/零角动量假设失效。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验;仅 MATLAB 仿真,但连杆长度与关节限位取自 Bioloid humanoid kit(脚长 0.10 m、踝-脚偏移 0.049 m、髋宽 0.085 m、大腿/小腿 L1=L2=0.111 m),声称模型可直接硬件实现",
+        "datasets": "未说明(纯解析建模 + 仿真,无数据集)",
+        "compute": "未说明;仅提到 MATLAB ga 求解器配置(population 130、500 generations、crossover 0.95、mutation 0.05),无 GPU/参数量信息",
+        "results_headline": "标称 8-DOF 模型在平地步时低至 0.5 s、坡度至 22.5° 时 ZMP 仍留在支撑多边形内;0.4 s 或 30° 时 ZMP 越界,后者需把脚长加长 0.01 m 并重新 GA 优化才恢复可行解(GA 最优适应度一度退化到惩罚值 10^4 量级)。",
+        "baselines": [
+          "LIPM / cart-table 模型(式 8,与全 8-DOF 模型逐步时对比)",
+          "未经 GA 优化的标称三次样条轨迹",
+          "整体质量 10× 缩放模型(用于质量分布消融)"
+        ],
+        "limitations": "作者承认模型非冗余且全驱动,控制相对简单,未考虑障碍跨越与更高 DOF 的在线冗余求解;22.5° 附近多数表面摩擦角(0.4–0.6)可能不足以防滑。此外全部结论来自 MATLAB 仿真,无真机验证,脚长数值在正文中前后不一致(标称 0.10 m 与 0.05→0.06 m 的表述矛盾)。",
+        "code_release": "论文未提(未开源,无 GitHub 链接)",
+        "relevance_detail": "这是一篇偏经典 model-based 双足控制的论文,与 VLA / 世界模型主线关联较弱,读它的价值在于两条可迁移的物理先验:一是把 ZMP 留在支撑多边形写成显式可行性惩罚(式 9),这种硬约束+能量目标的形式可直接搬到 legged/人形 locomotion 的轨迹优化或作为 world model rollout 的物理一致性校验;二是 VII-E 的消融——总质量 10× 缩放 ZMP 不变、但单独加倍摆动腿质量即失稳,以及高加速度下 LIPM 预测稳定而全模型失稳,提示在训练动作条件动力学模型或做 sim 参数化/域随机化时,质量分布与角动量项比总质量更值得作为条件变量,且恒 CoM 高度近似在快速步态下不可信。若不做 legged locomotion,此文的直接收益有限。",
+        "followup": "重点看 Section VII-E(质量分布消融与 LIPM 对比)和 VII-C(22.5°/30° 极限与脚长扩展),以及 Table I 的 DH 参数与式 9 的 GA 代价函数设计。"
+      }
+    },
+    {
+      "rank": 9,
+      "key": "arxiv:2609.12306",
+      "title": "Grid-Free Monte Carlo for Time-Dependent Diffusion",
+      "title_zh": "时变扩散问题的无网格蒙特卡洛方法",
+      "score": 6,
+      "bucket": "explore",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 8,
+      "authors": [
+        "Zihong Zhou",
+        "Rohan Sawhney",
+        "Eugene d'Eon",
+        "Wojciech Jarosz"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.12306",
+      "url": "http://arxiv.org/abs/2609.12306v1",
+      "published": "2026-09-11",
+      "tldr": "论文把 walk on spheres 与 walk on stars 推广到带初始条件与时变源/边界数据的热方程,通过给随机游走设置有限时间预算并采样退出时间,无需体网格与时间步进即可直接估计任意时刻的解。",
+      "why": "它用随机游走直接求解瞬态 PDE 并彻底消除时间离散偏差,这种无网格、可并行、输出敏感的求解思路对物理仿真与基于扩散的场建模有潜在的方法论迁移价值。",
+      "hits": [],
+      "deep": {
+        "problem": "如何在复杂几何上求解含初始条件、时变源项与时空 Dirichlet/Neumann 数据的瞬态热方程（扩散方程），从而绕开传统 FEM 的体网格划分与逐步时间推进所带来的 meshing artifact、空间/时间 aliasing 和步长选择困难。",
+        "method": "把无网格蒙特卡洛求解器 WoS（纯 Dirichlet）与 WoSt（混合 Dirichlet–Neumann）推广到含时 IBVP：每条随机游走携带一个有限时间预算 t，每一步用 exit time 密度 H(η;R) 采样 η，若 η≤剩余预算则以 t−η 继续走，否则在域内按 time-conditioned heat kernel 密度 G_B/Q 采样一点并评估初始条件，同时沿途累加 source 与 Neumann 核贡献。核心是 tabulation-free exit time sampler：由 Laplace 变换 √s/sinh√s=∏_n λ_n/(s+λ_n) 得知 H 是无穷多个指数分布的卷积，故精确采样前 K=5 项、尾部用矩匹配的 Gamma(α=μ²/σ², θ=σ²/μ) 近似得到 η=R²(Στ_n+G)；核评估在 τ=κt/R²≤0.01 用 method-of-images、否则截断 16 项谱级数，并对时间条件径向密度在短/中/长时间段分别构造拒绝采样器（长时用 Beta(3,2) 包络）。",
+        "key_contributions": [
+          "首次把 WoS/WoSt 完整推广到热方程 IBVP，支持一般初始条件、时变 source 与时空 Dirichlet/Neumann 数据，且不需体网格、不需时间步进、不做 Laplace 反演。",
+          "提出无需查表、低偏差的 exit time sampler：3–12 阶矩最大相对误差 5.8e-6，比 Haji-Sheikh & Sparrow 的 1000 项 CDF 查表（5.6e-3）小约 1000 倍，且显著快于 WoMS。",
+          "为 heat kernel 的径向密度在 short/intermediate/long-time 三个区间设计高接受率的拒绝采样器（图 7），并给出 heat kernel 与其时空积分在各时间尺度上稳定的评估方式。",
+          "引入多种方差缩减：initial condition connection（每步评估初始条件项）、稀疏初始条件的 multiple importance sampling、跳过零贡献、以及共享 walks 以同时估计多个目标时刻。"
+        ],
+        "sim_benchmarks": [
+          "自建 manufactured solution（解析构造解，含 source-dominated 收敛测试）",
+          "ITER tokamak divertor 垂直靶板瞬态热分析（Neumann 热流 + Dirichlet 冷却管 + 非零初始温度）",
+          "2D/3D 纯 Dirichlet、混合 Dirichlet–Neumann、纯 Neumann 模型问题"
+        ],
+        "real_robot": "未做真机实验（论文为计算机图形学/数值 PDE 方向，实验对象是工程热仿真而非机器人）。",
+        "datasets": "论文未明确说明；不使用 OXE/DROID 等数据集，实验基于解析构造解与 ITER divertor 工程几何。",
+        "compute": "论文未明确说明本文方法的训练算力；仅给出对比开销：FEM h=0.025 约 10 小时、10 GB RAM，本文 153k wpp 约 3 分钟、150 MB RAM。",
+        "results_headline": "ITER divertor 案例中 FEM 细网格需约 10h/10GB 内存，粗网格（h=0.25）的 meshing 与时空 aliasing 会误报超过安全温度，而本文 3 分钟、150MB 即给出无时间离散偏差的结果；exit time sampler 的矩误差比 1000 项 CDF 查表低约 1000 倍（5.8e-6 vs 5.6e-3），time-independent source 优化带来约 15% 效率提升（图 10）。",
+        "baselines": [
+          "FEM（有限元，h=0.25 与 h=0.025，Forward/Backward Euler、Crank–Nicolson 等时间积分）",
+          "WoMS（walk on moving spheres, Deaconu et al. 2017）",
+          "WoHB（walk on heat balls, Deaconu & Herrmann 2018）",
+          "WoHSt（walk on heat stars, Bao et al. 2026b）",
+          "WoB（walk on boundary, Sabelfeld et al. 1994; Sugimoto et al. 2023/2024）",
+          "Haji-Sheikh & Sparrow (1966) 的 tabulated floating random walks"
+        ],
+        "limitations": "作者承认：作为蒙特卡洛方法其结果带噪声，只在稀疏/局部查询、短时间跨度与渐进式评估上有优势，需要稠密全局解时仍不如网格法；作者建议把稳态的 sample caching 扩展到含时情形作为后续方向。此外 Dirichlet 终止仍依赖 ε-shell 引入可控偏差，star 区域内初始条件/源项归一化无闭式解只能靠包围球核 + 零延拓估计。",
+        "code_release": "论文未提",
+        "relevance_detail": "这属于图形学/数值 PDE 的邻域工作，对具身智能的直接影响有限，但有两个真实可迁移点：(1) 它给出了「用随机游走 + Feynman–Kac 期望代替网格离散」的完整工程配方——特别是把难采样的 exit time 分布分解为无穷指数卷积后用有限项 + 矩匹配 Gamma 近似尾部（Sec. 4.2.1），这种「精确前缀 + 矩匹配近似尾」的思路可迁移到长时程随机 rollout / 变长 latent 预测的截断与尾部建模；(2) 论文引用了可微蒙特卡洛 PDE 求解器用于 inverse problem（Sec. 2.2 中 Himmler & Günther 2026、Miller et al. 2024a、Yu et al. 2024），这是一条把物理仿真做成可微、可反演参数的路线，对 sim-to-real 的参数辨识与物理一致性损失有潜在价值。其 progressive/output-sensitive 的并行评估（Sec. 6、图 1 右上）也值得作为「按需精度」计算范式的参考。不建议为其改变当前 VLA/世界模型主线，但可作为一个 explore 级别的机制来源。",
+        "followup": "优先看 Sec. 4.2.1–4.2.2（exit time 与 heat kernel 采样）配图 7，再看 Sec. 5 的方差缩减与图 10/11，细节在补充材料 S.3–S.6。"
+      }
+    },
+    {
+      "rank": 10,
+      "key": "arxiv:2609.08153",
+      "title": "Geodesic-informed Generative Diffusion Model For Topology-preserved Image Video Generation",
+      "title_zh": "测地线引导的生成扩散模型用于保拓扑的图像与视频生成",
+      "score": 6,
+      "bucket": "explore",
+      "domain_fit": 5,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Nian Wu",
+        "Nivetha Jayakumar",
+        "Jiarui Xing",
+        "Miaomiao Zhang"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.08153",
+      "url": "http://arxiv.org/abs/2609.08153v1",
+      "published": "2026-09-08",
+      "tldr": "论文提出 IGG,把保拓扑的测地形变原理嵌入扩散生成过程,在测地形变空间中学习可逆光滑映射来合成样本,从而显式建模形状变化并保证几何与拓扑一致性。",
+      "why": "它把生成过程从像素强度空间搬到可解释的形变空间,这种“在形变/流形空间而非观测空间做生成”的机制对世界模型中动作条件化的状态演化建模很有启发。",
+      "hits": [],
+      "deep": {
+        "problem": "现有 diffusion 生成模型主要在图像强度/纹理空间操作,几乎不显式建模物体几何,因此无法保证生成过程中的几何与拓扑一致性,也不把形变动力学显式表达出来,导致生成过程不可解释、物理上无约束。这对计算解剖、生物医学以及机器人等对结构保持敏感的领域是硬伤。",
+        "method": "IGG 是两阶段框架:(i) GIR(geodesic-informed image registration)用自编码器 + NeurEPDiff 神经算子学习 EPDiff 方程驱动的 geodesic 演化,把模板→目标的 diffeomorphic 形变编码为紧凑 latent 速度场序列 {z_vt},损失含图像匹配项、geodesic 能量项 (Lv0,v0) 以及与数值 EPDiff 解的一致性项;(ii) LGD(latent geodesic diffusion)在该形变 latent 空间做 DDPM,用 3D UNet 去噪,条件为模板图像梯度 ∇s 与 CLIP 文本 embedding(cross-attention),并以 image scale δ_I / text scale δ_T 做双条件 classifier-free guidance。采样出的 latent 经解码得到速度场,沿 Eq.(1) 积分成形变 Φ,再作用于模板生成图像序列。",
+        "key_contributions": [
+          "首次在 geodesic 形变空间(而非像素强度空间)做条件扩散生成,用 diffeomorphism 从构造上保证生成的拓扑一致性。",
+          "GIR 用神经算子在 latent 中近似 EPDiff 的 geodesic 演化,可与 EPDiff 数值解逐步对比,速度场误差小(Fig.3)。",
+          "引入 DetJac(雅可比行列式)图作为量化拓扑完整性的可解释指标:DetJac<0 即代表发生撕裂/折叠等非物理形变,作者称只有 IGG 能提供该度量。",
+          "在低数据 regime 下把生成的 image-label 对作为脑 MRI 分割增强数据,Dice 相对 baseline 最多提升 +11.0%(OASIS-3)与 +5.1%(OASIS-1,跨数据集泛化)。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验(论文只在动机中提及 robotics,全部实验为植物生长图像与脑 MRI 图像)。",
+        "datasets": "Komatsuna 植物生长数据集(300 帧 RGB-D label-map,5 株,228-236 小时生长过程,重采样至 128²)与 OASIS-3 纵向 T1 脑 MRI(2618 例,含健康与 AD,60-90 岁,128²、1mm 各向同性、skull-strip/强度归一化/bias 校正/仿射对齐);另用 OASIS-1 测跨数据集增强泛化(仅在 OASIS-3 上训练)。",
+        "compute": "NVIDIA A100 GPU;GIR 每 epoch 约 13.10s(数值 EPDiff 解的标准配准为 4.81s),分阶段训练 2000 epochs;LGD 训练 6000 epochs、batch 36、500 diffusion steps、lr 1e-4;总参数量论文未说明。",
+        "results_headline": "植物数据 FVD 48.29 vs VDM 357.56 / CogVideoX 471.49,FID 9.23 vs 71.79 / 153.93,SSIM 0.98;脑 MRI FVD 26.39 vs 247.84 / 302.20,FID 6.23 vs 69.23 / 114.50,即约 10 倍更优的分布对齐;下游分割增强 Dice 最多 +11.0%(OASIS-3)、+5.1%(OASIS-1)。",
+        "baselines": [
+          "VDM (Video Diffusion Model, Ho et al. 2022)",
+          "CogVideoX (Yang et al. 2024)",
+          "DynamiCrafter (Xing et al. 2025)"
+        ],
+        "limitations": "作者承认生成保真度强依赖底层配准精度,配准误差大时合成质量受限;拓扑先验只在结构近似 diffeomorphic 时成立,成像噪声、病理导致的非 diffeomorphic 外观变化会让严格拓扑保持不再反映真实解剖变异;此外只建模形变不建模纹理,且实验限于 128² 的植物/脑 2D 数据。",
+        "code_release": "开源:https://github.com/nellie689/IGG",
+        "relevance_detail": "虽然应用场景是医学影像,但机制高度可迁移:(1) 它把生成建模搬到 latent 形变空间——latent 是一串随时间演化的速度场,由神经算子沿 geodesic 前推,这正是'在 latent 里学连续时间动力学预测器'的一种非 JEPA 范式,与 V3/LWv2 中 predictor 学未来 latent 轨迹的设计可对照(Section 3.1 的 Latent Geodesic Evolution);(2) 双条件注入(latent 形变 + 模板梯度/CLIP 文本)与双 scale classifier-free guidance 的融合公式,对 action-conditioned latent world model 如何注入动作与观测条件有直接借鉴(Section 3.2.2);(3) 用 DetJac 图给出可解释、可量化的拓扑/一致性度量,可作为评估 world model rollout 是否产生物理合理形变的补充指标,而不只看 FVD/FID;(4) 低数据下用生成 image-label 对做 2×/4× 增强并跨数据集验证泛化(Fig.6/7, OASIS-3→OASIS-1),这套'生成式数据增广+评测协议'可直接迁移到机器人演示数据的增广与数据组成研究;(5) 与 NeurEPDiff、MGAug 同属一个作者线,是'latent 形变空间增广'方向延伸阅读的入口。注意该论文没有机器人/真机实验,与 VLA 本身无直接联系。",
+        "followup": "重点看 Section 3.1 的 latent geodesic evolution 与 EPDiff 一致性损失、Section 3.2.2 的 geometric conditioning / CFG 公式,以及 Table 1 的 FVD/FID/SSIM 与 Fig.6/7 的增强增益表。"
+      }
+    },
+    {
+      "rank": 11,
+      "key": "arxiv:2609.11434",
+      "title": "Hologram Representation via Quadratic Phase Gaussian Splatting",
+      "title_zh": "基于二次相位 Gaussian Splatting 的全息表示",
+      "score": 5,
+      "bucket": "explore",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [
+        "Haolong Wang",
+        "Yicheng Zhan",
+        "Kaan Akşit",
+        "Simeng Qiu"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.11434",
+      "url": "http://arxiv.org/abs/2609.11434v1",
+      "published": "2026-09-10",
+      "tldr": "论文用带可学习曲率参数的复值二次相位基元(CVQPG)替换 2D Gaussian Splatting 中的标准高斯,在全息重建上以同等参数量取得约 +0.19 dB(RGB)的视觉质量提升。",
+      "why": "它展示了把基元从高斯换成可调波前函数这一轻量改动就能提升表示能力,这种“换基元而非换架构”的思路对 3D 场景表示与神经场设计有直接迁移价值。",
+      "hits": [],
+      "deep": {
+        "problem": "计算机生成全息（CGH）需要表示密集空间变化的全息图并保留高频细节；现有 complex-valued 2D Gaussian 表示（Zhan et al.）每个 primitive 的相位是平坦的（plane wave），表示能力是否已被榨干、能否用更少的参数编码更高频的波前，是本文要回答的问题。",
+        "method": "提出 CVQPG：把 complex-valued 2D Gaussian primitive 的常量相位替换为 2D quadratic phase，用平方 Mahalanobis 距离 D_mah² 构造 shape-adaptive 的 QPF（式4），使椭圆 chirp 条纹与各向异性幅度包络对齐，并只增加一个可学习曲率参数 γ=1/f（G={α,c,x,s,θ,φ,γ}）。训练上采用 two-stage curvature warm-up（前 400 step 锁定 γ=0 优化低频，再解锁 refined）并按 SLM 采样极限推导 per-primitive 上界 γ_max=η·λ/(6σ(Δx)²)（η=0.9，用 tanh 约束）；渲染时将全部 primitive 光栅化累加成 complex hologram，经 BLASM 传播到两个深度平面，损失为各平面 L_recon + 0.005·(1−SSIM)。",
+        "key_contributions": [
+          "提出 Complex-Valued Quadratic Phase Gaussian 基元：用 Mahalanobis QPF 显式调制波前曲率，每个 primitive 只多 1 个标量参数 γ。",
+          "从 SLM 的 Nyquist 采样极限推导出 scale-adaptive 曲率上界 γ_max=η·λ/(6σ(Δx)²)，避免 chirp 高频混叠（消融显示这是决定性组件：+0.185→+0.048 dB）。",
+          "等参数量对照实验证明：给 primitive 加曲率自由度优于把 Baseline 的 primitive 数扩大 13/12（RGB）或 9/8（grayscale）。",
+          "频率域分析显示增益集中在中高频段（RGB 11% / grayscale 22% MSE 下降），在 Nyquist 附近归零，说明该方法补偿的是自然图像的细节频段。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验（仅仿真 SLM：3.74 μm 像素间距、RGB 639/532/473 nm 波长，BLASM 传播到 1 mm 与 5 mm 两个深度平面，未使用实体全息显示器）",
+        "datasets": "DIV2K + Real Forward-Facing (LLFF) 派生场景，深度图由 Depth Anything V2 生成；评测用 10 个场景、640×480、RGB/grayscale、10%/20% 压缩率",
+        "compute": "单张 NVIDIA TITAN RTX，2000 训练步（含 400 步 warm-up），Adan optimizer；primitive 数 7,680–33,280；模型总参数量未明确说明",
+        "results_headline": "等 primitive 数下全面超过 planar Gaussian baseline：RGB20% PSNR 29.450 vs 29.265（+0.185 dB）、RGB10% +0.191 dB、grayscale20% +0.331 dB、grayscale10% +0.322 dB；即使 baseline 加大到等参数量（Baseline+ 29.386 / 29.753）仍领先，Siemens star 单平面灰度目标提升 +3.04 dB。",
+        "baselines": [
+          "Complex-Valued 2D Gaussian（planar Gaussian baseline, Zhan et al. 2025, arXiv:2511.15022）",
+          "Baseline+（等参数预算，primitive 数 ×13/12 RGB、×9/8 grayscale）",
+          "消融变体：w/o Adaptive Bound、w/o Mahalanobis QPF、None (Vanilla)"
+        ],
+        "limitations": "绝对增益偏小（平均 +0.19 dB RGB），且 RGB 增益明显低于 grayscale，因为所有波长共享同一个曲率 γ，无法同时对 639/532/473 nm 最优；chirp 相位在 primitive 边界被截断会引入 ringing 伪影，需额外用 cosine-tapered window 压边才能消除。",
+        "code_release": "论文称 'We will also release our code upon acceptance'，目前未提供 github URL，未开源",
+        "relevance_detail": "与具身/VLA 没有直接关系（属于 CGH 图形学+光学），但有三个可迁移点：(1) Tab.1 的等参数量对照给出了一个干净的结论——给单个 primitive 加一个自由度（曲率 γ）比把 primitive 数扩大 8% 更划算，这对 3DGS 类场景/世界模型表示中『增加每个基元的表达力 vs 堆基元数』的取舍有直接参考；(2) Fig.3 的频率分解 ΔMSE（增益集中 mid-high frequency、Nyquist 附近归零）是一套可直接借用的诊断法，用来量化某个重建/生成式表示在哪些频段变糊，比单一 PSNR 更能揭示表示偏置；(3) 新增参数先由采样极限推出上界（附录 Sec.2 推导）再用 warm-up 分阶段解锁，这种『先定界再 coarse-to-fine 引入新参数』的流程，可类比到 V3/LWv2 中新增 predictor/action head 参数的引入与约束策略。总体属于广度补充而非必读。",
+        "followup": "重点看 Tab.1（等参数量对比）、Tab.2（Adaptive Bound 与 Mahalanobis QPF 消融）和 Fig.3 的频率分辨 ΔMSE，附录 Sec.1–2 是退化情形与曲率上界的完整推导。"
+      }
+    },
+    {
+      "rank": 12,
+      "key": "arxiv:2609.17770",
+      "title": "PointGrade: Geometric Priors for Grading MoonBoard Problems",
+      "title_zh": "PointGrade:用于 MoonBoard 难度评级的几何先验",
+      "score": 4,
+      "bucket": "explore",
+      "domain_fit": 4,
+      "transfer_value": 5,
+      "novelty": 6,
+      "authors": [
+        "Beatrice Stotz",
+        "Ningna Wang",
+        "Daria Nogina",
+        "Caroline Zhang",
+        "Jiyang Yin",
+        "Amy Huang",
+        "Ben Yang",
+        "Jace Li",
+        "Joel Salzman",
+        "Steven Feiner",
+        "Silvia Sellán"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.17770",
+      "url": "http://arxiv.org/abs/2609.17770v1",
+      "published": "2026-09-15",
+      "tldr": "论文从每个攀岩支点的预扫描网格采样点云,把 3D 物体分类架构与序列式难度预测方法结合,利用被以往工作忽略的几何信息来预测 MoonBoard 线路难度。",
+      "why": "它示范了如何把几何点云先验注入到序列决策/评级任务中,这种“几何 + 序列”的融合方式对涉及接触点与可达性的操作任务建模有可迁移的启发。",
+      "hits": []
+    },
+    {
+      "rank": 13,
+      "key": "arxiv:2609.19601",
+      "title": "FootprintRAG: Visual Analytics for Evidence Context Refinement in RAG-based Scientific Literature Exploration",
+      "title_zh": "FootprintRAG:面向 RAG 科学文献探索的证据上下文精炼可视化分析",
+      "score": 4,
+      "bucket": "explore",
+      "domain_fit": 3,
+      "transfer_value": 5,
+      "novelty": 6,
+      "authors": [
+        "Xingyu Liu",
+        "Yu Dong",
+        "Qizhen Yu",
+        "Shiyu Cheng",
+        "Zhe Wang",
+        "Guan Li",
+        "Guihua Shan",
+        "Dong Tian",
+        "Christy Jie Liang",
+        "Quang Vinh Nguyen"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2609.19601",
+      "url": "http://arxiv.org/abs/2609.19601v1",
+      "published": "2026-09-17",
+      "tldr": "把 RAG 的证据上下文当作可检查、可修改的分析对象，用 LLM agent 驱动的可视化系统展示检索轨迹、证据状态修订与溯源式摘要生成。",
+      "why": "它把「检索—重排—过滤」这条隐式流水线显式化并可人工干预，这种证据溯源与上下文精炼的交互设计可迁移到机器人长时程记忆检索与工具调用中的证据筛选环节。",
+      "hits": [],
+      "deep": {
+        "problem": "开放式科学文献探索中,RAG 的证据上下文由隐藏的检索、重排、评估和过滤步骤自动构建,研究者无法看到查询被如何改写、哪些证据被保留或丢弃、是否有有用证据在生成前被截断,因此难以把 RAG 当作真正的探索工具使用。",
+        "method": "提出 FootprintRAG:先把论文用 MinerU 解析成 text evidence unit 与 figure evidence unit(图=原图+caption+周边文本+LLM 生成描述),用 all-MiniLM-L6-v2 编码成 384 维向量存入 ChromaDB;Query Agent 把初始问题扩展成多个并行 query variant,分多轮做向量检索+rerank,Assessment Agent 给每个单元打 High/Medium/Low 支持度;再定义 local candidate pool L_u=I_u\\R_u 与 corpus-level 补充池 G_u=E\\(I_u∪C),用 Evidence Relation Score ERS(e)=αA(e)+βS(e)+γQ(e)(关联度、来源多样性、查询相关性)排序补充候选;最后由 Context Agent 在用户确认的证据上下文上生成带 provenance 引用的摘要,四个联动视图(RAG-Iteration Matrix / Evidence Space Revision / Context Summarization / Control Panel)支持证据态的检查与修订。",
+        "key_contributions": [
+          "提出 LLM-agent 辅助的 evidence context refinement 工作流:并行查询扩展、候选评估、local candidate 回收、corpus-level 补充候选选择、用户确认后合成。",
+          "实现 FootprintRAG 可视分析系统,把多轮检索轨迹、证据态修订与 provenance-aware 摘要生成外部化并联动。",
+          "通过 8 人 formative study 归纳 4 条 finding 与 4 条 design goal,再用 2 个 case study、10 人 user study 和 workflow-level 对比做评估。",
+          "提出 ERS(Evidence Relation Score)这一以已评估有用证据为中心、兼顾来源多样性的补充候选排序指标。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "无标准数据集;使用自建论文语料:Case 1 为 48 篇大气科学论文(VOC/空气质量),Case 2 为 10 篇 IEEE TVCG 论文,user study 为 16 篇生物信息可视化论文(以 LLM-powered genome visualization 论文为中心及其引用)。",
+        "compute": "论文未明确说明(仅提到 embedding 用 all-MiniLM-L6-v2,解析用 MinerU,LLM agent 模型与训练算力均未给出)。",
+        "results_headline": "10 人 user study 的 5 点 Likert 评分中,候选证据修订 Q3=4.9(SD=0.32)、证据上下文确认 Q5=4.9(SD=0.32)、证据有用性判断 Q2=4.8、查询扩展可见性 Q1=4.6、补充候选有用性 Q4=4.4(SD=0.84);交互日志显示证据级操作最多(M=25.1 次/人),其中新增 ERS 补充候选 M=12.9、删除 reranked 单元 M=10.6,而整篇重写仅 M=0.3。",
+        "baselines": [
+          "NotebookRAG",
+          "ResearchAgent",
+          "VisRAG",
+          "RAGExplorer",
+          "RAGTrace"
+        ],
+        "limitations": "作者承认当前评估只覆盖 10–48 篇的任务受限语料,无法证明跨领域/大规模语料的通用有效性;figure evidence 仅用 caption+周边文本+LLM 描述表示,缺少 cross-modal embedding,会丢失图表中的数值趋势、数据分布和空间关系;系统对 LLM agent 的 prompt 与模型选择敏感,且因多轮扩展/评估而延迟与成本高于单轮 RAG。",
+        "code_release": "开源:https://github.com/meteorshowering/FootprintRAGVA.git",
+        "relevance_detail": "与具身智能的直接关联很弱,但有一个具体可迁移的机制:把「生成前用到的上下文」当成显式、可检查、可修订的分析对象,而不是生成后再纠错——这与 agent memory / 检索式经验复用中「检索到什么、丢弃什么、凭什么信任」的问题同构。其中 ERS 的 A(e) 项用已评估为 High/Medium 的证据集合 M_u 做中心、S(e) 用同源计数惩罚过度集中、Q(e) 保留查询相关性约束,这套「关联+多样性+相关性」三元重排可以直接搬到长程规划 agent 的经验检索或示范数据召回上;Section 5.3 的公式与 Section 5.2 的 local/global 候选池划分是最值得抄的部分。此外 Section 8.4 揭示的用户行为分布(证据级操作 25.1 次 vs 摘要级 3.7 次)对设计人机协同的数据筛选/主动数据收集界面也有参考价值。",
+        "followup": "重点看 Section 5.3 的 ERS 公式与 local/global 候选池定义、Section 8.4 的交互日志统计,以及 Table 1 的 workflow-level 对比以确认它与 RAGTrace/RAGExplorer 的差异。"
+      }
+    }
+  ]
+}
