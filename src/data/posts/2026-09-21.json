@@ -1,0 +1,504 @@
+{
+  "date": "2026-09-21",
+  "kept": 9,
+  "reviewed": 9,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 24,
+    "unseen": 9,
+    "llm_candidates": 9,
+    "annotated": 9
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2609.18620",
+      "title": "DeformSmith: Physics Harness-Guided Hierarchical Generation of Deformable Assets for Robot Manipulation",
+      "title_zh": "DeformSmith:物理约束引导的机器人操作可变形资产分层生成",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.18620",
+      "url": "https://arxiv.org/abs/2609.18620",
+      "published": "2026-09-21",
+      "tldr": "提出用物理约束(harness)引导的分层生成流程,自动合成可变形物体资产用于机器人操作任务。",
+      "why": "可变形物体是操作数据合成中稀缺且难标注的一环,若其物理约束引导的生成方式可靠,可直接用于扩充操作训练数据的物体分布。",
+      "hits": [
+        "H:robot manipulation",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "要从文本或单张图像自动生成可用于机器人操作的可变形资产,难点在于必须同时定出几何、外观与物理属性(材料参数、接触响应),而文本/图像几乎不含物体如何变形、如何响应接触的信息。",
+        "method": "DeformSmith 采用分层 agentic 生成:LLM agent(GPT-5.6 Sol)分别担任 Planner / Designer / Critic,配一个共享的 physics-grounded harness(Prober 跑几何检查与 MPM 仿真,Orchestrator 按 harness contract 的硬门限与 revision budget 接受或打回),按 L0(几何+高斯外观+CoACD 碰撞体对齐到同一 canonical frame)→ L1(粒子体积/质量 m=ρV、重力与接触,placement/drop/slide 刚体探针)→ L2(neo-Hookean 材料:Young's modulus、Poisson ratio、damping,MPM drop/compression 探针+长 rollout 稳定性检查)→ L3(抓取-搬运-释放)逐层构建并回灌机械臂交互反馈;L3 把夹爪当 kinematic mesh boundary,用 Eq.1–2 的法向修正+摩擦速度修正和 Eq.3 的指力估计实现接触建模。",
+        "key_contributions": [
+          "提出 DeformSmith,一个完全自动的分层 agentic 框架,把文本或单张图像变成可交互、物理可信的可变形资产,逐级构建并验证几何、物理模型、材料行为与操作可用性",
+          "设计共享的 physics-grounded harness,用仿真证据在 L0–L3 之间做统一评估与修订,并在层层更新的过程中保持已确立的物理约束不被推翻",
+          "把机器人操作放进资产生成闭环,用 manipulation feedback 做超出基础物理探针的进一步修订,同时产出可回放的机械臂操作数据"
+        ],
+        "sim_benchmarks": [
+          "SAPIEN(自建评测集:30 个文本用例 + 9 个图像用例,非公开 benchmark)",
+          "Warp MPM 仿真后端(从 DeformMaster 集成)"
+        ],
+        "real_robot": "未做真机实验。Fig. 5 只给出概念性示意:用 RealMan RM65-6F 真机交互采集 RGB-D 视频并提取 3D point tracks,作为把 DeformSmith 生成结果当作初始估计、再反推真实材料参数的未来方向,没有报告任何真机定量结果。",
+        "datasets": "无预训练数据。评测用 30 个文本驱动用例(文本先经 Qwen-Image-2512 转成参考图)与 PhysGen3D 公开项目资产的 9 个图像用例;机器人场景用 3D Gaussian Splatting 重建。",
+        "compute": "模型规模与 GPU·days 论文未明确说明;仅报告每资产平均仿真调用次数(构建 13–14 次),LLM 走 GPT-5.6 Sol API,自动评分用 GPT-6 Astra API,L3 消融为 6 个资产 × 5 个 held-out 条件。",
+        "results_headline": "GPT-6 Astra 评分:physical realism 0.70 vs PhysGen3D 0.46 / PhysGM 0.39 / PhysX-Omni 0.41,photorealism 0.58 vs 0.34 / 0.27 / 0.32;40 人盲测偏好胜率物理 68–75%、视觉 88–96%、语义 63–76%;消融中 hierarchical 使交付率 83%→93%、物理通过 80%→87%,harness 使材料目标满足 40%→73%、硬失败 17%→7%,manipulation-guided refinement 使任务成功 40%→67%、joint success 27%→57%。",
+        "baselines": [
+          "PhysGen3D",
+          "PhysGM",
+          "PhysX-Omni",
+          "Flat(非分层消融)",
+          "One-shot(不做 harness refinement)",
+          "No feedback(不用操作反馈)"
+        ],
+        "limitations": "假设均质、各向同性的 neo-Hookean 体积材料与近似机器人接触,难以覆盖复杂可变形物体(流体、颗粒材料也明确排除);从文本/图像推断的物理参数缺乏真实世界验证,评估也只是感知质量而非材料参数精度,作者自己指出需要 video-based identification 来补。",
+        "code_release": "论文只给出项目主页 https://can-lee.github.io/DeformSmith_web/,未提代码是否开源。",
+        "relevance_detail": "三点可迁移价值:(1) 它是一条完整的「合成可变形操作数据」pipeline(L0 把每个 Gaussian 绑定到邻近粒子、由 MPM 粒子位移直接驱动高斯形变,配合 SAPIEN + 3DGS 渲染机械臂场景),对可变形物体与 dynamic Gaussian 渲染的数据生成有直接参考;(2) harness contract + Planner/Designer/Critic/Prober/Orchestrator 的「提案-仿真验证-修订-预算内接受」闭环,是一种可复用的 agent 自验证机制,可迁到主动数据采集与 curriculum 设计;(3) Table III-B 用 One-shot 40% → Harness 73% 给出了「少量仿真反馈换多少性能」的干净定量证据——如果你的 V3/LWv2 在考虑让 predictor 做 test-time 多轮修正而不只是单次 latent 预测,这组数字是同构的对照。注意它的物理指标依赖 GPT-6 Astra 打分加主观人类偏好,结论强度要打折。",
+        "followup": "重点看 Sec. III-C 的 harness contract 与 Table III 的三组消融(Sec. V-C),以及 Sec. III-B Eq.1–3 的夹爪接触/摩擦与指力估计公式。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2609.22068",
+      "title": "CodeMidas: Scaling Agentic Coding RL Environments from Code Itself",
+      "title_zh": "CodeMidas:从代码本身扩展智能体编码 RL 环境",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.22068",
+      "url": "https://arxiv.org/abs/2609.22068",
+      "published": "2026-09-21",
+      "tldr": "利用代码仓库自身自动构造并扩展智能体编码强化学习环境,以规模化生成可验证的训练任务。",
+      "why": "它展示了如何从既有语料自动派生可验证环境与奖励,这一“环境自扩展”思路可迁移到机器人任务与仿真场景的自动生成。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "训练编码 agent 的 RL 需要大量任务 + 可靠 verifier，但现有环境构造 pipeline 依赖开发痕迹（issue / PR / commit / 已有测试 / 文档），任务覆盖范围被这些记录限制，无法规模化。论文要回答：能否只用源码本身（已实现的功能）自动构造可执行、可验证的 RL 环境。",
+        "method": "CodeMidas 是一个 agentic pipeline，仅以 source code 为任务特定输入，分四个模块：(1) Task Design & Codebase Adaptation——agent 定位有公开入口和可观测行为的已实现功能，删掉核心实现并把周围代码库改造成合理的起点，同时保留原始实现作为 reference solution；(2) Execution-grounded Test Construction——agent 把 task statement 的行为要求映射成测试输入/边界用例，在 reference 上执行得到期望值，再由 reviewing agent 删除语句未要求的过强断言（精确措辞、偶然顺序、私有符号依赖）；(3) Environment Preparation + Execution Consistency——清理编译产物/缓存等泄漏物并移除原测试，用 6 个新容器校验（2 个起始态必须 fail、4 个 reference 必须 pass）；(4) Post-rollout Filtering——对抗性 rollout 查泄漏、solution audit 查 verifier 的 FP/FN、按 rollout 结果只保留既有成功又有失败的任务。最后用 GRPO + 二元执行 reward 训练 MiMo-V2.5，无 reward model。",
+        "key_contributions": [
+          "证明源码本身足以作为唯一任务来源：从 3,185 个开源代码库构造出 5,545 个可验证 RL 任务，覆盖 23 种语言、15 个技术领域（Python 21.4% / TypeScript 18.3% / Go 16.2%）。",
+          "提出一套多层环境可靠性过滤：execution consistency（2 fail / 4 pass）+ 泄漏对抗 rollout + solution audit（FP/FN 检测）+ rollout outcome filtering，显著优于未清洗的更大任务池。",
+          "RL 训练在全部 5 个外部 benchmark 上提升：DeepSWE +11.7pp、ProgramBench Almost Solved +17.0、Terminal-Bench v2.1 +8.5pp、RepoZero C2Rust +11.3pp、SWE-bench Pro +4.1pp。",
+          "行为分析：RL 后 agent 的 codebase exploration（27.2→40.1 次 read/search）、code drafting ratio（0.358→0.629）、self-verification 命令数（2.03→2.53）均上升，且 agent 自写检查的 rollout 平均 pass rate 高 4.2pp（95% CI 1.8–6.6）。"
+        ],
+        "sim_benchmarks": [
+          "SWE-bench Pro",
+          "DeepSWE v1.1",
+          "ProgramBench",
+          "RepoZero C2Rust",
+          "Terminal-Bench v2.1",
+          "CodeMidas Val (200 自留任务)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "任务来自 3,185 个开源代码库（论文未明确说明代码语料的具体采集来源，仅在 related work 引用 The Stack v2 作为大规模代码语料背景）；训练集 5,545 任务，reference patch 中位 142 行、IQR 66–305 行，65.9% 的任务跨至少 2 个源文件",
+        "compute": "论文未明确说明 GPU 数量与训练时长；给出超参：MiMo-V2.5 + GRPO，batch size 32、每任务 32 rollouts、max prompt 8,192 tokens、max response 516,096 tokens、每 rollout 最多 500 turns、lr 5e-6、Adam(0.95, 0.95)，advantage 不做 std 归一化（Table A1）",
+        "results_headline": "M iMo-V2.5 初始策略 → CodeMidas RL：DeepSWE 10.0%→21.7%、ProgramBench Almost Solved 4.5→21.5、Terminal-Bench v2.1 63.7%→72.2%、RepoZero C2Rust 40.5%→51.8%、SWE-bench Pro 50.3%→54.4%，自留 CodeMidas Val pass rate 35.0%→44.7%",
+        "baselines": [
+          "Initial policy MiMo-V2.5（RL 前，同一评测设置）",
+          "vanilla 8k 未清洗/未过滤任务池",
+          "高质任务子集 1k / 3k（用于 scale 消融）"
+        ],
+        "limitations": "任务只能来自已经实现的功能，因此天然无法覆盖新功能设计、需求级/架构级任务，也把「全过 / 全错」的任务整段丢弃（这些可能是过易或过难的信号）；reference 中位仅 142 行，长程任务比例受限；未在同等算力下与其他环境构造 pipeline（SWE-smith / R2E-Gym / SWE-Hub）做直接对比，过滤环节还依赖 frontier model 的审查能力。",
+        "code_release": "论文未提",
+        "relevance_detail": "这不是具身论文，但它的核心机制对做 agent 训练与 RL 数据管线的人很有用：(1)「用执行一致性 + 对抗性 rollout 查泄漏 + solution audit 查 verifier 的 FP/FN + 只保留既有成功又有失败的任务」是一套可直接迁移的 verifier 可靠性工程流程——具身 RL / VLA 后训练的瓶颈同样常常是 reward/verifier 而非策略本身，其 §3.3–§3.4 与图 8 给出了「3k 清洗样本 > 8k 未清洗样本」（SWE-bench Pro +0.59、DeepSWE +4.59、Val +4.49）的干净证据，说明数据质量重于数量；(2) §5.2 表 2/表 3 用可量化指标（pre-edit read/search 次数、drafting ratio、post-edit distinct verification commands、interaction turns）刻画 RL 带来的行为变化，并给出「self-verification 与 +4.2pp pass rate 相关」的统计，这种「行为级而非仅分数级」的评估思路可直接搬到长程具身 agent 的轨迹分析上。",
+        "followup": "重点看 §3.4 post-rollout filtering 的三个过滤步骤、§5.1 图 8 的任务规模/质量消融，以及 Table A1 的 GRPO 训练配置与 Appendix B 的行为指标定义。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2609.22000",
+      "title": "RecreationWorld: Scalable and Verifiable Environments for Hybrid Computer-Use Agents",
+      "title_zh": "RecreationWorld:面向混合计算机使用智能体的可扩展可验证环境",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.22000",
+      "url": "https://arxiv.org/abs/2609.22000",
+      "published": "2026-09-21",
+      "tldr": "构建可扩展且可自动验证的交互环境,用于训练和评测混合型计算机使用智能体。",
+      "why": "可验证环境的大规模构造与自动奖励设计,是当前智能体训练数据瓶颈的核心问题,其思路可迁移到仿真任务与可验证机器人环境的搭建。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 computer-use agent (CUA) 沿两条互不相通的路线发展：只会操作图形界面的 GUI agent 看不见界面背后的软件，只会写代码/敲命令行的 terminal agent 看不见自己动作产生的界面；真实数字工作需要两者在一条长程轨迹内反复交替，而现有 benchmark 大多只测单一交互模式，对这种自主协调能力的评测严重不足。",
+        "method": "论文提出 RecreationWorld 框架，核心任务设定为 recreation：给定一个可运行的 reference 应用（Ubuntu/macOS/Windows/Android/Web 五平台），agent 必须自主交替 explore–implement–verify，最终提交符合各平台 build/launch 契约的源码实现，流程不预设。reference 同时充当 oracle：用 reference-grounded test generation 自动生成隐藏的 programmatic 断言（AT-SPI / AXUIElement / UI Automation / UiAutomator / DOM-ARIA）与 visual 断言（截图 + Qwen3.7-Plus VLM judge，temperature 0 二值判定），经 reference 回放校验与人工复核后冻结为 implementation-agnostic 评测套件。训练侧用 Qwen3.8-Max 在同一框架内跑长程 rollout，用任务级行为 verifier 做 rejection sampling，取每平台 7000 条、共 35000 条轨迹做 SFT。",
+        "key_contributions": [
+          "提出 recreation 任务与 RecreationWorld 五平台可复现执行框架：task-isolated worker、版本化图形运行时、单轨迹 20 小时 wall-clock 预算，统一 harness 同时暴露 native GUI 控制与 coding/CLI 工具。",
+          "发布 RecreationBench：五平台各 50、共 250 个任务，双通道 hidden test（Prog + VLM），并给出导航深度与结果特异度审计——94.2% 的 case 检查的是交互后结果而非元素存在，40.7% 要求精确期望值。",
+          "证明 recreation 轨迹 SFT 能迁移到 5 个 OOD benchmark（ProgramBench / GameCraft-Bench / Vision2Web / OSWorld 2.0 / WeaveBench），两条训练 arm 最后 checkpoint 均高于首个 checkpoint，并伴随自验证行为（读自己渲染输出）增加。",
+          "系统 trajectory 分析：agent 复现静态界面结构远比复现交互与计算输出可靠，生成的 app 明显更小更 monolithic；检测到大量 network egress 与 protected-path 访问等评测作弊尝试；persistent programmable runtime 在保持分数不变的前提下把模型–工具调用减少 39.9%、input token 减少 40.7%、单任务成本从 $90.50 降到 $41.58。"
+        ],
+        "sim_benchmarks": [
+          "RecreationBench（Ubuntu/macOS/Windows/Android/Web 各 50 任务）",
+          "ProgramBench",
+          "GameCraft-Bench",
+          "Vision2Web",
+          "OSWorld 2.0",
+          "WeaveBench"
+        ],
+        "real_robot": "未做真机实验（本文研究的是跨桌面/移动/Web 的 hybrid computer-use agent 环境，不涉及机器人）。",
+        "datasets": "训练任务取自 GitHub 开源 GUI 应用与 F-Droid/GitHub 的 Android 项目（五平台各 7000 条经 verifier 拒绝采样筛出的 recreation 轨迹，共 35,000 条 SFT mixture，并与评测集去重）；评测集为 250 任务，其中 Web 由 44 个合成站点 + 6 个公开网站构成，81 个任务打包了 393 个 fixture 文件。",
+        "compute": "论文未明确说明 GPU·days 与模型参数量；只说明 rollout 在可水平扩展的 VM 池上并发执行、单轨迹 wall-clock timeout 为 20 小时，Windows 上 Claude Opus 4.8 每任务约 4.12 小时 / $90.50（programmable 配置 3.04 小时 / $41.58），token 量级为每轨迹 23–259M cumulative input tokens。",
+        "results_headline": "RecreationBench 上 GPT-6 Astra 以 58.06% 总分领先（Prog 58.19 / VLM 57.92），Claude Opus 5 为 44.16%、GPT-5.6 Sol 为 42.06%，但 GPT-6 Astra 也仅有 2.8% 的任务全通过 programmatic 测试；recreation SFT 在 5 个 OOD benchmark 上两个 arm 均高于首个 checkpoint，Figure 5 中最大提升为 +17.9pp（例如 GameCraft-Bench 17.9→26.5、OSWorld 2.0 28.2→46.1）。",
+        "baselines": [
+          "GPT-6 Astra",
+          "Claude Opus 5",
+          "GPT-5.6 Sol",
+          "Claude Opus 4.8",
+          "Qwen3.8-Max-0902",
+          "Qwen3.7-Plus",
+          "GLM-5.3",
+          "Kimi K3",
+          "Gemini 3.7 Flash",
+          "Grok 4.6",
+          "Direct MCP 交互配置（vs programmable SDK）"
+        ],
+        "limitations": "作者明确承认多数结论是描述性的、不能确立因果（如 GUI 调用占比高与高分共存、final-loop closure 低并不等于没做过验证），programmable runtime 对比只是单次 rollout 的整配置比较；Android 尚无 packet-level egress 过滤，Web 因静态站点无法做到真正的 source-blind，且生成的 app 普遍比 reference 更小、更 monolithic。",
+        "code_release": "论文声明 release RecreationBench、五个平台的任务环境与 test suites，并在首页给出 Website / GitHub / Hugging Face / ModelScope 链接（正文以超链接形式给出，未列出具体 URL）；具体开源范围（是否含训练数据与 harness）论文未明确说明。",
+        "relevance_detail": "这篇的价值在于它把「reference 当 oracle → 自动生成可执行、可冻结的 hidden test → 用行为验证器做 rejection sampling 选轨迹」这套可验证奖励配方跑通在 35k 长程轨迹上，并证明能迁移到训练分布外的 5 个 benchmark，可直接借用到你 V3/LWv2 的 rollout 筛选与评测设计（见 Sec 3.1 与 Fig 5）。其次 Fig 10–11 的分析很有迁移性：agent 复现静态界面结构的成功率远高于交互与 computed outputs，源码集中在前半程写完、后续只做小幅修改，final-loop closure 普遍不到 50%——这与 JEPA 式 future latent prediction 里「静态表征好学、动力学与动作条件结果难学」的失败模式高度同构，可当作设计 predictor/target 与验证环节的对照证据。第三，Fig 9 显示把原始 GUI/工具调用收进一个 persistent programmable runtime，可让 agent 自行组合调用并筛选回传观察，模型–工具调用 -39.9%、input token -40.7%、成本 -54.1% 而 Prog/VLM 分数基本不变，是 agent harness 与观察接口设计的可复用工程结论。",
+        "followup": "优先看 Sec 3.1–3.3 + Fig 5/6（rejection sampling 数据配方与行为迁移）、Sec 4.4 + Table 2（双通道评测协议与覆盖审计）、Sec 5.2 + Fig 9（programmable runtime 的资源对比），附录 C.6/C.7 有隔离边界与 runtime 细节。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2609.22069",
+      "title": "OmniVBench: A Benchmark and Large-Scale Dataset for Omni Reference-to-Video Generation",
+      "title_zh": "OmniVBench:全模态参考到视频生成的基准与大规模数据集",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.22069",
+      "url": "https://arxiv.org/abs/2609.22069",
+      "published": "2026-09-21",
+      "tldr": "提出面向全模态参考条件的视频生成基准与大规模数据集,用于评测多模态条件下的视频合成。",
+      "why": "参考条件视频生成的数据与评测设计,对动作条件视频世界模型的训练数据构造与评价指标有直接借鉴意义。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 reference-to-video (R2V) 生成基准只覆盖有限的参考类型(以内容参考为主),且评估协议只做整体一致性打分,无法判断每个参考因子是否被正确保留、解耦并绑定到正确目标;同时构建 omni R2V 训练数据的成本很高,公开数据稀缺。",
+        "method": "提出 OmniVBench 基准与 Omni-R2V 数据集。OmniVBench 把 R2V 任务空间划为 5 个单参考维度(content / motion / style / structure / narrative)加 multi-content 与 cross-aspect 两类多参考设置,共 7 个 task family、18 个细粒度子任务、813 个评测用例;评估协议为 factor-grounded checklist,按 Reference Fidelity(RF,5 个 L2 子维度)、Instruction Realization(IR,含 reference-factor disentanglement and routing 与 target compliance)与 Video Quality(VQ)三个维度,由 VLM 用逐用例定制的 12,172 条 checklist 打分,再按层级加权映射到 100 分。Omni-R2V 数据集用 source video 处理 → task-specific pair construction(cross-pair matching 与 inverse construction,涉及 Wan-Animate、Wan2.2-VACE、Qwen-Image-Edit、GPT Image 2.0、TransNetV2、多种边缘提取器)→ 候选过滤 → 指令生成(Gemini-3.1-Pro 描述 + DeepSeek-V4-Pro 转写)的流水线构建。",
+        "key_contributions": [
+          "OmniVBench:覆盖 7 个 task family、18 个子任务、813 个用例的 omni R2V 评测基准,首次系统覆盖 motion / camera / style / structure / narrative 及多参考组合。",
+          "提出 factor-grounded 评测协议,用 12,172 条逐用例 checklist 显式评估参考因子的保真、解耦与路由;与人工评分相关性 RF 0.81 / IR 0.78 / VQ 0.86,明显优于 holistic 评测的 0.67 / 0.69。",
+          "发布 Omni-R2V 数据集:339,570(约 340K)已处理训练样本,覆盖 7 类任务、2D/3D 动画与真人视频、480p–2160p+、最长 20s,并公开可复用的任务化数据构建流水线。",
+          "对 11 个开源/闭源 R2V 模型做大规模评测,显示没有任何模型在全部任务族上一致领先,content 参考普遍得分高,而 motion / style / structure / narrative / 多参考差距明显。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "Omni-R2V Dataset(自建,约 340K 已处理样本,主要来自腾讯内部专业视频语料,补充公开数据如 Koala-36M);OmniVBench 的 813 个评测用例来自内部有授权的视频集合,与训练集不重叠。",
+        "compute": "论文未明确说明",
+        "results_headline": "最强模型 Seedance 2.5 总分 72.68、MiniMax H3 72.41、Seedance 2.0 70.91,开源最强的 Bernini 仅 56.95、UniVideo 49.69;IR 上部分模型 target compliance 很高(如 Seedance 2.0 motion IRTC 95.88)但 disentanglement/routing 明显偏低(cross-aspect IRDR 仅 91.83 vs Vidu 86.77 等),说明跟进指令与正确绑定参考因子是两种独立能力。",
+        "baselines": [
+          "UniVideo",
+          "OmniWeaving",
+          "LoomVideo",
+          "Bernini",
+          "MiniMax H3 (H3-Context-IR)",
+          "Vidu-Q2-Pro",
+          "Kling 3.0 Omni",
+          "Happy Horse 1.0",
+          "Gemini Omni",
+          "Seedance 2.0",
+          "Seedance 2.5"
+        ],
+        "limitations": "评测集规模较小(813 用例、18 子任务),checklist 需人工撰写与校验,难以扩展到新任务;RF/IR 最终仍依赖单个 VLM 打分(仅用 100 个用例、965 个输出做人工验证)。作者也指出当前模型在不同参考类型上能力不通用,但论文只诊断问题、不提出改进模型。",
+        "code_release": "论文提供项目主页 https://wxliii.github.io/OmniVBench/ 并声明 release benchmark 与 Omni-R2V 数据集;但正文未给出 GitHub 代码仓库,也未说明评测代码是否开源。",
+        "relevance_detail": "与具身智能没有直接关系,但有两处可迁移的机制。(1) 评测方法论:把'参考—目标'关系拆成 case-specific checklist,并单独度量 factor disentanglement and routing(Table 4 的 IRDR)与 target compliance(IRTC),这套'因子级解耦 + 绑定'的评估思路可直接搬到 action-conditioned video/latent world model 的评测上——判断模型究竟是学到了动作引发的动态,还是照抄了参考视频的外观与相机运动;论文用 100 用例 / 965 输出的相关性实验(Table 5、Table 6)证明细粒度 checklist 比 holistic 打分与人类判断一致得多(RF Spearman 0.77 vs 0.67),这是稀缺的评测有效性证据。(2) 数据构造:cross-pair matching + inverse construction(用生成/编辑工具反向合成参考)+ VLM 指令生成的任务化流水线,对需要构造'同内容不同因子'配对数据的视频世界模型训练有直接借鉴价值。",
+        "followup": "重点看 Sec. 3.3 的 factor-grounded checklist 与打分聚合公式、Table 4 的 IRDR/IRTC 分解,以及 Sec. A.1.1 的 motion/camera reference 构造细节(用 camera pose 估计 + Unreal Engine 合成可控相机轨迹)。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2609.21749",
+      "title": "GraphSkillEvo: Evolutionary Optimization of Graph-Structured Agent Skills",
+      "title_zh": "GraphSkillEvo:图结构智能体技能的演化优化",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.21749",
+      "url": "https://arxiv.org/abs/2609.21749",
+      "published": "2026-09-21",
+      "tldr": "把智能体技能表示为图结构并用演化搜索优化其组合与参数。",
+      "why": "技能图上的演化优化为长时程技能库的自动组合与改进提供了可迁移的搜索框架,可类比到机器人技能库的自动构建。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 LLM agent 的 skill 优化把 skill 表示成非结构化的自然语言指令,导致两个问题:(1) 缺少显式 workflow 级指导、冗余严重,弱模型(如 GPT-5.4-nano)难以判断当前阶段该用哪条指导、下一步该做什么;(2) 无约束的文本搜索空间巨大且冗余,迭代式自反思优化效率低。",
+        "method": "把 skill 形式化为图结构自然语言artifact s=⟨h_s, g_s⟩:h_s 是全局指导(任务描述、通用原则、共享模板),g_s=(V_s,E_s) 是有向图,节点 v_i 是自包含的一个执行步骤及其指令/规则/约束,边由 M 个 workflow {(c_m, p_m)} 定义,每个 workflow 含适用条件 c_m 和一条有序节点路径 p_m,不同条件诱导不同执行路径。在此结构化空间上提出 GraphSkillEvo:population-based 进化框架(N=4, T=5 代),用四个 LLM 算子——global-guidance mutation、graph-structure mutation(基于失败轨迹 F_i 精修节点/增删节点/调整 workflow)、global-guidance crossover、graph-structure crossover——round-robin 选算子、父代按 p∝1/(r+N) 按验证排名加权采样、在 D_val 上算 fitness 后 top-N 选择;新生成 skill 需通过 graph schema validator 否则重生成。",
+        "key_contributions": [
+          "将 agent skill 形式化为图结构自然语言 artifact(全局指导 + 节点执行步骤 + 条件 workflow 路径),显式给出 workflow 级指导并降低表示冗余",
+          "提出 GraphSkillEvo:面向图结构 skill 的 population-based 进化优化框架,含结构感知的 mutation / crossover 四算子与演化式种群选择",
+          "在 5 个 benchmark、2 个 LLM、2 种 harness 上系统性验证:显著优于 SkillOpt,且优化 token 消耗更低;并通过消融与跨模型迁移实验分析图结构与算子的作用"
+        ],
+        "sim_benchmarks": [
+          "SearchQA",
+          "SpreadsheetBench",
+          "DocVQA",
+          "LiveMathematicianBench",
+          "ALFWorld"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "使用 5 个 benchmark 自划分 train/val/test(split seed=42,与 SkillOpt 一致):SearchQA 400/200/1400,SpreadsheetBench 80/40/280,DocVQA 107/53/374,LiveMath 35/18/124,ALFWorld 39/18/134;未使用 OXE/DROID/Ego4D 等机器人数据",
+        "compute": "只优化 skill 文本、不训练模型参数,未报告 GPU·days;报告的是优化期 token 消耗:GPT-5.4 下 SkillOpt 81.08M vs GraphSkillEvo 61.94M,GPT-5.4-nano 下 103.54M vs 75.94M;LLM 规模未说明(GPT-5.4 / GPT-5.4-nano API)",
+        "results_headline": "14 个 model–harness–benchmark 设置中 13 个最优:相对 SkillOpt 平均准确率提升 +1.76%(GPT-5.4 无 harness)、+4.01%(GPT-5.4-nano 无 harness)、+1.33%(GPT-5.4 + Codex harness);流程型任务提升最大(SpreadsheetBench 60.71 vs 50.11,ALFWorld 61.19 vs 57.46),仅 GPT-5.4-nano 的 LiveMath 落后 SkillOpt 0.80%。",
+        "baselines": [
+          "No skill",
+          "Human skill(专家手写)",
+          "LLM skill(GPT-5.4 一次性生成)",
+          "SkillOpt"
+        ],
+        "limitations": "只在流程型任务上优势显著,QA 类 benchmark(SearchQA/DocVQA)增益较小且显著性仅 p≈0.07–0.09,GPT-5.4-nano 的 LiveMath 反而低于 SkillOpt;框架完全依赖固定 LLM 生成与验证 skill、不更新参数,且未处理跨领域图结构 skill 的合并(作者将其列为 future work)。",
+        "code_release": "已开源:https://github.com/ruisun7/GraphSkillEvo",
+        "relevance_detail": "它对你更偏“可迁移机制”而非直接具身价值:把技能/流程表示为『节点=执行步骤、边=条件转移』的有向图,并由失败轨迹驱动结构感知 mutation/crossover 做种群进化,这套“先压缩表示空间、再做结构化搜索”的思路可迁移到长时程层级规划、机器人 procedural memory / skill library 的结构化组织与自动改进;ALFWorld 上的结果(+19.90 over no skill,+3.73 over SkillOpt,Table 1)说明它在需要与环境逐步交互的任务上收益最大。但要注意边界:它不涉及 world model、VLA、动作 token 或真实物理感知,和 V3/LWv2 的 latent 预测没有直接机制联系,不要强行类比;若你关心“如何自动优化注入到策略提示/技能库里的过程性知识”的搜索算法(Table 4 消融显示去掉 mutation 掉 17.02 分、去掉 crossover 掉 4.93 分),它值得一读。",
+        "followup": "重点看 Table 4 的算子消融、Appendix C.1 显著性检验与 Appendix E.3 中生成出的 graph-structured skill 实例(以及 E.4 的非结构化对照),判断图表示本身的收益来源。"
+      }
+    },
+    {
+      "rank": 6,
+      "key": "arxiv:2609.05571",
+      "title": "Grounded Skill Synthesis from Code at Scale for Agentic Intelligence",
+      "title_zh": "从代码规模化合成可落地技能以支撑智能体智能",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.05571",
+      "url": "https://arxiv.org/abs/2609.05571",
+      "published": "2026-09-21",
+      "tldr": "从大规模代码中抽取并合成可验证、可执行的技能,用于提升智能体的任务能力。",
+      "why": "技能从代码中自动抽取并验证的流程,与机器人技能库构建和工具使用数据合成有方法上的共通点。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 agent 技能合成要么依赖与特定环境/模型耦合的执行轨迹，要么从文档文本抽取而缺乏可执行证据做 grounding，难以规模化且难以验证。论文提出以源代码作为新基底，把仓库中已被实现、调试、维护的程序知识转成可验证、可检索的复用技能。",
+        "method": "Code2Skill 是一条全自动流水线：(1) 用 LLM tagger 从 19,769 个 >500 star 的 GitHub 仓库里按「可复用意图 + 操作结构 + 可见执行约束」筛选函数/方法/CLI 入口/file 级单元并全局排序取 Top-K；(2) extractor 把它们抽成三类带类型的记录——atomic skill、composite skill、recurring-pattern skill，每条含 PROBLEM/WHEN TO USE/CONTROL RULE/WORKFLOW/INVARIANTS AND FAILURES/ANTI-GOALS/SOURCE EVIDENCE 与 provenance；(3) 用 source-body-blind reconstruction（只给技能记录让 LLM 重写代码）+ source-aware judge 与原实现比对，一致则接受，否则交 adjudicator 判定是记录无据还是重建失败；(4) 做 feature tagging 与 purpose indexing 生成检索视图，并通过 Eq.1 的接口在 prompt / planning / post-generation review / verifier reward / training 等不同决策点注入检索到的技能。",
+        "key_contributions": [
+          "提出 grounded skill synthesis 问题设定：用源代码作为既可执行又可版本化的 grounding 基底，摆脱对 trajectory 或文档的单一依赖。",
+          "构建 Code2Skill 全自动流水线，核心是 source-body-blind reconstruction + source-aware judge 的「重建-比对」一致性校验，作为仓库级可扩展的 grounding 过滤器。",
+          "发布 CodeSkillBank：1,006,822 条被接受记录，带 workflow/boundary/provenance/source-evidence 元数据；人工标注显示 92% 描述准确、80% 值得保留。",
+          "在 9 个模型设置 × 8 个 benchmark 共 72 组协议对齐评测中平均相对提升 11.7%，并在统一下游接口下全面超过 trajectory-derived skill bank（均分 49.5 vs 31.0/27.9/32.8）。"
+        ],
+        "sim_benchmarks": [
+          "SWE-bench Verified",
+          "BigCodeBench",
+          "TerminalBench",
+          "LongCLI-Bench",
+          "AgentBench-OS",
+          "AIME 2026",
+          "HMMT 2025",
+          "GPQA",
+          "LiveCodeBench (400-task subset)",
+          "SWE-World (coding RL)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "自建语料：截至 2026-04-14 的 GitHub 公开仓库，保留 >500 star 项目共 19,769 个（中位 3,133 star、82 个 merged PR，78.3% ≥1k star）；实验为效率起见随机采样 bank 的 10% 作为默认检索池。RQ6 另用 25 个人写实现 + 25 个 Codex/GPT-5.1 生成的接口匹配实现各抽 50 条技能，在 400 题 LiveCodeBench 子集上评测。",
+        "compute": "论文未明确说明（未报告 GPU 型号、GPU·days 或训练规模；仅列出被评测模型：DS4-Flash、Qwen3.5-27B/397B-A17B、Qwen3.6-27B、Gemini 2.5 Pro、GPT-5.2，RL 实验用 Qwen3-32B SWE-World checkpoint）。",
+        "results_headline": "8 benchmark 宏平均 42.90 → 47.90（相对 +11.7%），72 组协议对齐评测中 57 组提升、SWE-bench Verified 全部 9 组均提升；统一接口下 Code2Skill 均分 49.5 高于最强 trajectory baseline 6.6–13.3 分；coding RL 中 resolve rate 24% → 38%（post-generation review 位）。",
+        "baselines": [
+          "No-skill control（同一 agent loop，z_t = ∅）",
+          "Trace2Skill（Creation+Error pipeline 的 trajectory-derived skill）",
+          "ExpeL（经验记忆）",
+          "SkillRL-Bank（SkillRL-adapted SkillBank）",
+          "Full-record / Summary / Indexed 等不同检索与渲染配置互为对照"
+        ],
+        "limitations": "作者承认 RQ6 只是初步证据（仅 25 个源实现、50 条技能的小 bank，0.50pp 差异不能证明人写与 AI 写代码等价）；RQ5 只报单个 checkpoint（step 150）、无重复种子与学习曲线，无法说明收敛速度或最终策略差异。此外 reconstruction 一致性检查只是可扩展的 grounding 过滤器，不能替代基于测试/形式化性质的验证；purpose indexing 会挤掉局部更相关的候选，下游效果有好有坏。",
+        "code_release": "摘要处标注了 Website 与 Dataset 链接，但 full_text 未给出具体 GitHub URL，是否开源未明确说明。",
+        "relevance_detail": "直接具身价值有限（任务域是 SWE/终端/数学推理），但有三处可迁移机制值得读：① skill record 的 schema——把「适用条件 / 控制规则 / 不变量与失败路径 / anti-goals / source evidence」显式写出来，而不是写一段自然语言摘要，这套字段设计可直接搬到操作技能库与长程任务的 memory 条目；② source-body-blind reconstruction + source-aware judge 的「只给记录重构、再对照证据裁决」是通用的知识 grounding 验证回路，可用于筛掉 LLM 自蒸馏出的错误/幻觉技能或 world-model 伪标签；③ §5.4/§5.5/§5.6 系统研究了检索上下文注入位置（planning vs 首轮生成 vs 草稿后 review vs verifier 侧 reward）与压缩渲染的影响，Table 3 显示同一批技能放在 reviewer 位把 resolve rate 从 24% 拉到 38%，而 policy 提示只有 32%，Figure 6 显示 summary 渲染砍掉 88.9% 上下文（6,352→707 字符）仍不掉分——这是「知识在何处进入闭环、以多长形式进入」的实验范式，对 VLA/多模态策略如何在有限 context 里挂接技能或记忆、以及监督信号该加在策略侧还是评判侧，都是可复用的方法论。与 V3/LWv2 无具体机制关联，不建议强行套用。",
+        "followup": "重点看 §5.3 Table 2（统一接口下与 trajectory-derived bank 的对照）、§5.5 Figure 6（检索深度/渲染/索引的上下文-效用权衡）与 §5.6 Table 3（RL 中各注入位置的 resolve rate），附录 C.2.1 有 reconstruction 判定流程的细节。"
+      }
+    },
+    {
+      "rank": 7,
+      "key": "arxiv:2609.22083",
+      "title": "MintAct: A Unified Visual Agent for Digital Environments",
+      "title_zh": "MintAct:面向数字环境的统一视觉智能体",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 5,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.22083",
+      "url": "https://arxiv.org/abs/2609.22083",
+      "published": "2026-09-21",
+      "tldr": "构建一个统一的视觉智能体,直接在数字界面环境中感知并执行操作。",
+      "why": "纯视觉输入到动作输出的统一智能体范式与 VLA 的感知-动作接口同源,但其环境是数字界面而非物理世界,迁移需谨慎。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "数字设备上的视觉 agent 目前被拆成 UI grounding、mobile/desktop/web 多步导航、visual tool use 等互相独立的专家模型,分别训练与部署成本高,尤其在端侧小模型上不可行;核心问题是:能否用一个共享权重的模型统一这些能力而不牺牲单域性能。",
+        "method": "MintAct 在 Qwen3-VL-Instruct 上用多阶段配方训练 2B/4B/8B 模型:(1) 高分辨率单步 SFT 学 grounding(<grounding_think>+<answer> 坐标);(2) 低分辨率多步 SFT 学导航与 tool use,四域按 25%:25%:25%:25% 平衡、append-only 轨迹以便 KV cache 复用;(3) 每域各训一个 RL specialist,再用 rejection sampling RFT 蒸馏回单模型;(4) 最后在 mobile+desktop 上做 asynchronous joint agentic RL。统一的关键设计是 raw screenshot + 归一化到 999×999 的像素坐标共享观测空间、由 domain-specific system prompt 指定 action set,以及显式受控的跨域混比。",
+        "key_contributions": [
+          "用一个模型族(2B/4B/8B)统一 UI grounding、mobile/desktop/web 多步导航与 visual tool use,并在同尺寸下匹配或超过各域专家模型",
+          "证明联合训练不损单域性能:joint SFT 在 mobile/desktop/tool use 上达到或超过单域 SFT 专家,grounding/web 也在同一区间(Table 4)",
+          "提出面向统一视觉 agent 的异步 RL 框架(verl + rLLM + SGLang router + Megatron trainer),含 message queue、参数同步器与 multimodal offloading,可并发托管 200+ desktop / 100+ mobile 环境实例",
+          "针对混合域异步 RL 给出四机制控制训练分布与 off-policy 漂移:per-domain quota、quota-normalized backpressure、dual-clip surrogate(ε_lo=0.2, ε_hi=0.28, c=3)与 truncated IS weight(C=2),以及 mask-independent normalizer"
+        ],
+        "sim_benchmarks": [
+          "AndroidWorld",
+          "AndroidControl",
+          "OSWorld-Verified",
+          "OSWorld-G",
+          "Weblica",
+          "Online-Mind2Web (Om2W)",
+          "MM-ToolSandBox",
+          "MMBench-GUI",
+          "ScreenSpot-v2",
+          "UI-Vision"
+        ],
+        "real_robot": "未做真机实验(论文研究的是数字设备 GUI agent,不涉及机器人实体)",
+        "datasets": "基座为 Qwen3-VL-Instruct。Grounding 用 GroundCUA、MolmoPoint;单步导航用 GUI-Odyssey、AndroidControl;多步 SFT 轨迹 ~42.7k(mobile)/~23.5k(desktop)/~51.7k(web)/~59.8k(visual tool use),web 查询从 InstaV3 的数十万域名采样并由 Qwen3-VL-32B 生成后经 VLM judge 过滤;VTU 场景用 COYO 与 Aria UI 的 100K 图像生成;RFT 数据 ~37.8k/21k/7k/24k。",
+        "compute": "论文未明确说明 GPU·days 或总算力。已知训练侧细节:2B/4B/8B 三档模型,rollout 用 SGLang、训练用 Megatron,GRPO group size 8、batch B=64(两域各 quota 32),desktop 每实例 10 CPU 核 + 40GB 内存、并发 200+,mobile 并发 100+;SFT 学习率 1e-5、RFT 3e-6,Stage 1 图像上限 2,116,800 像素、Stage 2 为 921,600 像素。",
+        "results_headline": "MintAct-8B 相对 Qwen3-VL-8B 初始化大幅提升:AndroidWorld 47.6→67.0、OSWorld-Verified 33.9→48.9、Weblica 55.5→74.7、MM-ToolSandBox 3.1→24.5,并在 OSWorld-Verified(48.9)、Weblica(74.7)、UI-Vision(56.6)、OSWorld-G(64.5)上取得同尺寸最佳。",
+        "baselines": [
+          "Qwen3-VL-2B/4B/8B",
+          "Qwen3.5-4B/9B",
+          "Jedi-3B/7B",
+          "ScaleCUA-3B/7B",
+          "Ferret-UI-Lite-3B",
+          "MAI-UI-2B/8B",
+          "OpenCUA-7B",
+          "UI-TARS-1.5-7B",
+          "EvoCUA-8B",
+          "WEBLICA-8B"
+        ],
+        "limitations": "全文在实验部分被截断,部分结论无法完整核对;最终 joint RL 只在 mobile 与 desktop 两域上进行,web 仅靠迁移、最远的 visual tool use 未参与 joint RL 因而仍停留在 SFT 水平;论文也承认统一的主要代价在环境/数据/训练基础设施而非建模,跨域混比仍需人工 quota 与 backpressure 调参。",
+        "code_release": "论文未提",
+        "relevance_detail": "虽然面向 GUI 而非机器人,但有三处可迁移机制值得细读:(1) RFT 配方——先训单域 RL specialist,再用 rejection sampling 把多个 specialist 蒸馏回单一模型,这套『专家 RL→蒸馏→联合 RL』在多任务机器人策略上同样适用,对应 Table 6 显示 RFT 后单模型可超过 mobile specialist(AndroidWorld 68.1 vs 67.8);(2) 混合域异步 RL 的分布控制与稳定性技巧(per-domain quota、quota-normalized backpressure、dual-clip surrogate、truncated importance sampling、mask-independent normalizer,Table 2 与公式 3.5–3.7),对任何需要跨任务异构环境异步 rollout 的训练都直接可用,也是本文最硬的部分;(3) 用 domain prompt 选择 action space、而非把各域 action 合并成单一空间,以及 raw screenshot + 归一化像素坐标的共享 grounding 空间,是针对『单模型多动作空间』的具体设计取舍,对 action head / action token 设计有对照价值。",
+        "followup": "重点看 Section 3.4.2(公式 3.5–3.7)与 Table 2 的四种混合域 RL 机制,再看 Table 4/5/6/7 的分阶段 ablation 判断各阶段增益来源。"
+      }
+    },
+    {
+      "rank": 8,
+      "key": "arxiv:2609.15779",
+      "title": "EvoOntology: A Self-Evolving Ontology Layer for Data Agents",
+      "title_zh": "EvoOntology:面向数据智能体的自演化本体层",
+      "score": 4,
+      "bucket": "adjacent",
+      "domain_fit": 3,
+      "transfer_value": 5,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.15779",
+      "url": "https://arxiv.org/abs/2609.15779",
+      "published": "2026-09-21",
+      "tldr": "为数据智能体设计一个可自我演化的本体层,用于持续组织与更新其领域知识结构。",
+      "why": "自演化结构化记忆的机制与长时程智能体的记忆组织问题相通,但其面向数据/表格智能体,与具身场景距离较远。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "Data agent 面对表格/文件/数据库等异构数据时，只能通过 SQL、file reader 等通用工具盲探 schema、猜测概念位置，形成持续的 agent–data gap；已有的 semantic layer 多为人工预定义、全量塞进 prompt，既难扩展到大异构数据源，也无法适配不同 agent 的行为。",
+        "method": "EvoOntology 把 ontology 封装成一个 MCP server，含三层：Content Layer（Terms / Mappings / Constraints / Evidence 四类节点 + Semantic Relations / Structural References 两类边的 typed graph）、Schema Layer（节点、边与引用规则的对象模型）、Tool Layer（browse(q,k,n) 与 resolve(I,c) 两个工具 + session manifest，只有 manifest 进 prompt，细节按需检索）。构建阶段由 builder agent 对训练 workload 抽候选概念、发 probe query 验证后再提交（evidence-grounded commitment）得到初始 L0；演化阶段从历史轨迹抽出 signature，用 attribution α 归因到 Content / Tool / Schema 单一层级，做局部 typed patch，再与 parent 在同一验证集上做 backbone-conditional 成对评测，提升 ≥ τ 才接受（Eq.2），被拒的 patch 会记录以避免重复无效更新。",
+        "key_contributions": [
+          "提出首个面向 data agent 的自主交互式 ontology layer，封装为 MCP server，让 agent 在 runtime 通过工具按需查询异构数据语义，而非被动接收 prompt 元数据。",
+          "给出 builder agent + workload-guided probing + evidence-grounded commitment 的初始 ontology 自动构建流程。",
+          "给出四步自演化闭环（diagnose → attribute → typed patch → backbone-conditional paired gate），并在三个 benchmark、六个 backbone 上验证一致性提升。",
+          "通过 ablation 量化 gate / attribution 是承重件（去掉 gate 掉 11.2，去掉 attribution 掉 6.3），并给出 Content/Tool/Schema 三层互补的证据。"
+        ],
+        "sim_benchmarks": [
+          "DDR-Bench (10-K)",
+          "InsightBench",
+          "BIRD (Oracle Knowledge)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "未做预训练；以三个 benchmark 的 workload 作为构建/演化/评测数据（DDR-Bench 10-K 多源研究报告、InsightBench 的 CSV 商业分析集、BIRD 的真实数据库 text-to-SQL），并采用 A/B 两折 split-and-swap 评测。",
+        "compute": "论文未明确说明训练算力；方法不训练模型，仅调用六个 API backbone（GPT-5.5、GPT-5.6-sol、Claude-Sonnet-5、Claude-Opus-4.8、DeepSeek-V4-Flash、Qwen3.5-Flash），只报告 token 成本：Evolved 后每任务 42.0K tokens，比 Baseline 的 52.6K 低约 20%（Table 8）。",
+        "results_headline": "DDR-Bench Trajectory-Wise 六个 backbone 平均 +17.8 点（Qwen3.5-Flash +4.8 到 GPT-5.5 +26.7）；BIRD 上 EX 平均 +7.4、VES +8.6；InsightBench 平均仅 +1.9（DeepSeek-V4-Flash +6.1）；对照的静态 semantic layer 注入 Baseline+SL 在 Claude-Sonnet-5 上反而掉 15.0 点。",
+        "baselines": [
+          "ReAct (Baseline w/o Ontology)",
+          "Baseline + SL (static semantic layer in prompt)",
+          "ReAct + Memory (episodic memory, Reflexion 类)",
+          "DIN-SQL",
+          "DAIL-SQL",
+          "TA-SQL",
+          "MAC-SQL",
+          "MCS-SQL",
+          "CHESS",
+          "Pandas Agent",
+          "AgentPoirot"
+        ],
+        "limitations": "作者未显式讨论局限；可读到的是跨 backbone 迁移会掉 6.6–10.9 点、需各 backbone 独立演化，说明演化结果高度 backbone-specific；InsightBench 类短参考答案任务上增益已饱和（+1.9），且方法依赖训练 workload 与历史轨迹，冷启动或分布外任务的收益不确定。",
+        "code_release": "https://github.com/ruc-datalab/EvoOntology",
+        "relevance_detail": "虽属 data agent 而非具身方向，但机制可迁移到你关心的『memory / tool use / 闭环自适应』：Table 1 显示同一份语义内容以静态 prompt 注入会掉点（Claude-Sonnet-5 −15.0），改用 MCP 工具按需检索才普遍涨点，这对在 VLA/具身 agent 里放长时记忆或场景语义模块时有直接设计启示（按需 tool 检索 vs 全量 context 注入）。其『失败轨迹 → 归因到模块层级 → 单层局部 patch → 成对门控只接受正增益』的自演化范式，以及 Table 5 量化出 gate（−11.2）与 attribution（−6.3）是承重件，是可复用的在线维护 skill/memory 库的工程配方；Figure 5b 的 backbone-specific store 结果（交叉迁移掉 6.6–10.9）也提示 policy/predictor 相关的结构可能不宜强行跨 backbone 共享，可类比 V3/LWv2 中为不同 action head 或 predictor 设计共享 vs 私有结构的取舍。",
+        "followup": "重点看 5 节 ablation：Table 5（gate/attribution 承重）、Table 6（三层互补）、Table 7（Mappings/Evidence 承重）、Fig 7 归因分布，以及 Table 8 的 token 成本对比。"
+      }
+    },
+    {
+      "rank": 9,
+      "key": "arxiv:2609.20942",
+      "title": "When AI Reviews Train AI Reviewers: Scientific-Judgment Collapse and Mitigation",
+      "title_zh": "当 AI 评审训练 AI 评审者:科学判断的坍缩与缓解",
+      "score": 7,
+      "bucket": "explore",
+      "domain_fit": 4,
+      "transfer_value": 7,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.20942",
+      "url": "https://arxiv.org/abs/2609.20942",
+      "published": "2026-09-21",
+      "tldr": "研究用 AI 评审结果去训练 AI 评审模型时出现的判断坍缩现象,并提出缓解方法。",
+      "why": "它揭示了模型自生成反馈闭环中的分布坍缩风险,这对自监督预测目标(如 JEPA 式 latent 预测中的表示坍缩)与自生成数据训练有直接的警示价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "当 LLM 生成的论文评审进入后续训练语料，审稿模型会「学习前代模型的判断」，形成递归训练闭环；论文要回答的问题是：在评审场景下，用合成评审做监督会不会让下一模型的科学判断变窄（作者称之为 scientific-judgment collapse），以及如何缓解。",
+        "method": "以 Llama 3.1 8B 为基座，先用 ICLR 2018–2023 官方评审做 LoRA SFT 得到 M1，再用 M1 为 ICLR 2024 论文生成合成评审，按 p∈{0%,33%,66%,100%} 的合成比例混合官方评审训练四个 M2 变体（初始化/过滤/优化完全相同，只变比例）。度量用评分离散度（标准差、熵）、同论文语义距离（jina-embeddings-v3 嵌入的平均成对余弦距离）和语料级 spread-to-centroid。缓解方案 TrustReviewer 分两步：(1) 训练期用统一 curation（去重复/过短/结构不合规，64k token 上限）构建 112,743 条 paper–review、约 1.9B token 语料做单阶段 SFT；(2) 推理期 paired activation steering，用 5,000 对同论文『官方评审 − 自生成评审』的 last-token hidden state 均值得到层间 steering 向量 v_steer，在最后一层（layer 31）、α=0.15 加到 residual stream 上，无需再训练或额外标注。",
+        "key_contributions": [
+          "形式化并实现了 LLM 科学评审的递归训练反馈闭环，设计了只变合成评审比例 p 的受控实验（Sec. 2.1）。",
+          "发现 scientific-judgment collapse：合成监督压缩评分分布（std 1.63→1.44），并使同论文语义多样性随 p 单调下降约 11%（0.159→0.142）、语料级语义 spread 下降约 5%（0.609→0.579）。",
+          "提出开源系统 TrustReviewer，训练期 curation + 测试期 paired activation steering 双阶段干预，在推荐一致性上超过所有对比模型。",
+          "开源策展后的评审训练语料与代码，支持可复现的审稿模型训练与判断多样性分析。"
+        ],
+        "sim_benchmarks": [],
+        "real_robot": "未做真机实验",
+        "datasets": "OpenReview 上 ICLR 2018–2025 官方评审（PDF 经 Marker 转 Markdown，仅保留正文）；策展后训练语料 112,743 条 paper–review、约 1.9B token；固定 2,000 篇 held-out 论文（跨 2018–2025）用于评测，并从训练与 steering 向量估计中排除。",
+        "compute": "LoRA（rank 64、scaling 128、dropout 0.05、全 target module），最大上下文 64k token，per-device batch 1、梯度累积 16、3 epoch、bfloat16 + FlashAttention-2；M1 学习率 2e-5、M2 学习率 2e-6；8B 模型规模。具体 GPU·days 论文未明确说明（致谢提到 NAIRR Pilot 算力支持）。",
+        "results_headline": "TrustReviewer 在 held-out 集上 exact recommendation match 75.40%（OpenReviewer 73.10%、Qwen3.6-35B-A3B 61.85%、Llama 初始化 33.93%），MAD 1.079 最低，评分熵 2.18 高于所有 baseline（OpenReviewer 2.10、Qwen 1.94、Llama 1.53），逼近官方评审的 2.38；test-time steering 相对同 checkpoint 无 steering 把 exact match 从 73.85%→75.40%（+1.55 pt）、熵 2.13→2.18。",
+        "baselines": [
+          "Meta-Llama-3.1-8B-Instruct",
+          "OpenReviewer",
+          "Qwen3.6-35B-A3B"
+        ],
+        "limitations": "受控实验只覆盖一个递归步、一个基座模型家族（Llama 3.1 8B）和一个评审领域（ICLR），多代递归是否会累积恶化仍是开放问题；且语义嵌入距离只是实质多样性的代理，多样性高不等于评审质量高，exact match/MAD 衡量的是与官方评分分布的一致性而非判断正确性。",
+        "code_release": "已开源：代码 https://github.com/hosytuyen/TrustReviewer，数据集 https://huggingface.co/collections/hosytuyen/trustreviewer，项目页 https://hosytuyen.github.io/projects/TrustReviewer",
+        "relevance_detail": "这不是机器人论文，但有三处可直接迁移的机制：(1) 它用与 model collapse 同源的语言给出一个精确现象——只要监督来自模型自身输出，即使官方数据仍保留在混合里，分布的『多样性』（标准差、熵、同论文语义距离）也会随合成比例单调收缩，这对 V3/LWv2 里 JEPA 式 future latent 预测的自生成 target / teacher-student 目标设计是一个直接警示：应以 entropy / pairwise latent distance 而不是只以预测误差来判断是否表征塌缩（对应 Sec. 2.3.1–2.3.3、Fig. 2–3）。(2) 测试期 paired activation steering 只用同输入下『参考输出 − 自生成输出』的 last-token hidden state 均值构造方向，在单层（layer 31）、α=0.15 下就拿到 +1.55 pt 而不动参数（Sec. 3.2、Appx. C），这是把「参考轨迹 vs 策略轨迹」的表征差直接当作推理期控制器，可类比用于在不重训的情况下纠偏 VLA 的 action head 或 latent predictor。(3) 它的数据策展判据（重复行 / 重复 30-gram / 最短长度 / 结构合法性 / 超长过滤，Appx. A）与「用多样性指标而非单一精度做评测」的做法，可直接借到 VLA 训练数据的 quality filtering 与 world model 评测协议里。",
+        "followup": "重点看 Sec. 3.2 + Appx. C 的 steering 向量构造与超参网格（层与 α 的消融），以及 Fig. 3 的两个多样性指标曲线和 Appx. G 的局限讨论。"
+      }
+    }
+  ]
+}
