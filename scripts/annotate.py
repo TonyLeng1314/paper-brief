@@ -23,6 +23,10 @@ class ModelUnavailableError(RuntimeError):
     """The configured provider cannot route the requested model."""
 
 
+class QuotaExhaustedError(RuntimeError):
+    """The account is out of credit / over its billing quota."""
+
+
 def is_model_unavailable_error(error: Exception) -> bool:
     message = str(error).lower()
     return any(
@@ -35,30 +39,86 @@ def is_model_unavailable_error(error: Exception) -> bool:
         )
     )
 
+
+def is_quota_error(error: Exception) -> bool:
+    """Out-of-credit, not rate-limiting.
+
+    Retrying or continuing past this just burns the rest of the run and lands a
+    near-empty brief, so the caller aborts instead.
+    """
+    message = str(error).lower()
+    return any(
+        marker in message
+        for marker in (
+            "insufficient_quota",
+            "insufficient balance",
+            "insufficient_user_quota",
+            "exceeded your current quota",
+            "payment required",
+            "billing_not_active",
+            "account is not active",
+            "余额不足",
+            "额度不足",
+        )
+    )
+
 ANNOTATION_INSTRUCTIONS = """You are scoring and annotating papers for the researcher whose profile is in the
-system message above. Optimize for broad, high-quality discovery rather than
-forcing every paper to support the researcher's current project.
+system message above. Their core field is embodied intelligence: VLA models,
+world / world-action models (WAM), and robot learning. That core field is the
+spine of the brief. They ALSO want neighbouring work they can take inspiration
+from — neuroscience and computational cognition in particular — but such a paper
+earns its place by carrying a mechanism, finding, or reframing that reaches the
+core field, never by being competent work in its own field.
 
 You will receive a JSON array of papers. For EACH paper, output an object with:
 - "key": the paper's dedup key (echo back exactly what was given)
 - "title_zh": Chinese translation of the paper title. Keep technical English
-  acronyms (JEPA / VLA / SE(3) / LoRA / VLM / DINOv2 / VICReg / SIGReg 等) as English.
+  acronyms (JEPA / VLA / WAM / SE(3) / LoRA / VLM / DINOv2 / VICReg / SIGReg 等) as English.
   Method names with colons stay: e.g. "UWM-JEPA:在信念空间中想象的预测世界模型".
 - "tldr": ONE sentence in CHINESE summarizing what the paper actually does.
 - "why": ONE concrete sentence in CHINESE explaining why the paper is worth
   reading. The value may be direct utility, a transferable mechanism, or a new
   direction. Mention V3/LWv2 ONLY when there is a genuine specific connection.
   Do not force a current-project connection and do not default to "弱信号".
-- "bucket": exactly one of "direct", "adjacent", or "explore", following the profile.
-- "domain_fit": integer 0-10 for fit to the researcher's STABLE interests.
+- "bucket": exactly one of:
+    "direct"   — the paper is ITSELF about embodied agents, robot manipulation /
+                 navigation / locomotion, VLA or robot foundation models, world
+                 models or action-conditioned prediction, or embodied
+                 benchmarks / datasets / sim. Physical or simulated embodiment
+                 is present.
+    "adjacent" — not embodied work, but you can name the specific mechanism or
+                 finding that reaches embodied policies or world models.
+                 Neuroscience and computational cognition normally belong here:
+                 predictive coding, active inference, internal/forward models,
+                 motor control, hippocampal replay, place/grid cells, cognitive
+                 maps, successor representations, neural population geometry,
+                 embodied cognition. For those, report what the brain appears to
+                 compute and the evidence for it — do NOT invent a robotics
+                 benchmark claim the paper never makes. If you cannot name the
+                 connection in the "why" sentence, this is NOT adjacent.
+    "explore"  — genuinely surprising work that could open a new direction even
+                 though no transfer path is visible yet. A competent paper in an
+                 unrelated field with nothing to carry over is NOT explore, it
+                 is a low score.
+- "domain_fit": integer 0-10 for fit to the researcher's core field. Calibration:
+  9-10 embodied/VLA/world-model paper squarely on their agenda;
+  7-8 robotics or world-model adjacent with clear embodied framing;
+  4-6 general ML, or neuroscience/cognition touching prediction, control, memory
+      or spatial representation, with a real nameable path into embodied work;
+  0-3 another field entirely (speech, medical imaging, pure theory, networking,
+  recommender systems, generic LLM benchmarking) — be willing to use this range.
 - "transfer_value": integer 0-10 for reusable method/evidence/tooling value.
+  For a neuroscience paper this is the weight of the idea it lends, not whether
+  it ships code.
 - "novelty": integer 0-10 for horizon-expanding or assumption-challenging value.
-- "score": integer 0-10 for overall reading priority. A high-novelty explore
-  paper can score highly even without a direct current-project connection.
+- "score": integer 0-10 for overall reading priority. Weight domain_fit heavily:
+  an off-field paper needs exceptional transfer_value or novelty to clear 6.
 
 IMPORTANT: title_zh, tldr, why MUST be in Chinese (中文). Technical jargon stays English.
 
-Output ONLY a JSON array, no preamble, no markdown fences. Schema:
+Output ONLY a JSON array with one object per input paper, no preamble, no
+markdown fences. Keep every field short — the whole array must fit in one reply.
+Schema:
 [{"key":"...","title_zh":"...","tldr":"...","why":"...","bucket":"adjacent","domain_fit":6,"transfer_value":8,"novelty":7,"score":7}, ...]
 """
 
@@ -103,13 +163,165 @@ def _extract_json_array(text: str) -> list[dict]:
     return json.loads(m.group(0))
 
 
+def _salvage_objects(text: str) -> list[dict]:
+    """Pull whole objects out of a truncated array so a cut-off reply still pays.
+
+    A response that hits max_tokens ends mid-object; everything before it is
+    still valid and represents real work already paid for.
+    """
+    out: list[dict] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escaped = False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start >= 0:
+                try:
+                    out.append(json.loads(text[start : i + 1]))
+                except json.JSONDecodeError:
+                    pass
+                start = -1
+    return out
+
+
+def _call_model(
+    client: "openai.OpenAI",
+    model: str,
+    system_prompt: str,
+    batch: list[Paper],
+    thinking: bool,
+    max_tokens: int,
+) -> Any:
+    payload = json.dumps([_paper_to_dict(p) for p in batch], ensure_ascii=False)
+    request: dict[str, Any] = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": f"Annotate the following {len(batch)} papers:\n\n{payload}",
+            },
+        ],
+        "extra_body": {"thinking": {"type": "enabled" if thinking else "disabled"}},
+    }
+    if not thinking:
+        request["temperature"] = 0.2
+    return client.chat.completions.create(**request)
+
+
+def _annotate_chunk(
+    client: "openai.OpenAI",
+    model: str,
+    system_prompt: str,
+    batch: list[Paper],
+    thinking: bool,
+    max_tokens: int,
+    label: str = "",
+) -> list[dict]:
+    """Annotate one chunk; on failure split it and retry the halves.
+
+    A single unparsable reply used to take all ten of its papers down with it,
+    which is where 30-70%% of daily candidates were disappearing. Splitting
+    keeps the loss proportional to the actual failure.
+    """
+    try:
+        resp = _call_model(client, model, system_prompt, batch, thinking, max_tokens)
+    except Exception as e:
+        if is_quota_error(e):
+            raise QuotaExhaustedError(
+                f"LLM provider reports the account is out of quota: {e}"
+            ) from e
+        if is_model_unavailable_error(e):
+            raise ModelUnavailableError(
+                f"Model {model!r} is unavailable; check the model ID and OPENAI_BASE_URL."
+            ) from e
+        log.error("LLM call failed for chunk %s (%d papers): %s", label, len(batch), e)
+        if len(batch) == 1:
+            return []
+        mid = len(batch) // 2
+        return _annotate_chunk(
+            client, model, system_prompt, batch[:mid], thinking, max_tokens, f"{label}a"
+        ) + _annotate_chunk(
+            client, model, system_prompt, batch[mid:], thinking, max_tokens, f"{label}b"
+        )
+
+    choice = resp.choices[0]
+    usage = getattr(resp, "usage", None)
+    if usage:
+        log.info(
+            "chunk %s: papers=%d prompt=%d completion=%d",
+            label, len(batch),
+            getattr(usage, "prompt_tokens", 0),
+            getattr(usage, "completion_tokens", 0),
+        )
+    text = choice.message.content or ""
+    truncated = getattr(choice, "finish_reason", None) == "length"
+
+    try:
+        items = _extract_json_array(text)
+    except (ValueError, json.JSONDecodeError):
+        items = _salvage_objects(text)
+        if items:
+            log.warning(
+                "chunk %s: array unparsable, salvaged %d/%d objects",
+                label, len(items), len(batch),
+            )
+    if isinstance(items, dict):
+        items = [items]
+    elif not isinstance(items, list):
+        items = []
+    items = [it for it in items if isinstance(it, dict)]
+
+    if len(items) >= len(batch):
+        return items
+
+    if len(batch) == 1:
+        if not items:
+            log.warning("chunk %s: single paper produced no usable annotation", label)
+        return items
+
+    log.warning(
+        "chunk %s: got %d/%d annotations (truncated=%s) — splitting and retrying",
+        label, len(items), len(batch), truncated,
+    )
+    done = {it.get("key") for it in items if it.get("key")}
+    remaining = [p for p in batch if p.key() not in done]
+    mid = max(1, len(remaining) // 2)
+    retried = _annotate_chunk(
+        client, model, system_prompt, remaining[:mid], thinking, max_tokens, f"{label}a"
+    )
+    if remaining[mid:]:
+        retried += _annotate_chunk(
+            client, model, system_prompt, remaining[mid:], thinking, max_tokens, f"{label}b"
+        )
+    return items + retried
+
+
 def annotate_papers(
     papers: list[Paper],
     research_profile: str,
     model: str = "deepseek-v4-flash",
     api_key: str | None = None,
-    batch_size: int = 10,
+    batch_size: int = 5,
     thinking: bool = False,
+    max_tokens: int = 16000,
 ) -> dict[str, Annotation]:
     """Annotate papers in small batches; returns mapping {paper.key() -> Annotation}.
 
@@ -129,10 +341,12 @@ def annotate_papers(
     )
 
     system_prompt = (
-        "You are an expert research assistant curating a broad daily research "
-        "brief for an embodied-intelligence researcher. Below is their long-form "
-        "profile. Treat stable interests and the discovery policy as primary; "
-        "the current project is only one optional lens.\n\n"
+        "You are an expert research assistant curating a daily research brief "
+        "for an embodied-intelligence researcher working on VLA models and "
+        "world / world-action models. Below is their long-form profile. Their "
+        "core field comes first, and neighbouring fields — neuroscience and "
+        "computational cognition included — are wanted for inspiration, but "
+        "must earn their place through a nameable connection.\n\n"
         "===== RESEARCHER PROFILE =====\n"
         + research_profile.strip()
         + "\n\n"
@@ -141,63 +355,30 @@ def annotate_papers(
 
     out: dict[str, Annotation] = {}
     by_key = {p.key(): p for p in papers}
+    batch_size = max(1, batch_size)
 
     for i in range(0, len(papers), batch_size):
         batch = papers[i : i + batch_size]
-        batch_payload = json.dumps([_paper_to_dict(p) for p in batch], ensure_ascii=False)
-
-        try:
-            request: dict[str, Any] = {
-                "model": model,
-                "max_tokens": 8000,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": f"Annotate the following {len(batch)} papers:\n\n{batch_payload}",
-                    },
-                ],
-                "extra_body": {
-                    "thinking": {"type": "enabled" if thinking else "disabled"}
-                },
-            }
-            if not thinking:
-                request["temperature"] = 0.2
-            resp = client.chat.completions.create(**request)
-        except Exception as e:
-            if is_model_unavailable_error(e):
-                raise ModelUnavailableError(
-                    f"Model {model!r} is unavailable at {base_url}; check the "
-                    "model ID and OPENAI_BASE_URL."
-                ) from e
-            log.error("LLM call failed for batch %d-%d: %s", i, i + len(batch), e)
-            continue
-
-        usage = getattr(resp, "usage", None)
-        if usage:
-            log.info(
-                "batch %d: prompt=%d completion=%d total=%d",
-                i // batch_size,
-                getattr(usage, "prompt_tokens", 0),
-                getattr(usage, "completion_tokens", 0),
-                getattr(usage, "total_tokens", 0),
-            )
-
-        text = resp.choices[0].message.content or ""
-        try:
-            items = _extract_json_array(text)
-        except (ValueError, json.JSONDecodeError) as e:
-            log.warning("Could not parse batch %d: %s", i // batch_size, e)
-            continue
+        items = _annotate_chunk(
+            client,
+            model,
+            system_prompt,
+            batch,
+            thinking,
+            max_tokens,
+            label=str(i // batch_size),
+        )
 
         for it in items:
+            if not isinstance(it, dict):
+                continue
             k = it.get("key")
             if not k or k not in by_key:
                 continue
 
-            def score_field(name: str) -> int:
+            def score_field(name: str, source: dict = it) -> int:
                 try:
-                    value = int(it.get(name, 0))
+                    value = int(source.get(name, 0))
                 except (TypeError, ValueError):
                     value = 0
                 return max(0, min(10, value))
@@ -217,4 +398,10 @@ def annotate_papers(
                 novelty=score_field("novelty"),
             )
 
+    missing = len(papers) - len(out)
+    if missing:
+        log.warning(
+            "Annotation incomplete: %d/%d papers annotated, %d lost",
+            len(out), len(papers), missing,
+        )
     return out

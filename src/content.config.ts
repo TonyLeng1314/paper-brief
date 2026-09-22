@@ -14,6 +14,7 @@ const posts = defineCollection({
         unseen: z.number().default(0),
         llm_candidates: z.number().default(0),
         annotated: z.number().default(0),
+        deep_read: z.number().default(0),
       })
       .optional(),
     papers: z.array(

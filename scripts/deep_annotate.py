@@ -15,7 +15,12 @@ from typing import Any
 
 import openai
 
-from annotate import ModelUnavailableError, is_model_unavailable_error
+from annotate import (
+    ModelUnavailableError,
+    QuotaExhaustedError,
+    is_model_unavailable_error,
+    is_quota_error,
+)
 from deep_read import _safe_id, fetch_pdf_text
 from sources import Paper
 
@@ -36,7 +41,6 @@ English jargon: VLA / JEPA / SE(3) / LoRA / LIBERO / RoboTwin / DINOv2 / etc):
   "sim_benchmarks":     ["LIBERO", "RoboTwin", ...]      // 用到的仿真/bench; 没有则 []
   "real_robot":         "真机设置:机器人型号 + 任务 + 数据规模。没做实验则填 '未做真机实验'",
   "datasets":           "预训练/主训练数据(OXE / DROID / Ego4D 等)。没说则 '未说明'",
-  "compute":            "训练算力 / 模型规模(参数量 / GPU·days)。没说则 '未说明'",
   "results_headline":   "一句话:主要数值结果与 baseline 对比的关键数字",
   "baselines":          ["baseline 方法 1", "baseline 方法 2", ...]
   "limitations":        "1-2 句:作者承认或可读出的局限",
@@ -50,6 +54,11 @@ Rules:
 - 数字要具体(SR 86→91,而不是"有提升")。
 - relevance_detail 不许写"和你的研究有关"这种废话,也不要强行关联当前项目。
 - 找不到对应信息时,字段写 "论文未明确说明" 而不是瞎编。
+- 非机器人论文(神经科学 / 认知科学 / 纯 ML 等)在 sim_benchmarks / real_robot /
+  datasets 这些机器人专属字段上写 "不适用",不要硬套。这类论文的
+  method / key_contributions / results_headline 照常写该领域自己的实验与证据
+  (被试数、记录方式、统计量、消融等),relevance_detail 说清楚它给具身智能
+  提供的是什么机制或反直觉结论,不要编造论文没做过的机器人实验。
 - Output **ONLY** the JSON object. No preamble. No markdown.
 """
 
@@ -63,7 +72,6 @@ class DeepAnnotation:
     sim_benchmarks: list[str] = dataclasses.field(default_factory=list)
     real_robot: str = ""
     datasets: str = ""
-    compute: str = ""
     results_headline: str = ""
     baselines: list[str] = dataclasses.field(default_factory=list)
     limitations: str = ""
@@ -138,7 +146,6 @@ def _ann_from_dict(key: str, d: dict) -> DeepAnnotation:
         sim_benchmarks=lst("sim_benchmarks"),
         real_robot=s("real_robot"),
         datasets=s("datasets"),
-        compute=s("compute"),
         results_headline=s("results_headline"),
         baselines=lst("baselines"),
         limitations=s("limitations"),
@@ -174,8 +181,12 @@ def deep_annotate_papers(
     system_prompt = (
         "You are an expert research assistant who reads the FULL TEXT of an "
         "arxiv paper and produces a structured Chinese summary tailored to the "
-        "researcher whose profile is below. Stable interests and the discovery "
-        "policy are primary; current projects are optional context only.\n\n"
+        "researcher whose profile is below. Their core field is embodied "
+        "intelligence: VLA models, world / world-action models, and robot "
+        "learning. Judge everything against that field first — but they also "
+        "read neighbouring work, neuroscience especially, for ideas, so a "
+        "non-robotics paper should be summarised on its own terms with the "
+        "transferable mechanism made explicit.\n\n"
         "===== RESEARCHER PROFILE =====\n"
         + research_profile.strip()
         + "\n\n"
@@ -227,6 +238,10 @@ def deep_annotate_papers(
                 request["temperature"] = 0.2
             resp = client.chat.completions.create(**request)
         except Exception as e:
+            if is_quota_error(e):
+                raise QuotaExhaustedError(
+                    f"LLM provider reports the account is out of quota: {e}"
+                ) from e
             if is_model_unavailable_error(e):
                 raise ModelUnavailableError(
                     f"Model {model!r} is unavailable at {base_url}; check the "

@@ -4,6 +4,7 @@ from __future__ import annotations
 import dataclasses
 import datetime as dt
 import logging
+import os
 import re
 import time
 from typing import Iterable
@@ -17,6 +18,12 @@ log = logging.getLogger(__name__)
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 HF_PAPERS_URL = "https://huggingface.co/papers"
 USER_AGENT = "paper-brief/1.0 (https://github.com/)"
+
+# arxiv.org rate-limits shared egress IPs (GitHub Actions runners especially)
+# and answers with HTTP 429. Retry with backoff instead of silently yielding an
+# empty feed — a day with no arxiv results is a broken run, not a quiet one.
+ARXIV_QUERY_RETRIES = 4
+ARXIV_RETRY_BASE_SECONDS = 8
 
 
 @dataclasses.dataclass
@@ -36,34 +43,154 @@ class Paper:
         return f"title:{re.sub(r'[^a-z0-9]+', '', self.title.lower())}"
 
 
-def fetch_arxiv(categories: list[str], max_per_category: int = 50) -> list[Paper]:
-    """Pull the latest preprints from each arxiv category."""
-    out: list[Paper] = []
-    client = arxiv.Client(page_size=max_per_category, delay_seconds=10, num_retries=2)
-    for cat in categories:
+@dataclasses.dataclass
+class ArxivFetch:
+    """Outcome of an arxiv pull, so callers can tell 'empty' from 'broken'."""
+
+    papers: list[Paper]
+    attempted: int = 0
+    failed: list[str] = dataclasses.field(default_factory=list)
+
+    @property
+    def all_failed(self) -> bool:
+        return self.attempted > 0 and len(self.failed) == self.attempted
+
+
+def _result_to_paper(r: "arxiv.Result") -> Paper:
+    aid = r.get_short_id().split("v")[0]
+    return Paper(
+        title=r.title.strip().replace("\n", " "),
+        authors=[a.name for a in r.authors],
+        abstract=r.summary.strip().replace("\n", " "),
+        arxiv_id=aid,
+        url=r.entry_id,
+        source="arxiv",
+        published=r.published.date() if r.published else None,
+    )
+
+
+def _run_arxiv_query(
+    client: "arxiv.Client", query: str, max_results: int, label: str
+) -> list[Paper] | None:
+    """Run one arxiv query with backoff. None = the query never succeeded."""
+    for attempt in range(ARXIV_QUERY_RETRIES):
         search = arxiv.Search(
-            query=f"cat:{cat}",
-            max_results=max_per_category,
+            query=query,
+            max_results=max_results,
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending,
         )
         try:
-            for r in client.results(search):
-                aid = r.get_short_id().split("v")[0]
-                out.append(
-                    Paper(
-                        title=r.title.strip().replace("\n", " "),
-                        authors=[a.name for a in r.authors],
-                        abstract=r.summary.strip().replace("\n", " "),
-                        arxiv_id=aid,
-                        url=r.entry_id,
-                        source="arxiv",
-                        published=r.published.date() if r.published else None,
-                    )
-                )
+            return [_result_to_paper(r) for r in client.results(search)]
         except Exception as e:
-            log.warning("arxiv fetch failed for %s: %s", cat, e)
-    return out
+            if attempt == ARXIV_QUERY_RETRIES - 1:
+                log.error("arxiv query %s failed after %d attempts: %s",
+                          label, ARXIV_QUERY_RETRIES, e)
+                return None
+            wait = ARXIV_RETRY_BASE_SECONDS * (2**attempt)
+            log.warning(
+                "arxiv query %s failed (attempt %d/%d): %s — retrying in %ds",
+                label, attempt + 1, ARXIV_QUERY_RETRIES, e, wait,
+            )
+            time.sleep(wait)
+    return None
+
+
+def build_topic_query(categories: list[str], terms: list[str]) -> str:
+    """`(cat:a OR cat:b) AND (abs:"t1" OR abs:"t2")` for arxiv's search API."""
+    cat_clause = " OR ".join(f"cat:{c}" for c in categories)
+    term_clause = " OR ".join(f'abs:"{t}"' for t in terms)
+    return f"({cat_clause}) AND ({term_clause})"
+
+
+@dataclasses.dataclass
+class TopicLane:
+    """A set of search terms paired with the categories they make sense in.
+
+    One category list cannot serve two fields. Searching neuroscience terms
+    across cs.CV/cs.LG/cs.AI returned 2 q-bio.NC papers out of 100: "replay"
+    matches every RL replay buffer, and cs.AI out-publishes q-bio.NC by two
+    orders of magnitude, so on a date-sorted page real brain work never
+    appears. The same terms restricted to q-bio.NC returned 78 out of 100.
+    """
+
+    name: str
+    categories: list[str]
+    terms: list[str]
+
+
+def topic_lanes_from_config(arxiv_cfg: dict) -> list[TopicLane]:
+    """Read `topic_lanes`, falling back to the flat topic_categories/terms form."""
+    default_categories = arxiv_cfg.get("topic_categories") or []
+    lanes: list[TopicLane] = []
+    for raw in arxiv_cfg.get("topic_lanes") or []:
+        terms = raw.get("terms") or []
+        categories = raw.get("categories") or default_categories
+        if terms and categories:
+            lanes.append(
+                TopicLane(
+                    name=str(raw.get("name") or "topic"),
+                    categories=list(categories),
+                    terms=list(terms),
+                )
+            )
+    if lanes:
+        return lanes
+
+    flat_terms = arxiv_cfg.get("topic_terms") or []
+    if flat_terms and default_categories:
+        return [TopicLane("topic", list(default_categories), list(flat_terms))]
+    return []
+
+
+def fetch_arxiv(
+    categories: list[str],
+    max_per_category: int = 50,
+    topic_lanes: list[TopicLane] | None = None,
+    max_per_topic_query: int = 80,
+    terms_per_query: int = 12,
+) -> ArxivFetch:
+    """Pull preprints from arxiv.
+
+    `categories` are fetched as a recency firehose — right for small, on-topic
+    feeds like cs.RO. Everything else is searched by topic, because the large
+    categories cannot be sampled by recency (cs.CV and cs.LG each take 500+
+    submissions a day, so the newest 60 is just the last couple of hours).
+    Each lane carries its own categories; see TopicLane for why that matters.
+    """
+    out: list[Paper] = []
+    attempted = 0
+    failed: list[str] = []
+    # arxiv.org asks for >=3s between requests; the client enforces it for us.
+    client = arxiv.Client(page_size=100, delay_seconds=3.0, num_retries=3)
+
+    for cat in categories:
+        attempted += 1
+        papers = _run_arxiv_query(client, f"cat:{cat}", max_per_category, cat)
+        if papers is None:
+            failed.append(cat)
+            continue
+        log.info("arxiv %s: %d papers", cat, len(papers))
+        out.extend(papers)
+
+    for lane in topic_lanes or []:
+        chunks = [
+            lane.terms[i : i + terms_per_query]
+            for i in range(0, len(lane.terms), terms_per_query)
+        ]
+        for i, chunk in enumerate(chunks):
+            attempted += 1
+            label = f"{lane.name}[{i + 1}/{len(chunks)}]"
+            query = build_topic_query(lane.categories, chunk)
+            papers = _run_arxiv_query(client, query, max_per_topic_query, label)
+            if papers is None:
+                failed.append(label)
+                continue
+            log.info("arxiv %s: %d papers (%s…)", label, len(papers), chunk[0])
+            out.extend(papers)
+
+    return ArxivFetch(papers=out, attempted=attempted, failed=failed)
+
 
 
 def fetch_huggingface_papers(date: dt.date | None = None) -> list[Paper]:
@@ -106,8 +233,15 @@ def fetch_huggingface_papers(date: dt.date | None = None) -> list[Paper]:
 
 
 def _s2_get(path: str, params: dict | None = None) -> dict | None:
-    """Hit S2 graph API with light retry on 429."""
+    """Hit S2 graph API with light retry on 429.
+
+    S2 throttles anonymous traffic hard. Set SEMANTIC_SCHOLAR_API_KEY to get a
+    usable quota; without it this feed contributes very little.
+    """
     headers = {"User-Agent": USER_AGENT}
+    api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
+    if api_key:
+        headers["x-api-key"] = api_key
     for attempt in range(3):
         try:
             r = requests.get(f"{S2_BASE}{path}", params=params, headers=headers, timeout=20)
@@ -177,7 +311,7 @@ def enrich_arxiv_metadata(papers: list[Paper]) -> None:
     if not missing:
         return
     ids = [p.arxiv_id for p in missing]
-    client = arxiv.Client(page_size=min(50, len(ids)), delay_seconds=10, num_retries=2)
+    client = arxiv.Client(page_size=min(100, len(ids)), delay_seconds=3.0, num_retries=3)
     search = arxiv.Search(id_list=ids)
     by_id: dict[str, arxiv.Result] = {}
     try:

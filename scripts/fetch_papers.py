@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import collections
 import datetime as dt
 import json
 import logging
@@ -11,9 +12,9 @@ from pathlib import Path
 
 import yaml
 
-from annotate import ModelUnavailableError, annotate_papers
+from annotate import ModelUnavailableError, QuotaExhaustedError, annotate_papers
 from deep_annotate import deep_annotate_papers
-from filter import prescore, select_for_llm
+from filter import candidate_lane, prescore, select_for_llm
 from render import render_day, update_index
 from sources import (
     Paper,
@@ -22,6 +23,7 @@ from sources import (
     fetch_arxiv,
     fetch_huggingface_papers,
     fetch_semantic_scholar_authors,
+    topic_lanes_from_config,
 )
 
 logging.basicConfig(
@@ -127,15 +129,44 @@ def select_by_bucket(
     return selected
 
 
+class ArxivFeedError(RuntimeError):
+    """The arxiv feed is required but every query failed."""
+
+
 def gather(cfg: dict, date: dt.date | None = None) -> list[Paper]:
     papers: list[Paper] = []
     sources = cfg.get("sources", {})
 
-    if sources.get("arxiv", {}).get("enabled", True):
-        cats = sources["arxiv"].get("categories", ["cs.LG"])
-        m = sources["arxiv"].get("max_per_category", 50)
-        log.info("Fetching arxiv: %s (%d each)", cats, m)
-        papers.extend(fetch_arxiv(cats, m))
+    arxiv_cfg = sources.get("arxiv", {})
+    if arxiv_cfg.get("enabled", True):
+        cats = arxiv_cfg.get("categories", ["cs.LG"])
+        m = arxiv_cfg.get("max_per_category", 50)
+        lanes = topic_lanes_from_config(arxiv_cfg)
+        log.info(
+            "Fetching arxiv: firehose=%s (%d each), topic lanes: %s",
+            cats, m,
+            ", ".join(f"{l.name}({len(l.terms)} terms in {'/'.join(l.categories)})"
+                      for l in lanes) or "none",
+        )
+        result = fetch_arxiv(
+            cats,
+            m,
+            topic_lanes=lanes,
+            max_per_topic_query=arxiv_cfg.get("max_per_topic_query", 80),
+        )
+        if result.failed:
+            log.error(
+                "arxiv queries failed: %d/%d (%s)",
+                len(result.failed), result.attempted, ", ".join(result.failed),
+            )
+        # Publishing an arxiv-less brief quietly poisons seen_papers.json with a
+        # day's worth of HF-only results, so a total failure is fatal by default.
+        if result.all_failed and arxiv_cfg.get("required", True):
+            raise ArxivFeedError(
+                f"All {result.attempted} arxiv queries failed (likely HTTP 429 "
+                "rate limiting). Refusing to publish a brief without arxiv."
+            )
+        papers.extend(result.papers)
 
     if sources.get("huggingface_papers", {}).get("enabled", True):
         log.info("Fetching HuggingFace Papers")
@@ -187,7 +218,11 @@ def main() -> int:
         dt.date.fromisoformat(args.date) if args.date else dt.datetime.utcnow().date()
     )
 
-    gathered = gather(cfg, today)
+    try:
+        gathered = gather(cfg, today)
+    except ArxivFeedError as exc:
+        log.error("%s", exc)
+        return 4
     if not gathered:
         log.warning("No papers fetched. Nothing to render.")
         return 0
@@ -217,10 +252,23 @@ def main() -> int:
     mode = filter_cfg.get("mode", "strict")
     cap = filter_cfg.get("llm_cap", 40)
     explore_fraction = filter_cfg.get("explore_fraction", 0.25)
+    adjacent_fraction = filter_cfg.get("adjacent_fraction", 0.0)
     candidates = select_for_llm(
-        prescored, mode=mode, cap=cap, explore_fraction=explore_fraction
+        prescored,
+        mode=mode,
+        cap=cap,
+        explore_fraction=explore_fraction,
+        adjacent_fraction=adjacent_fraction,
     )
     log.info("LLM candidates: %d (mode=%s, cap=%d)", len(candidates), mode, cap)
+    if mode == "broad":
+        lanes = collections.Counter(candidate_lane(c) for c in candidates)
+        # Worth logging every run: if `adjacent` collapses to ~0 the brief has
+        # quietly stopped surfacing cross-field work even though it still fetches it.
+        log.info(
+            "  lanes: core=%d adjacent=%d explore=%d",
+            lanes["core"], lanes["adjacent"], lanes["explore"],
+        )
     if not candidates:
         log.info("No papers passed candidate selection; no brief written.")
         return 0
@@ -238,7 +286,7 @@ def main() -> int:
         triage_model = llm_cfg.get("triage_model") or llm_cfg.get(
             "model", "deepseek-v4-flash"
         )
-        batch_size = llm_cfg.get("batch_size", 10)
+        batch_size = llm_cfg.get("batch_size", 5)
         triage_thinking = bool(llm_cfg.get("triage_thinking", False))
         try:
             annotations = annotate_papers(
@@ -247,11 +295,19 @@ def main() -> int:
                 model=triage_model,
                 batch_size=batch_size,
                 thinking=triage_thinking,
+                max_tokens=llm_cfg.get("max_tokens", 16000),
             )
+        except QuotaExhaustedError as exc:
+            log.error("%s", exc)
+            return 5
         except ModelUnavailableError as exc:
             log.error("%s", exc)
             return 3
-        log.info("Annotated %d papers", len(annotations))
+        log.info(
+            "Annotated %d/%d candidates (%.0f%%)",
+            len(annotations), len(candidates),
+            100.0 * len(annotations) / max(1, len(candidates)),
+        )
         if not annotations:
             log.error(
                 "All LLM annotations failed for %d candidates; refusing to publish an empty brief.",
@@ -308,6 +364,9 @@ def main() -> int:
                 cache_dir=Path(args.cache_dir),
                 thinking=deep_thinking,
             )
+        except QuotaExhaustedError as exc:
+            log.error("%s", exc)
+            return 5
         except ModelUnavailableError as exc:
             log.error("%s", exc)
             return 3
@@ -325,6 +384,7 @@ def main() -> int:
             "unseen": len(papers),
             "llm_candidates": len(candidates),
             "annotated": len(annotations),
+            "deep_read": len(deep_annotations),
         },
     )
     log.info("Wrote %s", fp)

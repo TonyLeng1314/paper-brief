@@ -5,10 +5,88 @@
 sources:
   arxiv:
     enabled: true
-    # Core embodied-intelligence feeds plus adjacent language, 3D/graphics,
-    # and imaging sources where transferable ideas often appear first.
-    categories: [cs.RO, cs.CV, cs.LG, cs.AI, cs.CL, cs.GR, eess.IV]
-    max_per_category: 60
+    # `categories` is a recency firehose. Only put small, on-topic feeds here:
+    # taking the newest N from cs.CV or cs.LG just samples the last two hours.
+    categories: [cs.RO]
+    max_per_category: 150
+    # Large categories are searched by topic instead of by recency, so a world
+    # model paper posted to cs.LG without a cs.RO cross-list still shows up.
+    #
+    # Each lane carries its own categories. Running the neuro terms against the
+    # CS categories returned 2 q-bio.NC papers out of 100 — "replay" matches
+    # every RL replay buffer, and cs.AI out-publishes q-bio.NC by two orders of
+    # magnitude, so on a date-sorted page the brain papers never appear. The
+    # same terms restricted to q-bio.NC returned 78 out of 100.
+    max_per_topic_query: 100
+    topic_lanes:
+      - name: embodied
+        categories: [cs.CV, cs.LG, cs.AI, cs.CL, cs.GR, cs.MA, eess.SY]
+        terms:
+          - vision-language-action
+          - embodied
+          - world model
+          - robot manipulation
+          - robot policy
+          - robot learning
+          - latent action
+          - action-conditioned
+          - visuomotor
+          - manipulation policy
+          - dexterous manipulation
+          - humanoid
+          - egocentric video
+          - affordance
+          - sim-to-real
+          - spatial reasoning
+          - physical reasoning
+          - video prediction
+          - JEPA
+          - diffusion policy
+
+      # Brain work, searched where brain work is posted. Terms may be loose
+      # here ("replay", "motor control") because the category does the filtering.
+      - name: neuro
+        categories: [q-bio.NC]
+        terms:
+          - sensorimotor
+          - motor control
+          - motor cortex
+          - cerebellum
+          - hippocampal
+          - place cells
+          - grid cells
+          - cognitive map
+          - replay
+          - predictive coding
+          - active inference
+          - internal model
+          - forward model
+          - efference copy
+          - mental simulation
+          - embodied cognition
+          - neural population geometry
+          - successor representation
+          - free energy principle
+
+      # Brain-inspired work posted to the CS categories. Terms must be tight
+      # here for the opposite reason: no category filter is doing the work.
+      - name: neuro-in-ml
+        categories: [cs.LG, cs.AI, cs.NE, cs.CV]
+        terms:
+          - predictive coding
+          - active inference
+          - free energy principle
+          - efference copy
+          - cognitive map
+          - grid cells
+          - place cells
+          - successor representation
+          - neural population geometry
+          - embodied cognition
+          - hippocampal replay
+    # A total arxiv failure (HTTP 429) aborts the run instead of publishing an
+    # HF-only brief and poisoning seen_papers.json with it.
+    required: true
   huggingface_papers:
     enabled: true
   semantic_scholar_authors:
@@ -17,98 +95,224 @@ sources:
 
 # ---- Relevance ranking ----
 # These keywords boost ranking. In broad mode they are not eligibility gates.
+# Weights live in scripts/filter.py: high 5.0 / medium 1.0 / cross 0.5.
+# Keep `medium` free of generic ML vocabulary — three generic hits must never
+# outrank one real high-priority hit.
 keywords:
   high_priority:
+    # Core identity of the brief.
     - VLA
     - vision language action
+    - vision-language-action
     - embodied intelligence
     - embodied agent
+    - embodied AI
     - robot learning
     - robot manipulation
+    - robot policy
     - generalist robot policy
+    - robot foundation model
+    - visuomotor policy
     - world model
+    - world action model
+    - WAM
     - video world model
     - action-conditioned prediction
-    - model-based control
-    - visuomotor policy
-    - robot foundation model
+    - latent action model
+    - action tokenizer
+    - interactive world model
+    - neural simulator
+    - world simulator
+    - dual-system policy
+    - action chunking
+    - cross-embodiment
+    - dexterous manipulation
+    - whole-body control
+    - mobile manipulation
+    - embodied chain-of-thought
     - spatial intelligence
-    - 3D reasoning
+    # Named systems — a mention is almost always a real topical hit.
+    - OpenVLA
+    - pi0
+    - RT-2
+    - GR00T
+    - Octo
+    - RDT
+    - Genie
+    - Cosmos
+    - V-JEPA
+    - Dreamer
+    # Benchmarks / datasets — same idea.
+    - LIBERO
+    - CALVIN
+    - RoboTwin
+    - ManiSkill
+    - RLBench
+    - SimplerEnv
+    - Meta-World
+    - BEHAVIOR
+    - Habitat
+    - Isaac Lab
+    - Genesis
+    - Open X-Embodiment
+    - DROID
+    - Ego4D
   medium_priority:
+    # Specific enough that a hit means something. Generic ML terms belong in
+    # cross_domain, where they are worth 0.5 instead of 1.0.
     - JEPA
     - joint embedding predictive
     - latent world
-    - latent action
     - video prediction
     - future prediction
-    - representation learning
-    - self-supervised learning
-    - multimodal learning
-    - vision-language model
-    - video-language model
-    - policy learning
+    - action prediction
     - imitation learning
-    - reinforcement learning
     - diffusion policy
     - flow matching policy
-    - planning
+    - model-based control
+    - model predictive control
+    - offline reinforcement learning
+    - goal-conditioned
     - long-horizon
-    - memory
-    - test-time adaptation
-    - sim-to-real
-    - synthetic data
-    - data mixture
-    - curriculum learning
-    - active learning
-    - uncertainty
-    - causal representation
-    - object-centric
-    - 3D reconstruction
-    - neural rendering
-    - egocentric video
+    - task planning
+    - motion planning
+    - navigation policy
+    - locomotion
+    - grasping
+    - tactile
+    - teleoperation
     - human-robot interaction
+    - sim-to-real
+    - object-centric
+    - scene dynamics
+    - physical common sense
+    - 3D reasoning
+    - 3D reconstruction
+    - point cloud
+    - egocentric
+    - video-language model
+    - vision-language model
+    - test-time adaptation
+    - episodic memory
+    # Neuroscience — kept at medium because these terms are specific enough
+    # that a hit is a real signal, not generic ML vocabulary. The polysemous
+    # ones ("internal model" also means IMC control, "forward model" also means
+    # the physics operator in an inverse problem) live in cross_domain instead,
+    # so they cannot lift a paper into the reserved adjacent lane on their own.
+    - predictive coding
+    - active inference
+    - free energy principle
+    - efference copy
+    - sensorimotor
+    - motor control
+    - motor cortex
+    - cerebellum
+    - basal ganglia
+    - hippocampal
+    - place cells
+    - grid cells
+    - cognitive map
+    - successor representation
+    - hippocampal replay
+    - embodied cognition
+    - neural population geometry
+    - neural manifold
+    - mental simulation
+    - dopamine
+    - reward prediction error
+    - spiking neural network
+    - neuroscience
   cross_domain:
+    # Transferable mechanisms and general ML vocabulary. Deliberately cheap.
+    # A term belongs to exactly one tier — listing it twice silently doubles its
+    # weight and makes the tiers mean nothing.
     - predictor design
     - representation collapse
     - non-contrastive
     - self-supervised representation
+    - self-supervised learning
+    - representation learning
+    - multimodal learning
+    - policy learning
+    - reinforcement learning
+    - planning
+    - memory
+    - uncertainty
+    - curriculum learning
+    - active learning
+    - synthetic data
+    - data mixture
+    - causal representation
+    - neural rendering
     - SIGReg
     - VICReg
     - layer selection
     - DINOv2
-    - V-JEPA
-    - predictive coding
-    - active inference
-    - audio self-supervised
+    - internal model
+    - forward model
     - mixture of experts
     - efficient attention
     - token compression
     - mechanistic interpretability
 
 authors:
+  # World models / predictive learning
   - Mahmoud Assran
   - Adrien Bardes
-  - Mathilde Caron
+  - Yann LeCun
+  - Danijar Hafner
+  - Yilun Du
+  - Sherry Yang
+  - Yuandong Tian
+  # Robot learning / VLA
   - Sergey Levine
   - Chelsea Finn
-  - Yuandong Tian
-  - Yann LeCun
   - Pieter Abbeel
+  - Shuran Song
+  - Yuke Zhu
+  - Xiaolong Wang
+  - Deepak Pathak
+  - Dhruv Shah
+  - Danny Driess
+  - Ted Xiao
+  # Vision / spatial
+  - Mathilde Caron
+  - Jiajun Wu
+  - Katerina Fragkiadaki
+  # Neuroscience / computational cognition
+  - Karl Friston
+  - Ila Fiete
+  - Timothy Behrens
+  - Kimberly Stachenfeld
+  - Matthew Botvinick
+  - Daniel Wolpert
 
 # ---- Filtering ----
 filter:
   # broad = keyword-ranked core plus a reserved zero-keyword exploration slice.
   mode: broad
   llm_cap: 180
-  explore_fraction: 0.30
+  # The exploration slice is sampled by hash, i.e. randomly. It is worth a few
+  # slots for serendipity, not a third of the brief.
+  explore_fraction: 0.15
+  # Reserved share of `llm_cap` for papers with only weak signal (medium/cross
+  # keywords, no high-priority hit). Without it a busy VLA day fills all 180
+  # candidate slots with 10-25 point papers and a 2-point neuroscience paper
+  # never reaches the LLM at all — the cross-field lane would exist only at
+  # fetch time. Unused slots flow back to the core lane.
+  adjacent_fraction: 0.3
   # Successfully reviewed keys are persisted so old papers are not re-scored.
   seen_path: src/data/seen_papers.json
-  min_score: 4
-  max_papers_per_day: 25
+  min_score: 5
+  max_papers_per_day: 30
+  # `direct` used to cap at 10 and hit that cap on most full days, which cut
+  # exactly the papers this brief exists for. `adjacent` and `explore` are the
+  # inspiration lanes — cross-field work (neuroscience especially) lands there,
+  # so they get real capacity rather than leftovers.
   bucket_quotas:
-    direct: 10
-    adjacent: 9
-    explore: 6
+    direct: 15
+    adjacent: 10
+    explore: 5
 
 # ---- LLM annotation ----
 # Uses an OpenAI-compatible endpoint. Provide OPENAI_API_KEY and optionally
@@ -120,5 +324,8 @@ llm:
   # Fast deterministic triage; reserve reasoning tokens for full-paper reading.
   triage_thinking: false
   deep_read_thinking: true
-  batch_size: 10
+  # Small batches with generous headroom: a truncated reply costs a retry of
+  # that chunk, not the whole batch.
+  batch_size: 5
+  max_tokens: 16000
   research_profile_path: research_profile.md
