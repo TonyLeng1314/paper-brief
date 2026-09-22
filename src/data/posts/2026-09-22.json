@@ -1,0 +1,282 @@
+{
+  "date": "2026-09-22",
+  "kept": 5,
+  "reviewed": 5,
+  "min_score": 4,
+  "funnel": {
+    "fetched": 21,
+    "unseen": 5,
+    "llm_candidates": 5,
+    "annotated": 5
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2609.24984",
+      "title": "WorldCrafter: Consistent Video World Model with Implicit 3D-aware Memory",
+      "title_zh": "WorldCrafter: 具有隐式 3D 感知记忆的一致视频世界模型",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.24984",
+      "url": "https://arxiv.org/abs/2609.24984",
+      "published": "2026-09-22",
+      "tldr": "提出 WorldCrafter,通过隐式 3D 感知记忆机制让视频世界模型在长时生成中保持几何与外观一致性。",
+      "why": "隐式 3D 记忆是解决长时视频世界模型漂移的可迁移机制,可直接对照 V3/LWv2 中 latent 预测的时序一致性与记忆设计。",
+      "hits": [
+        "H:world model",
+        "H:video world model",
+        "M:memory",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "视频 world model 支持交互式探索动态环境，但在长时程、跨视角回访时很难忠实保留先前观测，相机控制精度也会随之退化。",
+        "method": "在 chunk-wise 自回归 video DiT（从 Helios-base 初始化）上引入隐式 3D-aware memory：memory encoder 由 LagerNVS encoder 初始化，把历史 latent frames 与相对相机位姿编码成紧凑 representation R；pose-conditioned memory readout（LagerNVS 浅层 decoder 初始化，用未来轨迹上采样的 query poses Cq 查询）输出固定数量 memory tokens M，与 recent context z_r、当前噪声 z_t 拼接为 [M; z_r; z_t] 送入 DiT self-attention。相机控制沿用 UCPE/PRoPE 式 parallel camera-attention，只作用于噪声部分 z_t；历史帧按 max-coverage 贪心检索（保留最新帧 + 联合 FoV 覆盖最大的 8 帧）。推理端用 pyramid distribution-matching 蒸馏加高/低噪声双模型实现流式生成。",
+        "key_contributions": [
+          "提出隐式 3D-aware memory 机制：把历史 latent frames 编码进固定 token 预算的紧凑表征，无需显式 depth 对应即可完成 memory 写入与读出。",
+          "将该 memory 接入 camera-controllable 自回归视频生成，回访一致性相对最强 baseline 提升 47.6%，相机控制误差也最低，并给出受控消融。",
+          "通过少步蒸馏构建实时交互系统 WorldCrafter-fast，在分钟级探索中维持视觉质量，4-GPU 机器上 16 fps。",
+          "对比 context memory、frozen encoder、pose-free readout、similarity retrieval 等变体，验证设计选择（Table 4）。"
+        ],
+        "sim_benchmarks": [
+          "自建长时程 world model benchmark（145 张图 / 725 条轨迹，含闭环回访）",
+          "VBench（custom-input mode）"
+        ],
+        "real_robot": "未做真机实验（纯视频世界模型工作，无机器人平台，评估在静态/动态场景的生成视频上进行）",
+        "datasets": "训练：Open-Sora-Plan (OSP，stage1 用 760k 视频)、DL3DV、MIND 合成视频；用 Depth Anything 3 估计 metric-scale 相机位姿，Qwen2.5-VL 生成 caption，并筛出相机跟随运动主体的 OSP 子集。评测：HappyOyster、Project Genie、网络来源与 GPT-Image2 生成的 145 张图像 + 文本描述。",
+        "compute": "视频 DiT 从 Helios-base 初始化（未给参数量）。4 阶段训练：stage1 用 32 GPU、bs 32、5,000 iter（760k OSP 视频）；stage2 用 32 GPU、bs 128（40k 过滤后 OSP + 6k DL3DV，冻结 DiT）；stage3 用 16 GPU、bs 16、5,000 iter；stage4 用 32 GPU、bs 32、8,000 iter 后再加 MIND 1,000 iter 联合训练 memory encoder/readout/DiT/camera 分支。蒸馏后 WorldCrafter-fast 在 4-GPU 机器上 16 fps。",
+        "results_headline": "回访一致性显著领先：MEt3R 0.166 / LPIPS 0.255 / PSNR 18.016 / SSIM 0.517，最强 baseline Lyra 2.0 为 0.334 / 0.487 / 14.050 / 0.390；蒸馏版 WorldCrafter-fast 达 LPIPS 0.186、PSNR 20.868；相机控制 RotErr 13.536 vs 16.145、TransErr 1.475 vs 1.538；VBench Overall 81.910 为最高。",
+        "baselines": [
+          "DreamX-World",
+          "Alaya-EVOKE",
+          "HY-WorldPlay",
+          "Lyra 2.0",
+          "Echo-WM",
+          "LingBot-World 2",
+          "Matrix-Game 3.5",
+          "SANA-WM"
+        ],
+        "limitations": "作者承认在特别复杂或超长相机轨迹上一致性仍会失效，且每个 chunk 都重新编码全部历史带来额外延迟（提出改为增量 streaming memory encoder）；此外评测指标依赖 VGGT-Ω 估计的相机轨迹与几何，benchmark 为自建而非标准数据集。",
+        "code_release": "论文给出项目主页 https://drexubery.github.io/WorldCrafter，未提及代码或权重是否开源。",
+        "relevance_detail": "直接相关：它让「请求视角/动作」决定历史如何被压缩进固定 token 预算——pose-guided readout 相比 pose-free 把 MEt3R 从 0.251 降到 0.166、LPIPS 从 0.333 降到 0.255（Table 4），这正是 V3/LWv2 中 action-conditioned latent prediction 的 predictor/readout 设计问题；joint optimization vs frozen memory encoder 的消融（Table 4、Fig 5(b)）直接回答记忆/表征模块该不该与生成器共适应，可迁移到 JEPA 式 future latent predictor 的 target/stop-gradient 取舍；max-coverage history retrieval 与 21.7× 更低的 memory 处理延迟（Fig 5(c)，0.062s vs 1.346s）为长时程闭环 agent 的 memory 写入/读出提供可复用工程方案。差异是它做像素视频生成而非 VLA 动作输出，但 memory 读写机制可移植。",
+        "followup": "重点读 Sec 3.3（memory encoder 与 pose-guided readout）配合 Table 4 消融与 Fig 5(a)(b) 的联合优化曲线，再看 Sec 3.5 的蒸馏与高/低噪声双模型细节。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2609.22966",
+      "title": "Transferring the Intelligence of VLMs to Robotic Control",
+      "title_zh": "将 VLM 的智能迁移到机器人控制",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 7,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.22966",
+      "url": "https://arxiv.org/abs/2609.22966",
+      "published": "2026-09-22",
+      "tldr": "研究如何把预训练 VLM 的语义与推理能力迁移到机器人控制策略中,而非从头训练专用 VLA。",
+      "why": "直接触及 VLA 的核心问题——VLM 知识如何接入动作输出,对动作头挂载位置与表征对齐有参考价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "论文要回答一个迁移性问题：主要在数字世界（网页/文本/图像）预训练出来的 VLM 智能，能否不做任何任务特定的机器人数据训练，仅靠一个合适的动作接口加少量 in-context 示例，就直接迁移到物理世界的机器人闭环操作控制中。",
+        "method": "RoboDawn 把一个冻结的 agentic VLM 放在闭环里：动作接口以夹爪交互点 GIP 为基准，只暴露离散语义原语 {arm move axis d, rotate rot θ, point pose, gripper open/close, home, wait, done}（平移每步≤20cm、旋转≤90°），VLM 每轮接收多视角图像、机器人状态、上一轮执行反馈 F 与交互记忆 M，输出结构化响应（进度估计、当前计划、scratchpad）加动作命令，再由执行算子解析并规划到目标 GIP 位姿、物理执行后回传反馈并更新记忆。ICL 方案把演示上下文分解为共享的 command primer D_prim（展示每条原语的效果）与任务级演示 D_task，并把专家轨迹从连续低层动作转写成语义命令序列；长程任务按每轮 16 张图像的预算做稀疏化，只保留抓取、旋转、完成等语义关键轮。",
+        "key_contributions": [
+          "提出 RoboDawn：用人类直觉的离散运动原语接口让 agentic VLM 闭环操作机器人，无需任何任务特定的机器人训练，给出'把数字世界智能迁移到具身控制'的新路径。",
+          "设计与接口对齐的 ICL 方案：把演示拆成命令 primer + 任务演示、把专家轨迹转写成同一命令空间，使冻结 VLM 仅用一条演示就能大幅提升（RoboTwin 2.0 C2R 53.2%→73.6%）。",
+          "在 RoboTwin 2.0 C2R 与 RoboDojo 上仅用一条 in-context 演示达到 SOTA，超过全部 robot-trained 与 agentic 方法，且无参数更新。",
+          "把同一框架零样本部署到真机 Franka/Piper，验证跨仿真-真机、跨 embodiment 的可迁移性。"
+        ],
+        "sim_benchmarks": [
+          "RoboTwin 2.0 C2R (50 个双臂任务, domain-randomized 评测, 每任务 10 runs)",
+          "RoboDojo (42 个任务, 5 runs)"
+        ],
+        "real_robot": "Franka 上做 block-in-basket 与 block stacking，Piper 上做 cloth folding，零样本（Gemini 3.8 Flash）部署；演示来自人类遥操作，但具体演示条数与数据规模论文未明确说明；成功率分别 9/10、5/10、0/10。",
+        "datasets": "不做机器人数据预训练或微调。仿真 in-context 演示取自 benchmark 自带的 scripted expert（RoboTwin 2.0 clean 集，每任务 50 条，与对照策略训练用的是同一批轨迹），真机演示来自人类遥操作；在线评测时最多使用 1 条演示。",
+        "compute": "论文未明确说明（方法本身不含训练，无 GPU·days / 参数量信息）。仅报告推理开销：RoboDawn 平均 9.74 s 推理、3.4 条命令、2.09 s 动作执行，inference-to-motion 比 4.65。",
+        "results_headline": "RoboTwin 2.0 C2R 上 RoboDawn（GPT-6 Astra）零样本 53.2%、单条 in-context 演示 73.6%，超过 π0.5 的 46.0%、LingBot-VLA 50.4% 与 SOTA agentic 方法 HarnessVLA(CC) 58.4%；RoboDojo 上 35.67%→47.17%，远超 full-set 后训练的 DM0.5（19.34%）。",
+        "baselines": [
+          "π0.5",
+          "LingBot-VLA",
+          "HarnessVLA (Codex / Claude Code)",
+          "X-VLA",
+          "GR00T-1.7",
+          "Fast-WAM",
+          "X-WAM",
+          "StarVLA",
+          "GalaxeaVLA (G0)",
+          "Xiaomi-Robotics-0 / Xiaomi-Robotics-1",
+          "Hy-Embodied-0.5-VLA",
+          "G0.5",
+          "DM0.5",
+          "GPT-6 Astra (纯 agentic 对照)"
+        ],
+        "limitations": "作者承认四点：推理效率差（9.74 s vs π0.5 的 101 ms，I/M=4.65），不适合高频控制；对旋转/末端朝向类自由度的处理明显弱于平移（web 预训练里 3D 朝向表征少）；离散语义接口对接触附近的精细调整（抓取、插入、放置）粒度太粗；部署安全性未解决。另外零样本性能对底层 VLM 能力高度敏感（GPT-5.6-Luna 仅 14.4%）。",
+        "code_release": "论文给出项目页 https://RoboDawn.top/，代码/模型是否开源论文未明确说明。",
+        "relevance_detail": "这是 VLA / 世界模型主路线之外的一条强对照路线：不训练动作头、不改 VLM 参数，只用『低维离散语义接口 + 冻结 VLM 闭环推理 + ICL』就把 50 任务双臂 benchmark 做到超过 full-set 微调的 π0.5 与 LingBot-VLA，并明确引用证据说明大规模 VLA 动作微调可能损害通用能力——对『动作头该放哪、要不要动作头』这类 V3/LWv2 式问题提供了一个极端但具体的对照锚点。可迁移的工程机制很实：接口对齐的演示构造（D_prim ⊕ D_task、把连续专家轨迹重写进命令空间、长程任务 16 图预算的稀疏化策略）、Tab. 3(c) 的 harness 消融（去掉显式 reasoning 47.0→34.8，去掉 grid-based localization 47.0→32.4，说明空间 grounding 与显式推理是关键组件）、以及 Fig. 3 的 test-time command budget scaling（60→240 条命令，one-shot 31.2%→47.2%）和失败恢复/记忆机制。即便不采纳该架构，其接口设计与演示格式可直接用于 RoboTwin 上的 agentic baseline 对比与评测协议设计。",
+        "followup": "重点看 Sec. 3.3 的 ICL 拆解（D_prim/D_task、轨迹转写成命令空间、图预算稀疏化）、Tab. 3(c) harness 消融与 Tab. 2 效率对比、以及 Fig. 3 的 test-time scaling 曲线。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2609.23658",
+      "title": "Why Do Video Diffusion Models Violate Physics? Unveiling the Flaws in Attention Mechanisms",
+      "title_zh": "视频扩散模型为何违反物理? 揭示注意力机制的缺陷",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 8,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.23658",
+      "url": "https://arxiv.org/abs/2609.23658",
+      "published": "2026-09-22",
+      "tldr": "通过分析视频扩散模型的注意力模式,定位其生成违反物理规律内容的机制性原因。",
+      "why": "从注意力机制层面解释物理不合理生成,为世界模型的物理一致性诊断与架构改进提供了可复用的分析视角。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "SOTA 视频扩散模型视觉质量高但常生成违反物理规律的内容（半空弹跳、反重力悬浮、突然冻结）；已有方法依赖外部物理先验、prompt 改写或专用数据，既难扩展也没触及根因，本文转而研究模型内部机制，追问 motion planning 发生在哪里、如何发生、能否据此改进架构。",
+        "method": "以 Wan2.1-T2V-1.3B（DiT + Flow Matching）为对象做可解释性分析：用 cross-attention 轨迹模式 + attention entropy/support quality 定位前 5 步「先定形状」阶段，用 attribution patching（式 2，因果干预）度量各 head 对参考区域速度预测的贡献，把 cross-attention head 分成 4 类；再用 self-attention + mutual consistency / anchor-distance 分析每帧 candidate region 的竞争，发现 RoPE 的 spatial anchoring effect 导致空间注意力过度衰减。据此提出轻量修正：在 height/width 维度对 RoPE 旋转角加缩放 λ_h, λ_w<1（默认 0.75），仅作用于前 5 个去噪步；训练版用自定义 timestep sampler（前 10% 步以概率 p_early 采样）配合 LoRA 微调。",
+        "key_contributions": [
+          "首个针对 text-to-video 扩散模型 motion planning 的可解释性研究，给出可复用的分析框架与工具（cross-attention 指标、candidate region 提取、attribution patching）。",
+          "把「first shape, then details」从经验现象推进到机制层面：只有极少数 head（Type 3，如 L15H2）真正驱动运动，有明显轨迹模式的 head 未必负责运动规划（Type 4 消融后轨迹不变）。",
+          "揭示 self-attention 中 RoPE 的 spatial anchoring effect 这一隐藏缺陷：早期物理不合理的候选区域提前锁定，压过相邻帧更合理的候选，导致生成失败模式。",
+          "提出只改 RoPE 频率缩放的轻量方案，training-free 与 training-based 两种设置下均提升物理常识，且不改动原生可扩展性。"
+        ],
+        "sim_benchmarks": [
+          "VideoPhy（343 个 test case，solid-solid / solid-fluid / fluid-fluid）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练用 WISA（Wang et al., 2026b），含 80K 人工筛选、覆盖 17 种物理规律的视频；主分析用自建「篮球自由落体弹跳」prompt + 多随机种子；评测用 VideoPhy。",
+        "compute": "A800 GPU；分析基于 Wan2.1-T2V-1.3B（DiT 30 层、12 head、D=1536）并额外验证 14B；LoRA 微调 batch size 32、lr 1e-4、50 步推理；未给出总 GPU·days。",
+        "results_headline": "VideoPhy 上 Wan2.1-T2V-1.3B 基线 SA 53.64 / PC 29.45，改 RoPE 后 57.43 / 39.94；叠加 prompt refinement 达 86.30 / 58.89，LoRA+改 RoPE+PR 最高 87.46 / 62.68（对比 PR 单独 80.47 / 44.31、LoRA 单独 55.69 / 35.57）。",
+        "baselines": [
+          "Wan2.1-T2V-1.3B（base）",
+          "Prompt Refinement / PhyT2V (Xue et al., 2025)",
+          "LoRA (Hu et al., 2022)",
+          "VideoREPA (Zhang et al., 2026)"
+        ],
+        "limitations": "λ_h/λ_w 需要人工搜索/预设（默认 0.75，只能缓解不能根治），且主要针对 solid dynamics 与大幅运动，fluid-fluid 子集提升有限；分析仅限前 5 个去噪步与 T2V 场景，I2V 与少步自回归扩散模型的扩展留作 future work。",
+        "code_release": "开源于 https://github.com/Siriuslala/physics（同时提供可解释性分析与 RoPE 修改代码）",
+        "relevance_detail": "这条工作给「视频扩散模型作为 world model 为何物理不守恒」提供了一条非常具体、可检验的机制解释：Table 1 与 Section 6 的 λ 缩放说明问题出在 3D RoPE 的空间衰减让早期去噪提前锁定错误候选区域，而 Section 5 的 Fig.8/9 用 mutual consistency 量化「winner 被抢走」的竞争动力学。对做 latent world prediction / VLA 的人有两处可迁移点：(1) 若你的 future-latent predictor 也使用 RoPE 或多维位置编码，Section 5 的 spatial anchoring effect 与「降 λ 让早期步探索更多候选」可能同样适用，且成本仅为频率缩放；(2) Section 4.2 的 attribution patching + head 零消融（Fig.5 四象限，Type 3 vs Type 4）是套现成的定位「哪些 head 真正决定预测/规划」的因果工具，可直接搬到 V3/LWv2 中判断 predictor 里哪些 head 在承担未来帧/动作对齐，而不是只看注意力可视化。",
+        "followup": "重点看 Section 4.2 + Fig.5 的 head 四象限消融协议、Section 5 的 mutual consistency 指标与 Fig.8/9，以及 Appendix H.1 的 λ 与 p_early 消融（H.1.2 关于「只 tune attention 比 tune FFN 更好」的结论）。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2609.24972",
+      "title": "RRSI: Regularized Recursive Self-Improvement of Agent Harnesses",
+      "title_zh": "RRSI: 智能体 Harness 的正则化递归自我改进",
+      "score": 6,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.24972",
+      "url": "https://arxiv.org/abs/2609.24972",
+      "published": "2026-09-22",
+      "tldr": "提出带正则化的递归自我改进框架,让智能体自动迭代优化自身的 harness(工具与提示脚手架)而不崩溃。",
+      "why": "递归自我改进加正则化防止退化的思路,对长时程智能体的闭环自适应与工具使用迭代有借鉴意义。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM agent 的能力很大程度取决于包裹冻结 backbone 的 harness（prompt、control flow、工具接口、memory、context 管理）。近期方法用 LLM 迭代地 propose/select harness 编辑，形成 agent 系统级的 recursive self-improvement (RSI)，但在有限的 evolve set 上反复自适应会导致过拟合：evolve 分数大涨，到了 OOD benchmark 增益缩小甚至消失。",
+        "method": "RRSI 不限制 harness 的编辑空间（prompt/control flow/tool/skill/memory/subagent 都可改），而是正则化搜索轨迹。Proposal 侧三项：(1) L0-style 退火更新稀疏度，第 t 轮可捆绑的独立编辑数按 b_t = b_min+(b_max-b_min)·(1+cos(πt/T))/2 递减；(2) evidence-aware credit assignment，记录每个候选改的组件、假设、diff、分数/成本变化与是否被接受，被否证的机制作为负证据；(3) structured exploration，进度落在噪声带 δ 内即判定 stall，把一小部分 proposal 预算投向未探索组件。Selection 侧四项：critic 做 leakage screening（拒绝写死任务名/答案/benchmark-specific 逻辑的 diff，且在执行前就筛）、noise-adjusted floor（先在未改动 harness 上测出噪声带 δ，候选取须满足 Ŝ(H') ≥ S*−δ）、Ridge/L2-style complexity-aware acceptance（ΔS>δ 时要求 ΔC ≤ β0+β1ΔS，policy token 作为成本代理）、Lasso/L1-style structural pruning（剪掉 pruning window 内无正贡献的组件）。",
+        "key_contributions": [
+          "把 harness 演化中的 overfitting 明确定义为 RSI 的核心挑战，并归因到三种耦合行为：benchmark-specific fitting、noise chasing、complexity accumulation。",
+          "提出 RRSI，把 L0/L1/L2 式正则化类比迁移到 harness 搜索的 proposal 与 selection 两侧，同时保持编辑空间完全开放。",
+          "在 3 个 domain、8 个 benchmark 上同时提升 in-distribution held-out 与 OOD 迁移（最高 +14.1 evolve / +4.7 OOD）并降低推理成本（比未正则化演化少约 30% policy token），且 harness 可跨 backbone 迁移（Gemini 3.5 Flash 演化出的 harness 在从未参与搜索的 Gemini 3.1 Flash Lite 上仍 +3.4）。"
+        ],
+        "sim_benchmarks": [
+          "Terminal-Bench 2.1",
+          "SWE-bench Verified",
+          "Harvey LAB",
+          "JobBench",
+          "GDPval",
+          "APEX-Agents",
+          "EngDesign",
+          "Frontier-Eng"
+        ],
+        "real_robot": "未做真机实验；全文为纯软件侧 LLM agent / harness 研究，评测环境是容器化终端、法律工作 workspace、工程设计模拟器与 LLM-as-a-judge，不涉及真实机器人或物理仿真平台。",
+        "datasets": "无训练数据，全部是评测基准与 evolve split：Terminal-Bench 2.1（89 个容器化终端任务，单元测试判分）、Harvey LAB（120 个固定 evolve 任务 + 40 个 in-distribution pristine held-out）、EngDesign（61 个设计任务，各自冻结 simulator 判分）；OOD 用 SWE-bench Verified、JobBench、GDPval、APEX-Agents、Frontier-Eng。",
+        "compute": "论文未明确说明训练算力（backbone 全程冻结、无权重更新）。策略模型为 Claude Opus 4.8（三个 domain 统一）、以及 Gemini 3.5 Flash / Gemini 3.1 Flash Lite 做跨模型迁移；proposer、写跨轮失败 feedback 的 analyst、leakage critic 均由 Claude Opus 4.8 担任。成本以 policy token 计量：RRSI 2.42M tokens/trial、未正则化 3.80M、AHE 3.82M、未演化 H0 1.56M。",
+        "results_headline": "evolve split 最高 +14.1（Gemini 3.5 Flash 上 Terminal-Bench 2.1 64.6→78.7），六个 held-out split 全部不退化：SWE-bench Verified +1.8、Harvey LAB ID held-out +2.3、OOD agentic 平均 43.6 vs H0 39.7 与未正则化演化 40.3、Frontier-Eng +4.3 Medal points（+24.3% 相对），同时比未正则化演化少约 30% policy token。",
+        "baselines": [
+          "H0 (unevolved base harness)",
+          "Meta-Harness",
+          "AHE",
+          "TTHE",
+          "HarnessX",
+          "unregularized evolution (ablation)"
+        ],
+        "limitations": "作者承认：(1) 只研究 backbone 冻结的 harness 级 RSI，不涉及演化过程中更新模型权重；(2) 仍依赖有限 evolve set 与若干正则化超参（δ、β0、β1、pruning window、T），效果可能取决于 feedback 信号质量与搜索预算；(3) 跨域验证虽多，但是否适用于差异更大的 agent 架构、工具生态与更长期的自改进循环仍需更广验证。可读出的一点是评测集中在 coding / workspace / engineering design 三类文本-工具任务，缺少物理或具身环境。",
+        "code_release": "论文给出开源仓库 github.com/google-research/rrsi 与项目页 regularized-rsi.com（正文脚注），未说明是完整演化框架还是仅推理/复现脚本。",
+        "relevance_detail": "这篇属于 agent 自适应与评测方法学的可迁移工作，而非具身 VLA 本身。最值得拿走的是它的“自适应过拟合”视角与四个可直接复用的机制：先在未改动系统上估计噪声带 δ 再要求候选超过 S*−δ（防止一串小回归被当成噪声而滑下坡）、cost-budget 式接受准则 ΔC ≤ β0+β1ΔS、以及按窗口剪掉无正贡献组件；Table 2 的消融给出了清晰证据——去掉 acceptance 正则化后 evolve 分从 90.5 升到 91.5 但 OOD 从 43.6 掉到 41.0、token 涨到 3.59M，去掉全部正则化 evolve 最高（92.8）而 OOD 只剩 40.3（几乎等于未演化），这正是你在一套固定 RoboTwin/LIBERO 评测集上反复调 latent predictor、action head 附着位置或 token 化方案时同样会踩的坑：evolve 集上的提升有多少是可复用机制、有多少只是记住了这套任务的统计。此外它把 harness 视作可跨 backbone 迁移的“程序”（Table 3/4 中 Gemini 3.5 Flash 演化出的 harness 在更弱的 Gemini 3.1 Flash Lite 上仍 +30.4% 相对提升），这对“冻结 Qwen3-VL backbone + 外围预测/动作模块”的系统分层设计有参考价值。与 V3/LWv2 的联系是场景级而非算法级：只有当你打算把 VLA 的预测器/prompt/工具调用循环做成迭代自演化并需要在 held-out 任务上验迁移时，这里的 noise floor 与 complexity-aware acceptance 才直接可用。",
+        "followup": "先看 Section 4.3 的 Table 2 正则化消融与 Table 3/4 跨策略迁移，再看 Appendix C（尤其 C.3 对落在噪声带内候选的处理规则）和 Appendix D.1 的超参设置。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2609.23377",
+      "title": "One to More, More to One: Category-Aware Iterative Expert Training for Software Engineering Agents",
+      "title_zh": "One to More, More to One: 面向软件工程智能体的类别感知迭代专家训练",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2609.23377",
+      "url": "https://arxiv.org/abs/2609.23377",
+      "published": "2026-09-22",
+      "tldr": "针对软件工程智能体提出类别感知的迭代专家训练流程,先分门别类训练专家再融合回统一策略。",
+      "why": "分而治之再合并的专家训练范式可迁移到多任务机器人策略与 MoE 式动作头设计,但领域距离较远。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "仓库级 SWE 任务在维护意图、软件生态、修改规模上高度异质,用 pooled agentic RL 统一训练时会出现「category see-saw」:部分类别涨、部分类别跌,而单一的聚合 resolution 指标把这些反向变化完全掩盖。论文要问的是:能否按可观测的类别切分训练任务、训练同源专家,再把专家整合回一个可部署模型,同时提升整体与各类别成绩。",
+        "method": "三层机制:(1) SWE Labeler——证据驱动的层级标注系统,两条语义轴 Task Type(26 L1 / 119 L2)与 Repository Domain(21 L1 / 108 L2、每条标签绑定权威来源+操作规则+正证据+邻类边界),外加 modification scope / cognitive complexity / resolution time 三条 4 级序数轴;由 Repository Domain L1 用确定性规则 gψ 粗化为 A(service/data/security)、B(user-facing)、C(systems/tooling/runtime) 三类路由。(2) 每个类别一个同源专家,A/B/C 各自跑 Refresh–Repair–Expand(RRE) 循环:Agentic-miniRL(行为校正的截断重要性权重 + RLOO 组内基线 + K1 放在 reward path 而非 K3 作 loss + sign-aware proximal mask + seq-mean-segment-sum 的 turn-aware 归约)与 Repair SFT 交替,每阶段后用 verifier 重新估计 per-instance mastery,只回放自己产出的已通过轨迹、按低 mastery 加配额,并向前沿重选训练集。(3) Label-routed multi-teacher on-policy distillation(MOPD)把三个专家在 student 自己的长程轨迹上蒸馏成一个模型,并用 ReLU-gated reward extrapolation 只保留各 teacher 相对 reference 的改进方向。全程不使用外部大模型提供解轨迹或 action target。",
+        "key_contributions": [
+          "首次在 SWE 内部做类别粒度的专家分裂与整合:用可观测标签定义类别,训练类别专家,再用 label-routed MOPD 合并为单一 policy,并用类别级指标连接 see-saw 诊断与最终目标。",
+          "Refresh–Repair–Expand:把策略更新与数据选择耦合起来——刷新 instance mastery、用自身已验证成功轨迹做 Repair SFT、再从更大池中选出新的训练前沿,使专家自改进且不需要外部 trajectory teacher。",
+          "SWE Labeler:来源可追溯的多轴层级标注系统(47 个语义 family、227 个细粒度标签、12 个 scale level),可同时用于训练池构建、teacher 路由与类别级评测。",
+          "提出可量化的诊断指标 Gsim(所有类别的最小增益)与 SSG(see-saw gap = 总体增益 − 最小类别增益),把「聚合涨但某类跌」变成可测的数值。"
+        ],
+        "sim_benchmarks": [
+          "SWE-bench Pro (Pro-618,731 中审计后保留 618 题,Pro-A/B/C = 221/201/196)",
+          "SWE-bench Multilingual (300 题 / 42 repo / 9 语言)",
+          "SWE-bench Verified (500 题,仅用于标注画像与对照)"
+        ],
+        "real_robot": "未做真机实验(该工作为软件工程代码智能体,无机器人平台)",
+        "datasets": "自建可执行任务池:从已合并 PR 与关联 issue 抽取,用 RepoLaunch 构建 Docker 环境,LLM 改写为 issue 风格描述,做泄漏/去重/污染审计,并通过 gold patch 前后跑测试保留 F2P/P2P,约 32K 可执行候选;标注画像语料为 SWE-bench Verified/Pro/Multilingual 共 1,531 个实例。预训练数据论文未明确说明。",
+        "compute": "论文可见正文未明确说明 GPU·days;基线模型为 Qwen3.6-27B(文中命名为 Logics-SWE-Qwen3.6-27B),A/B/C 三个专家与 student 均由同一 base 出发,详细训练设置称在 Section 5(本次正文截断于 Section 4.4)。",
+        "results_headline": "最终 MOPD policy 在 Pro-618 上平均 resolution 58.04%(比 base 模型 +5.39 pp)、在 SWE-bench Multilingual 上 59.00%(+2.78 pp),且总体与各类别均优于 Pooled RL 与 Balanced RL 基线;Pooled RL 轨迹中存在总体微涨但最小类别增益为负的检查点(Gsim<0,SSG 拉大)。",
+        "baselines": [
+          "Pooled RL(全量 6,723 任务混合池联合 RL)",
+          "Balanced RL(按类别数量与 base pass-rate 分层匹配采样的平衡混合)",
+          "base policy π0(Logics-SWE-Qwen3.6-27B)"
+        ],
+        "limitations": "作者明确说明 label 是「可观测的操作性分组」而非潜在能力的分解,category 与 capability 非一一对应,因此结论不能解释为能力级 specialization;此外三类 A/B/C 的增益仍可能不等(SSG 非零),且评测集排除了 SWE-bench Pro 中 113 个被社区报告环境/verifier 有问题的实例,与官方分数不可直接比较。",
+        "code_release": "论文未提(github URL、权重、inference 代码均未在可见正文中出现)",
+        "relevance_detail": "这不是具身/世界模型论文,但有三点可迁移:(1)「用可观测类别标签切分任务池 → 训练同源专家 → 用 label-routed on-policy distillation 合并」这一分裂-整合范式,可搬到 VLA/机器人多任务后训练(例如按 LIBERO/RoboTwin 任务族或不同 embodiment 分 expert,再在 student 自身轨迹上做 MOPD),比单纯的混合数据配比更能定位类别间冲突;(2) RRE 的数据选择细节可直接借用——per-instance pass-rate mastery 刷新、只用自己 verifier 通过的成功轨迹做 Repair SFT 并按低 mastery 加配额、以及用 base-zero/base-one 随机扩池重选前沿,这套「课程+回放」对 V3/LWv2 的多任务数据配比与 replay 设计有具体参考价值;(3) 评估侧 Gsim/SSG 指标给出一个廉价的反聚合洗白检查,适合用来报告具身多任务套件上「总体涨但某任务族跌」的情况。Agentic-miniRL 的四个改动(K1 放 reward path 而非 K3 loss、RLOO 的 G=8 时单成功 rollout 优势 1 vs 均值中心化 7/8、turn-aware 归约)对长程稀疏奖励策略优化也有参考,但那是 LLM-agent 语境。",
+        "followup": "重点看 Section 5 的训练配置与 Pro-A/B/C 的 per-category 数值表(以及 Figure 2 的 see-saw 曲线),再看 4.5 节 MOPD 的 ReLU-gated reward extrapolation 公式与 Appendix B 的 label 规则/路由白名单。"
+      }
+    }
+  ]
+}
