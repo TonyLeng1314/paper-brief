@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-26",
+  "kept": 4,
+  "reviewed": 9,
+  "min_score": 5,
+  "funnel": {
+    "fetched": 133,
+    "unseen": 9,
+    "llm_candidates": 9,
+    "annotated": 9,
+    "deep_read": 4
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2610.32965",
+      "title": "RynnUnify: Towards Unified Embodied Brain",
+      "title_zh": "RynnUnify:迈向统一具身大脑",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2610.32965",
+      "url": "https://arxiv.org/abs/2610.32965",
+      "published": "2026-10-26",
+      "tldr": "提出统一的具身大脑模型,试图用单一架构统一感知、推理与动作生成等多类具身任务。",
+      "why": "统一具身大脑的架构选择与多任务/多模态联合训练方式,直接关系到 VLA 与 world-action model 的设计取舍,值得对照 V3/LWv2 的预测与动作头挂载方案。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 unified multimodal model 把「理解」和「生成」放在一起训练，但缺少支撑长程具身任务所需的 interleaved video–language reasoning：理解无法约束连续视频预测，静态视觉预测又忽略了中间动态，误差会在多步 rollout 中累积；同时还不清楚视频预测究竟在什么时候真正有助于对不可见未来状态的推理，也缺少把这类 UMM 转成机器人策略的路径。",
+        "method": "RynnUnify 是 16B 模型，沿用 Cosmos3 的 Mixture-of-Transformers：8B autoregressive reasoner + 8B rectified-flow diffusion generator，两分支通过 joint attention 交互。Reasoner 输入 task goal、初始/当前观测和历史 subtask，输出 <subplan>、结构化 <world_modeling> 视觉提示与 <duration>，再由 generator 生成对应视频片段，片段末帧回灌作为下一步观测，形成长程 visual planning 闭环。Generator 侧新增 cross-chunk scene memory（4 个独立编码的参考帧 token 拼在 main video tokens 之前）加前一段连续 prefix，支持 I2V / FL2V / 跨段续写三种模式；训练用 self-forcing（像素级 condition degradation、offline endpoint replacement、history+endpoint 联合替换）让模型适应自身预测误差。第三阶段用 BCPO（Branch-Conditional Policy Optimization，within-branch GSPO + soft D/G routing）训练一个 8B agent，自主决定「直接回答」还是「调用冻结的 UMM 生成视频再作答」。最后把全模型扩成 World-Action Model：reasoner 输出 continuous subtask latent，generator 据此预测未来视频，action head 从 generator 的视频特征回归动作。",
+        "key_contributions": [
+          "提出 16B MoT 统一具身模型 RynnUnify，以 interleaved video–language reasoning 把具身理解与长程视觉预测串成闭环（subplan → visual prompt → video → 新观测）。",
+          "设计 cross-chunk scene memory（4 参考帧 + 连续 temporal prefix）与 self-forcing 训练（噪声/模糊退化、离线端点替换、历史+端点联合替换），缓解长程 rollout 的外观漂移与误差累积。",
+          "提出 BCPO agentic RL：用 within-branch GSPO 优化两条推理路径，用分支间 reward 差构造 soft routing target，让 agent 学会何时值得调用视频生成（Rynn-GEU avg 44.0→50.0）。",
+          "把 UMM 扩展为 World-Action Model（latent planning + 联合 video-action 训练），并在 RoboCasa365 与 Astribot S1 真机上验证；同时发布 Rynn-VP、Rynn-GEU 两个评测长程视觉规划与预期推理的 benchmark。"
+        ],
+        "sim_benchmarks": [
+          "RoboCasa365（selected-20 composite tasks）",
+          "RoboTwin（用于构造 RynnUnify-Mess 数据）",
+          "Rynn-VP（新提出）",
+          "Rynn-GEU（新提出）",
+          "VSI-Bench",
+          "MMSI",
+          "ERQA",
+          "RoboSpatial",
+          "EmbSpatial",
+          "RefSpatial"
+        ],
+        "real_robot": "Astribot S1 双臂机器人，3 个真机任务，平均成功率 46.7%；任务覆盖需要躯体重定向的多步操作、精细物体抓取放置和有历史依赖的执行。真机数据的采集规模论文正文未明确说明。",
+        "datasets": "理解数据用 RynnBrain 预训练语料的 10% 子集约 2.0M 样本；visual planning 数据 55 万（human：RynnBrain-Planning / HiFi-UMI / OpenAoE）+ 60 万（robot：AgiBot-Beta / RoboMIND / RoboCOIN / RoboTwin / HIW-500）+ 86,800（RoboCasa365）+ 自采 egocentric loco-manipulation 视频；自建 RynnUnify-Spatial / Phys / Mess / ActionReasoning / Affordance / Area / Trajectory 共约 19.6 万 QA；视频生成数据合计 1,083,458 clips / 1,370.1 小时（含 PhysInOne、ScanNet++、RH20T 派生）。",
+        "results_headline": "Rynn-VP overall 54.80，比 Cosmos 3 Nano 的 45.05 高 9.75 分；Rynn-GEU avg 由 direct reasoning 的 44.0 提到 agentic 的 50.0（+6.0）；WAM 在 RoboCasa365 selected-20 上 51.5%（Cosmos 3 45.0 / Xiaomi-Robotics-1 46.0 / CMA 47.0），Astribot S1 真机 46.7%（π0.5 25.0 / GR00T 26.7）；公共具身理解 benchmark 上平均分为所比较 UMM 中最高。",
+        "baselines": [
+          "Cosmos 3 Nano",
+          "BAGEL",
+          "RxBrain",
+          "GPT-5.6 Terra + MiniMax-H3 流水线",
+          "Xiaomi-Robotics-1",
+          "CMA",
+          "π0.5",
+          "GR00T"
+        ],
+        "limitations": "作者承认长程 rollout 仍受预测误差与场景变化累积影响（scene memory + self-forcing 只是缓解）；且 Rynn-VP 上 GPT-5.6 Terra + MiniMax-H3 的外部流水线得分 65.71 明显高于 RynnUnify 的 54.80，说明单一统一模型在纯视觉规划质量上仍未超过大模型组合方案。此外大量数据标注与 prompt 改写依赖 GPT-5.6 系列（Terra/Luna）与 Qwen3.x，存在对闭源标注器的依赖；真机只评了 3 个任务，统计支撑较弱。",
+        "code_release": "已开源：https://github.com/alibaba-damo-academy/RynnUnify，权重见 https://huggingface.co/collections/Alibaba-DAMO-Academy/RynnUnify，项目页 https://alibaba-damo-academy.github.io/RynnUnify.github.io",
+        "relevance_detail": "这是典型的 direct 命中：world-action model + 统一具身大脑 + 自建 benchmark。两个点值得细看：(1) WAM 的接口设计——action head 不是接在 reasoner 上，而是从 generator 的视频特征回归动作，reasoner 只输出 continuous subtask latent 作为条件，这直接对应 V3/LWv2 里「action head 挂哪里」的问题，可作为 latent world prediction 与 action 解耦的对照方案（Section 5.1 + Figure 5）；(2) self-forcing 的三种条件退化（像素高斯噪声 σ~U(0,0.15)、下采样-上采样模糊 p=0.5、用缓存的自生成片段替换 GT 起点与历史）是解决 latent/video 预测在多步 rollout 中误差累积的具体工程手段，可迁移到 JEPA 式未来 latent 预测的训练中（Section 4.2.3）。另外 BCPO 的 direct vs generation 分支对比（44.0→50.0）给出一个可引用的经验结论：视觉预测并非总有用，需要学习 routing 才对收益有贡献，这对「何时该用 world model 做预测」的设计有直接参考价值。",
+        "followup": "重点看 Section 5（WAM 架构、action head 如何从 generator 视频特征取 token、latent subtask 监督信号）与 Section 4.2.3 self-forcing 的消融，以及 Appendix E 的 BCPO reward 设计与 Rynn-VP/Rynn-GEU 的评分协议。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2610.32909",
+      "title": "HoloBoxing: A Simple Recipe for Humanoid Boxing with 7 Minutes of Single-GPU Training",
+      "title_zh": "HoloBoxing:单卡 7 分钟训练人形机器人拳击的简单配方",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2610.32909",
+      "url": "https://arxiv.org/abs/2610.32909",
+      "published": "2026-10-26",
+      "tldr": "提出一套极简训练流程,在单张 GPU 上仅用约 7 分钟即可训练出人形机器人拳击动作策略。",
+      "why": "若其极低训练成本来自可复用的仿真环境与奖励/课程设计,这种训练效率配方可直接迁移到人形全身控制与快速迭代的机器人学习流程中。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "在已有通用全身控制器（HoloMotion v2）的前提下，人形机器人拳击这类需要对抗、接触与保持平衡的任务，最少还需要多少额外训练才能学会？论文想把\"关节级电机执行\"与\"任务决策\"解耦，用极短的单卡训练得到可对打的拳击策略。",
+        "method": "三阶段 recipe：(1) 先用 encoder E/decoder D 拟合\"未来窗口\"目标表征，把 5 个身体点×5 个未来时刻（20–100 ms）×9 维 = 225 维目标坐标压缩为 32 维归一化 latent action，只保留 decoder D；(2) measured-state imitation：冻结 controller 跟踪参考动作，采集实测量到的机器人观测与未来目标标签，planner fθ（MLP，hidden 256/128，输入 1095 维 mask 后仅保留 63 维自身状态 + 15 维对手位置）经冻结的 D 反传梯度做监督初始化；(3) 冻结 D 与 HoloMotion v2 低层控制器，用 PPO 先做 32 次 standing warmup，再用全新优化器状态做 128 次 interaction 更新（128 并行环境、24 步 rollout，奖励 = 0.8 task shaping + 0.2 AMP 风格判别）。执行链为 zt = N(fθ(M(ot))), gt = Dϕ(zt), at = πHM(ct, gt)。",
+        "key_contributions": [
+          "给出\"冻结全身控制器 + 32 维 latent 目标接口 + measured-state 模仿 + PPO\"的可复用分层适配 recipe，任务学习只更新一个小 planner（约 7 分钟单卡记账训练）",
+          "把 planner 的 action 维度从 225 维目标坐标压到 32 维 latent，并证明低重建误差不等于可执行：候选 decoder 验证 loss 更低（0.045326→0.044545）但多一次跟踪失败、丢 16 帧覆盖，因此被拒绝",
+          "用六策略、10 轮、150 场的固定 Elo 联赛（K=16）给出行为证据，并做匹配预算的组件消融（去模仿初始化 / 去 latent decoder）",
+          "系统给出训练时间记账与观测/表征诊断（观测选择、decoder 容量、reference→measured 目标迁移），明确区分\"任务适配成本\"与\"继承控制器的预训练成本\""
+        ],
+        "sim_benchmarks": [
+          "自建 HoloBoxing 擂台联赛（Warp 1.11.0 仿真、Unitree G1、统一 arena 与裁判规则，6 策略 150 场 Elo）"
+        ],
+        "real_robot": "未做真机实验。全部为 Unitree G1 仿真（128 并行环境、RTX 4090/5090）；作者在 limitations 中明确 real-robot boxing 与 transfer 尚未测试，仅在 RTX 4090 上做了 3.182 ms（p99 3.373 ms）的定姿推理微基准。",
+        "datasets": "InterHuman + 已发布的 RoboStriker 轨迹重定向到 G1，14 条原始动作共 212.88 s；先验拟合 21148/11074/3246（train/val/test）窗口，模仿初始化 2568 训练样本（6 条 InterHuman 动作）+ 6448 验证样本（2 条不同动作），属小数据实验。",
+        "results_headline": "7 分钟版本（422.2 s 记账，含复用的 47.2 s 先验拟合；新流程 375.0 s）在 6 策略联赛中 Elo 1541 排名第二（长版 21.4 min 为 1669 第一，RoboStriker 1524、GGSD run2 1476、去 latent decoder 1428、去模仿 1362）；对 GGSD 7–3、对 RoboStriker 4–6，但对 RoboStriker 有效接触 4:85；观测研究里 current state + 对手信息验证 loss 0.44447，比十帧历史 + 对手（0.53513）低 16.9%；selected decoder 与未压缩目标均通过 80/81 个跟踪窗口。",
+        "baselines": [
+          "RoboStriker（G1 Stage-3 发布 checkpoint）",
+          "GGSD run2",
+          "HoloBoxing w/o latent decoder（直接预测 225 维目标）",
+          "HoloBoxing w/o imitation initialization",
+          "HoloBoxing long version（21.4 min，256 次 interaction 更新）"
+        ],
+        "limitations": "小动作语料、单一任务训练 seed（seed 43）、league 并非观测受控对比（各方法状态编码/历史不同），且复用了训练成本未计入的任务专用 standing 对手；直接目标对照同时改变了 action 维度与探索几何，故无法分离各组件对收敛速度的因果贡献，也没有真机验证。",
+        "code_release": "https://github.com/HorizonRobotics/HoloMotion/tree/master/holoboxing（在 HoloMotion 仓库下）",
+        "relevance_detail": "这是\"冻结低层、只学上层\"的分层复用范例，对 dual-system / 高低层接口设计有直接参考价值：32 维 latent 经冻结 decoder 展开为 5 点×5 未来时刻的 225 维目标，等于把 action chunking 与短时程动作预测合成一个结构化接口，且 planner 的梯度穿过冻结 decoder 更新（decoder 权重固定）——这正是 V3/LWv2 里 predictor 通过冻结/stop-grad target 侧反传的一种工程化写法，可直接对照它的 predictor/target 分离方式。更值得抄的是评测纪律：Table C.2 + C.2 的 80/81 覆盖与高度门限说明\"重构 loss 低\"不能证明表示可执行，低 loss 候选（0.045326→0.044545）反而多一次跟踪失败；Table C.3 进一步显示 measured-frame 标签比 paired reference 难得多（6.30 cm/10.36° vs 2.90 cm/5.88°），提示 latent 预测目标应在真实执行分布上评估而非仅参考轨迹。Table 5/6 的匹配预算消融（去 latent 接口 1428、去模仿 1362 vs 1541）也给出了\"压缩 action 空间 + 模仿初始化\"在极小更新预算下才有明显收益的证据。",
+        "followup": "重点看 Table 1 的时间记账、Table 3/4 的联赛与对手分组、Table 5 的匹配预算组件消融，以及附录 C.2（跟踪覆盖/高度门限）和 C.3（reference→measured 目标迁移）这两处关于\"可执行性 ≠ 重构精度\"的诊断。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2610.31734",
+      "title": "DirCast: Live Esports Directing and Commentary with a Single Streaming Video-Language Model",
+      "title_zh": "DirCast:用单一流式视频-语言模型进行电竞直播导播与解说",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2610.31734",
+      "url": "https://arxiv.org/abs/2610.31734",
+      "published": "2026-10-26",
+      "tldr": "提出 DirCast,用单个流式视频-语言模型同时完成电竞直播的镜头导播决策与实时解说生成。",
+      "why": "流式视频-语言模型在持续观测下做在线决策与语言输出的架构,可类比 VLA 的实时闭环推理与动作/语言联合生成,值得看其流式注意力与延迟设计。",
+      "hits": [
+        "M:video-language model",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "现有 streaming commentator 默认输入已经是人类导演剪好的 broadcast，只解决“怎么说”，把“让观众看什么”留在问题外。本文提出 live broadcast production：仅给十路原始 hero 相机和游戏事件，模型必须因果地每秒选择 on-air 镜头并同时生成解说。",
+        "method": "DirCast 是基于 Qwen3-VL-8B + LoRA 的单一 causal streaming VLM。每秒 chunk 包含 game clock/events、10 路 128px low-res view（每路带 hero state token）、⟨D⟩ director token；hold-or-switch director 用 cut gate g_t 与 pointer π_t(k) 分解“是否切”和“切到哪”，选中 feed 以 288px 高分辨率追加，再经 ⟨C⟩ 生成 commentary。Memory 只保留 program（on-air high-res views + events + words），low-res views 8s 后过期，KV cache 按 36s horizon 驱逐。训练用 LM loss、speak binary loss、directing loss，并加入 perturbed program rollouts 与 event-anchored targets；推理时 cut/speak 阈值按 running rate 自适应到人类 crew 的频率。",
+        "key_contributions": [
+          "提出 live broadcast production 任务，并构建 27 场职业 Dota 2 比赛的数据集：每场渲染 10 路 hero 相机，对齐官方 broadcast，标注每秒 on-air 镜头与解说词。",
+          "DirCast 用单一 causal streaming VLM 同时做 directing 与 commentary：hold-or-switch gate+pointer 决定是否切/切到哪，选中镜头以高分辨率进入上下文后再生成解说。",
+          "Program-only memory 让 low-res 十路视图 8s 过期、on-air 高分辨率视图与已说文字保留，配合 36s KV horizon 把长流 cache 从 92.6k 降到 6.9k tokens，单 GPU 实时运行。",
+          "在自建测试集上 directing 超过规则与 zero-shot（含 GPT-5），解说在自导播条件下超过 11 个看人类导播流的 streaming commentators；联合训练优于两个分开模型且显存减半。"
+        ],
+        "sim_benchmarks": [
+          "不适用（非机器人仿真；自建 Dota 2 测试集，496 个 36s clip）"
+        ],
+        "real_robot": "不适用（非机器人论文）",
+        "datasets": "不适用（非机器人数据集；自建 27 场职业 Dota 2 比赛，20 训练 / 3 校准 / 4 测试；2,096 个 36s 训练 clip、496 个测试 clip；1 fps，十路 hero 相机）",
+        "results_headline": "Directing Top-1 27.0、Any-visible 41.8，优于最强规则 action rule 的 25.4/36.1 和 GPT-5 的 13.5；kill coverage 89.1%（人类导演 50.3%），cut 6.7 次/分钟接近人类 7.9；解说对 GPT-4o 胜率 29.21%，高于最强 baseline LiveCC-7B-Base 的 19.38%，TimeDiff 0.30s、PAUC 0.024。",
+        "baselines": [
+          "Random rule",
+          "Static rule",
+          "Action rule",
+          "Qwen3-VL-8B/32B",
+          "InternVL3.5-8B/38B",
+          "LLaVA-OV-7B",
+          "Mistral-Small-3.2-24B",
+          "Kimi-K2.6",
+          "GPT-5",
+          "LiveCC-7B-Base/Instruct",
+          "Dispider",
+          "MMDuet/MMDuet2",
+          "LiveStar-8B",
+          "StreamingVLM",
+          "Proact-VL (LiveCC/Qwen3)",
+          "LiveCC-7B-FT",
+          "Proact-VLQwen3-FT"
+        ],
+        "limitations": "只在 Dota 2 单一游戏、27 场职业比赛上验证，绝对 directing Top-1 仅 27%，且依赖结构化 game state/event stream；解说 F1 78.22 低于 Proact-VL 的 83.21（后者几乎每秒都说话），judge 用 GPT-5 代替官方 GPT-5.1。Kill coverage 高于人类导演主要反映 event-anchored 目标与覆盖指标，不等同于整体导播质量更优。",
+        "code_release": "已开源：https://github.com/ZixianGao/DirCast-code；项目页 https://zixiangao.github.io/DirCast/",
+        "relevance_detail": "这是 adjacent 而非 direct 的具身工作：核心机制是把“看哪路相机”做成显式离散观测选择——hold-or-switch gate + pointer，再用单一 causal VLM 在选中观测上生成语言，可直接类比多相机机器人/主动感知中的 view/action token 选择与 action head 分解。更可迁移的是 program-only memory 与 KV 驱逐（Table 5：92.6k→6.9k tokens，P95 1.05→0.29 s/视频秒），以及 perturbed program rollouts 对自回归策略 exposure bias 的纠正（Table 4：去掉后 Top-1 27.00→22.90）；event-anchored targets 和按人类节奏自适应的 cut/speak 阈值，对长时闭环 VLA 的触发/终止策略也有参考。",
+        "followup": "重点看 4.2 的 hold-or-switch 分解、4.3 的 program memory/KV 驱逐、4.5 的 perturbed rollouts，以及 Table 4 消融和 Table 5 长流测试；附录 A 的数据对齐与 strict mask 也值得翻。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2610.32250",
+      "title": "Easy-3Dfy: Object-Level Geometric Composition for Single-Image 3D Scene Construction",
+      "title_zh": "Easy-3Dfy:面向单图 3D 场景构建的对象级几何组合",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2610.32250",
+      "url": "https://arxiv.org/abs/2610.32250",
+      "published": "2026-10-26",
+      "tldr": "提出 Easy-3Dfy,从单张图像分解对象并组合其几何,构建对象级 3D 场景。",
+      "why": "对象级几何分解与组合式场景重建可直接用于具身场景理解、可供性推理与仿真资产生成,是空间/3D 智能的可复用前端。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "单图 3D 场景构建需要同时得到高质量物体资产与准确的场景布局；端到端联合方法（如 SAM-3Dfy）把资产生成与布局回归耦合在一个场景级管线里，导致物体几何细节粗糙、布局出现物体穿插与悬浮。",
+        "method": "Easy-3Dfy 把场景构建重构成 object-level 点云配准：先用 SAM 类 mask + 图像编辑模型（FLUX-2-pro / GPT-Image-2）补全被遮挡物体，再由可替换的 image-to-3D 模型（Hunyuan3D、TRELLIS-2.0、Meshy-T2、Tripo-V3、SAM-3Dfy）生成 object-local mesh；几何侧用单目 pointmap 模型（MogeV2 / Depth Anything V3）得到场景点图与法向图，按 mask 抠出物体局部 query 点云。核心模块 RPF-based aligner 沿用 Rectified Point Flow（DiT 速度场），以 6 通道 XYZ+法向为条件为每个 query 点预测其在物体 anchor 坐标系上的对应位置，再用 Umeyama 闭式拟合出 uniform-scale 相似变换 (s, R, t)，把完整 mesh 变换到场景坐标系完成组装。训练数据完全在 object-level 合成：渲染 RGB-D、用同一单目模型造 partial query、随机遮挡，并对 anchor 侧与 query 侧施加独立的旋转/尺度/平移增广。",
+        "key_contributions": [
+          "提出解耦式组合工作流 Easy-3Dfy：把物体资产生成与场景布局估计彻底分开，仅保留两者的几何/外观先验，丢弃所有上游 provider 自带的 pose/layout 输出。",
+          "设计 RPF-based 几何对齐器，把单图场景构建显式建模为 object-local mesh 到 partial scene pointmap 的点云配准，无需完整场景级监督即可回归 local→scene 的相似变换。",
+          "在共享 mask、共享 SAM-3Dfy mesh 的受控协议下证明：仅替换布局估计即可稳定提升 Scene-CD / Scene-FScore / BBox IoU，说明显式几何组合本身有效。",
+          "验证组合式工作流的可扩展性：更换 mesh provider（GT 上限 BBox IoU 0.415 vs HY3D-2.0 0.291）显示上游资产生成进步可直接转化为更准的布局，无需重训对齐器。"
+        ],
+        "sim_benchmarks": [
+          "Scene-Maker (1000 scenes)",
+          "3D-FUTURE200 (200 scenes)"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "训练 mesh 来自 Orient Anything V2 公开合成 3D 资产集合（约 21,000×40 个 asset 实例、每个 20 个视角渲染）；评测用 Scene-Maker 1000 场景与 3D-FUTURE test set 采样 200 场景（3D-FUTURE200）。",
+        "results_headline": "在与 SAM-3Dfy 共享同一批 mesh（Object-CD/F 完全相同）的条件下，Scene-Maker 上 Scene-CD 0.261→0.242、Scene-FScore 0.615→0.649、BBox IoU 0.366→0.399；3D-FUTURE200 上 Scene-CD 0.146→0.140、F 0.820→0.836、BBox IoU 0.517→0.554，全面优于 MIDI、SceneGen。",
+        "baselines": [
+          "SAM-3Dfy",
+          "MIDI",
+          "SceneGen",
+          "GT mesh 上限（oracle）",
+          "TRELLIS-2.0 / Hunyuan3D-2.0 / Hunyuan3D-3.1 / Meshy-T2 / Tripo-V3（mesh provider 对比）"
+        ],
+        "limitations": "小物体、严重遮挡、mask 污染、以及反光/透明表面的不可靠 pointmap 会让变换欠约束，出现尺度漂移或旋转不稳（Appendix A.7, Fig. A2）；此外 Scene-CD / F-score / BBox IoU 只衡量几何，不反映纹理、材质、语义与感知合理性，作者自己指出评测协议需要扩展。",
+        "code_release": "项目页 https://easy3dfy.github.io ，论文称将公开发布方法与一个完全基于开源模型的 inference 示例，目前为承诺开源。",
+        "relevance_detail": "虽然属于 3D 视觉/内容生成，但它把「估计物体在场景中的位姿」写成一个条件生成式配准问题：RPF 不直接回归 SE(3)，而是为每个 query 点生成 anchor 坐标系上的对应点，再做 Umeyama 闭式求解——这正是机器人 6D object pose / 抓取位姿估计与 sim-to-real 资产对齐可以用的一类 head 设计。第二点更有迁移价值：Table 8 显示把 RGB 通道去掉、只用 XYZ+法向的 6 通道条件反而全面提升（3D-FUTURE200 Scene-F 0.7973→0.8136、BBox IoU 0.5231→0.5428），说明几何信号比外观更适合作为对齐/预测的 target 与 condition，这对 VLA 与 latent world model 里「预测什么模态、condition 加什么」的选择是一个直接的反直觉证据（可与 LWv2 的 predictor/target 设计对照）。第三，object-level 训练对（独立扰动 query 与 anchor 两侧坐标系）是无需场景级标注就能大规模合成配准监督的 recipe，也可用于 RoboTwin 类仿真场景的资产生成与摆放增强。",
+        "followup": "重点看 Table 8 的 RGB vs 6 通道消融与 Appendix A.2（训练对构造、双侧独立几何增广的具体范围），以及 Appendix A.7 的失败模式。"
+      }
+    }
+  ]
+}
