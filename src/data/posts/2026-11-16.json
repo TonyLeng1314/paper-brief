@@ -1,0 +1,351 @@
+{
+  "date": "2026-11-16",
+  "kept": 5,
+  "reviewed": 11,
+  "min_score": 5,
+  "funnel": {
+    "fetched": 173,
+    "unseen": 11,
+    "llm_candidates": 11,
+    "annotated": 11,
+    "deep_read": 5
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2611.18397",
+      "title": "Gamer: A Generalist Vision-Language-Action Foundation Model for Long-Horizon Real-Time Game Agent",
+      "title_zh": "Gamer:面向长时程实时游戏智能体的通用 VLA 基础模型",
+      "score": 8,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 7,
+      "novelty": 7,
+      "authors": [
+        "Run Luo",
+        "Kuan Zhang",
+        "Qi Deng",
+        "Yukun Chen",
+        "Zhihao Yang",
+        "Yufei Zhang",
+        "Renrong Hu",
+        "Yi Zhang",
+        "Guiyu Ma",
+        "Tianyu Fan",
+        "Longze Chen",
+        "Hao Sun",
+        "Jiaming Li",
+        "Jiaming Yang",
+        "Xiaohao Liu",
+        "Tao Tan",
+        "Minzheng Wang",
+        "Hangtian Jia",
+        "Shuai Yuan",
+        "Lvdi Wang",
+        "Xiao Liu",
+        "Chao Ma",
+        "Yuting Zou",
+        "Yinhe Zheng",
+        "Xiaobo Xia",
+        "Dawei Jiang",
+        "Shaoqing Ren"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2611.18397",
+      "url": "https://arxiv.org/abs/2611.18397",
+      "published": "2026-11-16",
+      "tldr": "构建端到端 VLA 智能体 Gamer,用数万小时键鼠交互轨迹继续预训练,配合稀疏思考指令微调、多轮强化学习和云边推理引擎,在 3D 开放世界游戏与 2D 游戏基准上达到接近熟练玩家的表现。",
+      "why": "它把键鼠轨迹当作跨虚拟与物理环境的动作数据来训练长时程 VLA,其多轮 RL 处理有限上下文、rollout 误差累积与稀疏奖励的方案,可直接借鉴到长时程机器人策略训练。",
+      "hits": [
+        "H:vision language action",
+        "H:vision-language-action",
+        "M:long-horizon",
+        "C:reinforcement learning",
+        "C:memory",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "论文要解决的是：在视觉与机制各异、部分可观测、反馈稀疏且要求实时响应的现代 3D 商业游戏中，如何用一个统一的 VLA 模型，像人类玩家一样只靠屏幕像素输入、用键鼠原生操作，完成跨越数小时的长程任务，并把 CPT / SFT / 在线 RL 与实时推理打通成一条可扩展的流水线。",
+        "method": "以 Qwen3-VL-8B / Qwen3.5 为底座，把每个 200ms 观测区间的动作序列化为 <|action_start|> ΔP_t; K_{t,1..6} <|action_end|>（30Hz 六段键鼠块），直接用 LM 词表自回归输出、不加额外 action head。三阶段训练：(1) CPT 做统一键鼠控制先验，配 random key remapping（随机键位双射，把‘哪个键’变成‘什么功能’）与 repeat-aware loss decay（ω_t=γ^{n_t−1}，γ=0.9，抑制 85% 重复动作的 token 主导）；(2) SFT 加入三级指令 I∈{I_op, I_sub, I_task}、稀疏思考 r_t∈{∅, r_cur, r_mem} 与 summary-based 跨上下文 memory compaction（H_t=H_old⊕H_keep，驱逐前先生成摘要）；(3) TA-GRPO：把超长 rollout 按 memory 分段成有限窗口，用环境可验证的 segment 级 reward 做 group-relative 优势，再用 β^{T−1−t} 的归一化时间权重把分段分数摊到各步（critic-free）。部署侧自研 Streaming-vLLM：stateful KV cache 复用 + compaction 后的增量 RoPE 刷新 + FSM 引导的 BF16 验证投机解码 + 动作前缀流式下发。",
+        "key_contributions": [
+          "提出统一的 screen→键鼠 action space 通用游戏 agent 框架 Gamer，非侵入式操作，跨 2D UI 与 3D 开放世界共用同一接口与同一模型。",
+          "可扩展的长程指令数据流水线：从数万小时原始 gameplay 中筛出约 1K 小时（HSR 11K 小时/68K session → 3.2K session），由 GPT-5.6-Luna 生成约 1.2M 条 Think 注释、约 63K 个任务段（中位 40s）、约 223K 条 memory 注释，并自底向上合成 operation/subgoal/task 三级监督。",
+          "把 Verl 扩展为 CPT+SFT+TA-GRPO 统一训练评测框架，并提出 Streaming-vLLM（KV 复用、RoPE 位置刷新、FSM 投机解码、早发动作）使 32 个并行游戏环境在 64×H200 上做实时在线 RL rollout。",
+          "验证‘重复的键鼠轨迹 + 数据与算法 scaling’本身即可带来显著能力提升，并给出 120 组 CPT 配置、约 45K H200 GPU-hour 的 composition-aware scaling law（含 Minecraft 配比 q 的显式建模）。"
+        ],
+        "sim_benchmarks": [
+          "Honkai: Star Rail (HSR)",
+          "多个 3D open-world 商业游戏（正文结果节被截断，评测集未完整列出）",
+          "传统 2D 游戏 benchmark（未具名）"
+        ],
+        "real_robot": "不适用：无真机实验。Agent 通过屏幕像素 + 原生键盘鼠标在商业游戏客户端中闭环交互；训练数据中混有 D2E / OpenP2P / Embodied-Reasoner / Cambrian-S 等具身与自我中心数据，用以学习‘物理与虚拟域共同的环境动力学’。",
+        "datasets": "CPT：VPT、D2E、OpenP2P 游戏轨迹约 2.4K 小时 + 通用视觉语言数据约 6.3B token（LLaVA-OneVision、Zebra-CoT、GameQA、Embodied-Reasoner、Cambrian-S），配比 85% gameplay / 15% VL；另加 HSR 约 332 小时（149K clip）。SFT：约 1K 小时 HSR 轨迹，operation 261K / subgoal 211K / task 234K 样本（37.0%/29.8%/33.1%）。RL：约 14.6K 条在线验证 rollout。",
+        "results_headline": "摘要层面声称在多个高难度 3D 开放世界游戏中泛化性与操作效率‘接近熟练人类玩家’、在 2D 游戏 benchmark 上‘有竞争力’；但提供的 PDF 正文在 Sec. 7.3 处截断，Sec. 8 的具体数值（成功率、与 VPT/OpenP2P/Game-TARS/Lumine/SIMA 2 的对比表格、延迟数字）无法核实，此处不编造。",
+        "baselines": [
+          "VPT",
+          "Open-P2P",
+          "NitroGen",
+          "Game-TARS",
+          "Lumine",
+          "SIMA 2 (Gemini 2.5 Pro + Flash-Lite)",
+          "GameScaling（CPT scaling 对照）"
+        ],
+        "limitations": "作者承认 CPT 的 scaling 收益有边界——对‘距离很远的未见游戏’继续加数据并不带来持续提升，因此只靠 CPT 不足以泛化到全新世界，必须依赖任务条件监督与在线交互；此外 TA-GRPO 的分段分组并不从相同中间状态出发，同组段落在难度与状态分布上仍有差异，分段级 reward 也只能做启发式的时间信用分配（β 权重只是‘时间先验’，并不代表后段动作贡献更大）。",
+        "code_release": "承诺开源推理引擎与 checkpoints（用于 CPT scaling 行为复现），项目页 https://mihoyo-gamer.github.io/ ；正文未给出具体 GitHub 仓库地址，是否放出完整训练代码未明确。",
+        "relevance_detail": "作为 VLA 基础模型论文值得一读，三个点可直接搬回机器人：(1) 动作不走额外 head，而是直接序列化进 LM 词表自回归输出，这对 V3/LWv2 里‘action head 挂在哪、要不要独立 head’是一个明确的架构对照方案；(2) repeat-aware loss decay 处理的正是 action chunk 内部大量重复 token 淹没监督的问题（其数据中 >85% 步是重复动作），与 RoboTwin 长程任务里 action chunk 的 token 加权直接同构，γ=0.9 这一超参和 Eq.(4) 的加权形式可照抄做 ablation；(3) memory compaction + streaming KV 复用 + compaction 后增量 RoPE 刷新，是‘无界上下文长程执行’的一套工程解法，对应长程操作里 history 超出 context 后的摘要-驱逐机制，且它把摘要生成与动作生成放在同一个自回归步里（Eq.10），不需要单独的 memory model。random key remapping 则是一种‘动作空间重参数化’式数据增广，思路可迁移到不同机器人本体之间的关节/末端映射。",
+        "followup": "重点看 Sec. 8.2（CPT scaling 与远域泛化的经验边界）、Appendix C.2（compaction 后 RoPE refresh 的具体做法）与 Table 9（tensor parallel / 精度对延迟的权衡），以及 Table 2 的数据配比与 Sec. 4.2 的时间信用分配消融。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2611.18359",
+      "title": "Envisioning Agentic Robotics: A New Era of Robotic Systems",
+      "title_zh": "构想 agentic 机器人:机器人系统的新纪元",
+      "score": 6,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 5,
+      "novelty": 5,
+      "authors": [
+        "Grid Robotics",
+        ":",
+        "Qingfeng Lan",
+        "Duo Li",
+        "Siyao Li",
+        "Yiheng Lyu",
+        "Shijian Lu",
+        "Zhenghao Qi",
+        "Shizun Wang",
+        "Xinchao Wang",
+        "Ming Yang",
+        "Zhiqin Yang",
+        "Zuhao Yang",
+        "Tao Yu"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2611.18359",
+      "url": "https://arxiv.org/abs/2611.18359",
+      "published": "2026-11-16",
+      "tldr": "提出以基础模型加具身 harness 构成的 Embodied System 2 作为 agentic 机器人的决策核心,并给出同时衡量模型能力与闭环系统性能的评测框架和通向持续自主的研究路线图。",
+      "why": "它把 VLA 之外的 agentic 闭环范式(观察-推理-调用技能-验证-调整)明确为与专用策略并列的路线,并指出物理约束下可验证动作这一核心难题,值得作为架构选型的对照视角。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "agentic robotics 这一新范式（GPT-6 Astra + agentic harness 在多个 embodied benchmark 上追平或超过专用策略）缺少统一定义、可靠评测框架和 research roadmap，导致跨研究的实验条件不可比（如 RoboDojo 上 Astra 因 task-knowledge 来源与 action budget 不同而结果不一致）。",
+        "method": "提出三层功能架构：S2（foundation model + embodied harness）负责解读意图、推理、编排 skills/tools、验证结果；S1 提供可调用技能（VLA、WAM、perception、motion planning）；S0 负责本体接口与实时控制（50Hz–1kHz），外加高频 real-time event monitor 做中断与安全停机。把 Embodied S2 形式化定义为同时做出“如何继续”和“结果是否达成”两类可外部识别的决策，并给出判定标准（latent-only 的 Helix/GR00T N1 上层模块不算 S2，π0.5 的 subtask 输出算部分 S2）。harness 拆成五个核心组件（context manager / tool interface / planner / memory / verifier）加三个增强（safety gate、budget control、self-improvement），并提出 execution contract 生命周期 propose→admit→dispatch→execute→confirm→verify→commit，以及 sensorimotor / planning / evolution 三个闭环与“capped scaling”物理约束分析。",
+        "key_contributions": [
+          "给出 agentic robotics 的三层功能分解（S2/S1/S0 + event monitor）与三种执行路径（layered orchestration、direct control、code as policy），并强调同一任务可混用。",
+          "提出 Embodied S2 的可检验判定准则：必须同时做出 proceeding 决策与 outcome 验证决策，否则只是 S2 的一部分；据此重新归类现有 dual-system VLA。",
+          "提出覆盖九个维度的评测框架，区分 model capability 与 closed-loop system performance，强调独立 outcome verification、透明报告与环境持续变化下的评测。",
+          "提出 L1 原语/L2 任务/L3 workflow/L4 role 的“可委托工作阶梯”路线图，从执行单步走向长期承担角色。"
+        ],
+        "sim_benchmarks": [
+          "RoboDojo",
+          "RoboMME",
+          "VLN（HarnessVLN 相关评测）"
+        ],
+        "real_robot": "未做真机实验（position/roadmap 论文，仅引用他人系统与评测结果）",
+        "datasets": "不适用（未训练模型；仅讨论数据来源应以预训练规模纳入 egocentric/instructional video 与 robot trajectory）",
+        "results_headline": "综述性证据：frozen GPT-6 Astra 将整个 episode 放在 context 中，在 RoboMME 800 个测试 episode 上单次跑到 92.1%，但每次 model call 平均 18.3s；skill-only 接口使 GPT-5.6-Sol 从 11% 升到 63%，却使 GPT-6 Astra 从 92% 降到 61%；去掉 HumanCLAW 的 verifier 后 navigation 成功率几乎归零。",
+        "baselines": [
+          "task-specific VLA / WAM policies（π 系列等专用策略）",
+          "plain tool calling（对照带本地检查与 retry 的接口）",
+          "GPT-5.6-Sol（skill-only 接口对照）",
+          "去掉 verifier 的 HumanCLAW 消融"
+        ],
+        "limitations": "全篇为框架与路线图，无自建实验或新方法，所有数值均二手引用且实验条件不统一；S2/S1/S0 的功能划分本身承认“一个模型可担任多个角色”，实际系统边界模糊，判定准则依赖 replacement experiment，落地成本高。",
+        "code_release": "未开源代码；提供 roadmap 项目网站 https://grid-robotics-official.github.io/agentic-robotics-roadmap",
+        "relevance_detail": "这是把 VLA 从 policy-centric 推向 agentic 系统的定位文献，对 dual-system / 层级架构的设计有直接约束力：Section 3.1 的判定准则明确指出 latent-only 的 upper module（Helix、GR00T N1）无法从接口读出高层决策，因此不被算作 S2，而 π0.5 式的显式 subtask 输出算部分 S2 —— 这直接关系到“action head 接在哪、高层是否必须输出可读符号”的设计选择，也与 V3/LWv2 中 latent world prediction 的定位相关：论文把 world model 归为只提供 evidence 的模块而非 S2。Section 3.3 的 harness 五组件（尤其 verifier 与 memory）与 3.4 的 capped scaling（世界不等 token，18.3s/call 的 in-context memory 不可用于时效任务）为 test-time compute、action chunking 与延迟预算提供论证；Section 3.3 末的 11%→63% vs 92%→61% 对比说明 skill 抽象层级的最优值依赖具体模型，是很有价值的反直觉工程结论。",
+        "followup": "重点读 Section 3.1（S2 判定准则与 borderline cases）、Section 3.3 的 harness 组件表与 execution contract，以及 Section 4.1/4.3 的九维评测与现有结果汇总表。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2611.12901",
+      "title": "Rethinking in Spikes: Mitigating Hallucinations in MDLMs with Step-Aware Decoding",
+      "title_zh": "在脉冲中重思:用步感知解码缓解 MDLM 幻觉",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [
+        "Zhongxing Xu",
+        "Zhonghua Wang",
+        "Zhe Qian",
+        "Shiyan Su",
+        "Ming Hu",
+        "Xiaocheng Zou",
+        "Wei Feng",
+        "Mingquan Lin",
+        "Yuyin Zhou",
+        "Yifan Peng",
+        "Hamid Rezatofighi",
+        "Zongyuan Ge"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2611.12901",
+      "url": "https://arxiv.org/abs/2611.12901",
+      "published": "2026-11-16",
+      "tldr": "观察到多模态扩散语言模型去噪过程中少数步骤出现熵尖峰并与幻觉相关,提出 StepRefine 在尖峰步用概率加权嵌入做连续潜空间精修、其余步回到离散去噪。",
+      "why": "按去噪步熵偏差动态切换离散承诺与连续精修的思路,可迁移到扩散/流式动作生成策略中抑制动作序列的异常步,但需验证其在连续动作空间的有效性。",
+      "hits": [
+        "C:uncertainty",
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "多模态扩散语言模型（MDLM）通过迭代去噪生成文本时仍会产生幻觉；现有 decoding 策略（缓存复用、denoising 调度、re-masking）把各去噪步的不确定性一视同仁，没有考虑去噪轨迹上的时间不规则性。",
+        "method": "提出 StepRefine，一种 training-free、plug-and-play 的解码策略。第一步做 entropy spike 检测：每步计算 mask 位置的平均 mask entropy H̄_t，取其相对前 w 步局部窗口的差分 ΔH̄_t，若 ΔH̄_t > μ_t+σ_t 则判为 spike 步。第二步做 step-aware 模式切换：在 spike 步把离散 token commitment 换成 latent refinement，用概率加权 embedding ẽ_i=E_{v∼p_i}[e(v)] 替换 [MASK] embedding 并递归多轮前向，使候选语义继续与图文上下文交互；refinement controller 以相邻两轮预测分布在 mask 位置上的平均 KL 散度 D_KL<ε（ε=0.01）为终止条件。额外前向次数从总预算中扣除（t←t−1−k），总 forward 数不变。",
+        "key_contributions": [
+          "从去噪步间不确定性动态角度刻画 MDLM 幻觉：约 80% 的幻觉 token 落在 stepwise entropy change 超过 μ+σ 的 entropy spike 区域内（Fig.2a）。",
+          "给出 spike 步的两个反直觉证据：spike 集中在去噪前中段（LLaDA-V 71%、Dream-VL 62% 发生在前 50% 步内）；在 spike 步换成 random remasking 几乎不掉点，而在随机 10% 步做同样扰动则明显掉点，说明 spike 步的 confidence 信号已不可靠（Fig.2b/2c）。",
+          "StepRefine：spike 检测 + 概率加权 embedding 的 latent refinement + KL 稳定性自适应终止，用预算补偿保证不增加推理成本。",
+          "在 4 个 MDLM backbone（LLaDA-V-8B / LLaDA-O-8B / Dream-VL-7B / LaViDA-L-8B）上一致提升，并与 Fast-dLLM、dLLM-Cache、dKV-Cache 三种加速方法正交叠加。",
+          "证明自适应触发优于固定间隔触发、自适应终止优于固定 refinement 轮数（Fig.5）。"
+        ],
+        "sim_benchmarks": [
+          "不适用（评测为多模态 VQA benchmark：VStar / MMVP / MMEval-Pro / VMCBench / RealWorldQA / MMHalu / Bingo / POPE-R / MathVision / MathVista / MMK12-Phys / MMK12-Chem）"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "未说明（方法为 training-free，无预训练/微调数据；仅在公开多模态 benchmark 上评测）",
+        "results_headline": "LLaDA-V-8B 上 VStar 55.5→58.6(+3.1)、MMVP 40.7→45.3(+4.6)、MMHalu 3.35→3.50、Bingo 2.71→2.93；四个 backbone 平均提升 +2.3%~+2.8%；与 Fast-dLLM 叠加后在 8.47× 加速下 VStar 52.4→56.5、MMHalu 3.09→3.22，throughput 基本不降。",
+        "baselines": [
+          "Base（LLaDA-V-8B / LLaDA-O-8B / Dream-VL-7B / LaViDA-L-8B 各自 baseline）",
+          "CoTA",
+          "ReMix",
+          "WINO",
+          "Fast-dLLM",
+          "dLLM-Cache",
+          "dKV-Cache"
+        ],
+        "limitations": "依赖若干需调的检测超参（window w=16、ε=0.01、T=256/L=256 的固定解码设置），窗口过大过小都会导致触发不稳定；增益幅度在部分 benchmark 很小（如 LaViDA 的 MathVista 仅 +0.2），且只处理理解/推理侧幻觉，未涉及训练层面或视觉生成侧。",
+        "code_release": "论文给出项目页 https://mdlm-steprefine.github.io/，正文未明确说明是否放出完整代码",
+        "relevance_detail": "核心可迁移点是它对『离散 token commitment 会丢弃 masked 位置的分布信息』的诊断——这正对应 VLA 里的 action tokenization / action chunk 量化：把概率加权 action embedding 而不是 argmax token 喂回模型再做几轮 latent 细化，是把动作量化推迟到分布收敛后的可复用技巧，和 diffusion/flow policy 里在 latent 空间精修动作同源。第二个可迁移点是 entropy spike 检测本身：用局部时间窗口的 μ+σ 偏差判定『异常步』，可以搬到 VLA 自回归或扩散式 action chunk 生成中做自适应 compute 分配（只在异常步多迭代，且用 t←t−1−k 的预算补偿把额外开销抵掉，Table 2 证明与加速器叠加不损吞吐）。对 V3/LWv2 的 JEPA-style 未来 latent 预测：predictor 输出的是分布，取 argmax 等价于本文批评的 discrete commitment，用概率加权 embedding 回灌 + KL 稳定性终止来迭代 predictor，同时把 entropy spike 作为『何时需要多轮 predictor 迭代』的 gate，是可直接试的设计。另有信号价值：它引用的 Dream-VL/Dream-VLA、Unified Diffusion VLA、dVLA 说明 diffusion LM backbone 正快速进入 VLA，这类解码侧修复手法很可能紧随其后被搬过去。",
+        "followup": "重点看 Sec.3.1 的 Eq.5 检测式与 Fig.2(a)(b) 的统计证据、Sec.3.2 的 Eq.6–7 与 Algorithm 1，再看 Table 2（与加速器叠加）和 Table 3（remasking 策略 / 步预算 / 生成长度三组消融）判断鲁棒性。"
+      }
+    },
+    {
+      "rank": 4,
+      "key": "arxiv:2611.18549",
+      "title": "JVT: Just Video Transformer makes pixel-space video diffusion simple",
+      "title_zh": "JVT:仅用 Video Transformer 就让像素空间视频扩散变简单",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [
+        "Jianjun Zhou",
+        "Hua Geng",
+        "Haoyu Guo"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2611.18549",
+      "url": "https://arxiv.org/abs/2611.18549",
+      "published": "2026-11-16",
+      "tldr": "提出 JVT,一个大 patch 的 DiT 式 Transformer 直接在像素空间做视频扩散,无需预训练自编码器、级联阶段或 U-Net 跳连,并支持相机条件化的 RGB-视差联合生成。",
+      "why": "它证明像素空间视频扩散可与 latent 基线质量相当且天然支持像素对齐多模态联合生成,这对世界模型中绕开 tokenizer、直接预测像素与几何的生成式建模是有用的架构证据。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "像素空间的视频扩散通常依赖 U-Net skip 连接、级联超分或额外的 detailer/autoencoder，架构复杂；论文要回答：一个朴素的大 patch DiT-style Transformer 能否直接在像素空间生成高质量视频，并顺带支持像素对齐的多模态联合生成。",
+        "method": "JVT 沿用 JiT 的 clean-data prediction：网络从加噪像素 xt 直接回归干净视频 x̂0，v̂=(x̂0−xt)/t，用 rectified-flow 速度损失 ‖(x̂0−x0)/t‖² 监督。核心工程是 video patch embedding 的设计：在 tubelet（3D Conv）基础上加通道 bottleneck Cb<C，并把它因式分解为 patch-wise 2D Conv（空间）+ frame-wise 1D Conv（时间），比较 patch-first 与 frame-first 两种顺序。条件注入用标准 AdaLN；另在第 L1=9 个 block 后 prepend 可学习 register tokens（可在其中注入噪声级 et / 类别 ey），采样时用 register guidance v_rg = v_r + w_rg(v_r − v_nr) 并与 CFG 组合。像素对齐联合生成则是把 RGB 与 disparity 沿通道拼接成 4 通道目标共同去噪，推理时用相机参数反投影得到彩色点云，无需额外重建模型。",
+        "key_contributions": [
+          "首个无 detailer、无级联、无 U-Net skip、无预训练 autoencoder 的纯 DiT-style 像素空间视频扩散模型 JVT。",
+          "系统消融 video patch embedding（tubelet / patch-first / frame-first × bottleneck 宽度 Cb）与 register tokens、AdaLN，给出质量-效率的实用设计结论：默认 patch-first + Cb=32、保留标准 AdaLN。",
+          "把像素对齐联合生成作为原生扩展：相机条件下的 RGB-disparity 联合生成在 RealEstate10K 上改善 camera following（RTA@30 96.0→98.4，AUC@30 84.1→88.6），并直接产出 4D 点云场景表示。",
+          "给出若干反直觉的负结果：register-based conditioning（er=et/ey/et+ey）并无收益，去掉 AdaLN 反而 FVD 恶化（136.5→156.3）；register guidance 只在语义多样的 UCF-101 上有效。"
+        ],
+        "sim_benchmarks": [
+          "UCF-101",
+          "FaceForensics",
+          "SkyTimelapse",
+          "Taichi-HD",
+          "RealEstate10K"
+        ],
+        "real_robot": "未做真机实验",
+        "datasets": "UCF-101（train+test split）、FaceForensics、SkyTimelapse、Taichi-HD 做类别条件/无条件生成；RealEstate10K 做相机条件生成，深度目标由冻结的 Pi3X 在线提供；均为 256×256、16 帧（RealEstate10K 为 8 帧）、帧间隔 3。",
+        "results_headline": "UCF-101 类别条件 FVD@2048 达 136.5（+RG 129.2），大幅优于 Latte 的 477.97；无条件 FaceForensics 32.86 vs Latte 34.00、SkyTimelapse 46.58 vs 59.82、Taichi-HD 119.1 vs 159.60；RealEstate10K 上 RGB-disparity 变体 FVD 27.5（RGB-only 27.0，DFoT 35.3），RTA@30 98.4、AUC@30 88.6 为最优。",
+        "baselines": [
+          "Latte",
+          "FVDM",
+          "PVDM",
+          "LVDM",
+          "StyleGAN-V",
+          "MoStGAN-V",
+          "DIGAN",
+          "GLOBER",
+          "VideoGPT",
+          "OmniTokenizer",
+          "DFoT",
+          "Geometry Forcing (GF)",
+          "LIVE"
+        ],
+        "limitations": "规模很小：仅 256×256、16 帧、四个中小数据集，未验证更大模型/更长视频/更高分辨率；register guidance 的增益高度依赖数据集语义多样性，在三个数据集上无收益；深度监督来自冻结的 Pi3X，存在上游几何模型的误差上限；像素空间推理成本（NFE 100-200）相比 latent 方案未见优势。",
+        "code_release": "论文给出项目主页 https://zhoutimemachine.github.io/JVT，未明确说明是否放出训练代码与权重。",
+        "relevance_detail": "作为视频生成式 world model 的一条「去 latent」路线值得读：Table 5 显示把 disparity 与 RGB 通道拼接联合去噪，就能在没有任何重建模型的情况下拿到显式几何与 4D 点云，这对需要几何一致 rollout 的 world-action model 是可直接借用的输出形式，也提示 V3/LWv2 里若要做 latent+几何的联合预测，可以考虑让几何信号作为与 RGB 共享同一噪声级/同一去噪步的额外通道，而非单独 head。Table 3/Table 4 的负结果尤其有用：AdaLN 仍是噪声级与条件注入的最稳通道，register token 式的 in-context 条件（er=et/ey）完全没有收益、替换 AdaLN 还使 FVD 从 136.5 退化到 156.3——这直接影响「action 条件该接在哪里」的判断（优先 AdaLN/adaLN-zero 式调制，而不是塞进额外 token）。Table 2 关于 patch embedding 的 factorize + bottleneck 消融（Cb=32 时 patch-first FVD 135.0 且 embedding FLOPs 仅 0.503 GFLOPs）也是 action tokenizer / 时空下采样模块的现成效率参考。注意它是纯生成模型，无动作条件、无闭环控制实验。",
+        "followup": "重点看 Table 2（patch embedding 质量-效率权衡）、Table 3/4（register 与 AdaLN 的负结果）、Table 5 与 Fig. 5-6（RGB-disparity 联合生成与点云反投影），以及附录 A.3 的补充消融。"
+      }
+    },
+    {
+      "rank": 5,
+      "key": "arxiv:2611.07226",
+      "title": "Loopback Transformer: Towards a Unified View of Residual Looped Transformers",
+      "title_zh": "Loopback Transformer:残差循环 Transformer 的统一视角",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [
+        "Xuan Ouyang",
+        "Zefan Cai",
+        "Chenlong Zhang",
+        "Cheng Luo",
+        "Ke Wan",
+        "Junjie Hu"
+      ],
+      "source": "hf_papers",
+      "arxiv_id": "2611.07226",
+      "url": "https://arxiv.org/abs/2611.07226",
+      "published": "2026-11-16",
+      "tldr": "作者从深度-记忆视角拆解残差循环 Transformer 中每层输出如何被复用,提出 Loopback Transformer:把共享栈的输入与各次更新分离,用几何衰减控制总更新权重、用 attention 学习权重分配,在 191M–3B 规模上以 40–75% 参数量取得更低验证损失。",
+      "why": "它把\"重复计算的结果如何被读取\"形式化为可分离的输入强度、更新总量与更新分配三个旋钮,这种对循环深度中历史信息加权方式的显式控制,可直接类比到 VLA 中多层 action head 或循环 world-prediction 模块的残差聚合设计。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "Looped Transformer 通过重复共享 block 降低参数量，但“参数共享”本身并不决定重复计算的结果应如何被存储、传递和再次读取；现有 residual 设计把输入强度、总更新权重以及各次更新之间的分配耦合在一起。",
+        "method": "论文把沿深度的 repeated block application 视为 memory write：每次写入单独的 block update δ_s = f_k(x_s) − x_s，而不是写入包含输入的完整 block output；原始 loop 输入 h0 走独立通路且系数固定为 1。每个 loop iteration 边界对历史 update 施加几何衰减 λ（默认 1/4），得到先验权重和总更新权重 B_s；再用无 Q/K/V 投影的 learned query 对归一化 update 打分，softmax(z + log c^0) 在保持总和 B_s 不变的前提下按内容重分配。该方法只改 residual aggregation，不改共享 block 及其 token-axis attention。",
+        "key_contributions": [
+          "用 linear attention / recurrent memory 的 write–transport–read 视角统一分析 residual 连接，指出 full block output 与 individual block update 的区别，并拆出 input strength、total update weight、allocation 三个可独立控制的量。",
+          "提出 Loopback Transformer：单独存储 δ_s、保留 h0 恒等通路、用几何衰减设定 recency prior 与总更新权重、用 attention 在固定总权重下按内容重分配。",
+          "在 ClimbMix 的 191M–3B 五个规模上，以 Standard Transformer 的 40–75% Transformer 参数取得更低 validation loss 和更高 13-task mean；并在 9 种 residual 设计对比、额外 loop visit 鲁棒性与效率上给出系统实验。"
+        ],
+        "sim_benchmarks": [
+          "不适用"
+        ],
+        "real_robot": "不适用",
+        "datasets": "不适用",
+        "results_headline": "在 ClimbMix 上，191M/374M/778M 仅用 Standard 的 40.0%/56.3%/56.3% Transformer 参数，validation loss 分别为 2.6187 vs 2.6234、2.4008 vs 2.4395、2.2404 vs 2.2644；1.4B/3B 用 68%/75% 参数，13-task mean 为 46.50 vs 46.33、49.45 vs 48.56，3B 词问题准确率从 2.6% 提升到 6.4%。",
+        "baselines": [
+          "Standard Transformer",
+          "Plain Loop",
+          "HC (Hyper-Connections)",
+          "mHC (Manifold-constrained Hyper-Connections)",
+          "iHC1",
+          "Hyperloop",
+          "MHAR (Multi-Head Attention Residuals)",
+          "AttnRes (Attention Residuals)",
+          "Linear attention / RetNet / GLA / Mamba-2 / HGRN-2 / DeltaNet / Gated DeltaNet / KDA / RWKV-7 / Mesa / LaCT-inspired readers"
+        ],
+        "limitations": "证据仅限 ClimbMix 预训练与所测规模，且大尺度对比是单次 run；显式 history bank 会增加 memory traffic 和 activations，因此参数节省不一定转化为更低 latency 或 peak memory。输入系数固定为 1，额外 visits 没有提升 validation loss。",
+        "code_release": "开源：https://github.com/yancyou/Loopback ；论文还给出项目页 https://yancyou.github.io/Loopback_page",
+        "relevance_detail": "这是纯 LLM 架构论文，与 VLA/世界模型没有直接机器人实验；可迁移机制在第 3 节的 depth-memory 形式化：把共享块每次的 δ_s 单独存储、让初始 latent/input 走独立恒等通路、用几何衰减约束总更新量、再用 attention 按内容重分配。若在 VLA 中做迭代式 latent refinement，或在世界模型里用共享 block 反复预测未来 latent，这套接口可作为控制 residual stream 中历史更新被重复加权与过度累积的工程方案；5.2.3/Fig.6 的 extra-visit 鲁棒性也直接相关（191M 八次 visit 时 loss 增加 0.060 vs Plain Loop 0.454）。但它不验证机器人任务，也不直接解决 JEPA 的 representation collapse，优先级低于核心 VLA/世界模型论文。",
+        "followup": "深读第 3.1–3.4 节的 write–transport–read 展开与 input/update 权重分解、Table 4 的 decay/attention 消融、5.2.3/Fig.6 的 extra-visit 鲁棒性，以及 Section I 的 throughput/memory 测量。"
+      }
+    }
+  ]
+}
