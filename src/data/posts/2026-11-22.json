@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-22",
+  "kept": 3,
+  "reviewed": 7,
+  "min_score": 5,
+  "funnel": {
+    "fetched": 287,
+    "unseen": 7,
+    "llm_candidates": 7,
+    "annotated": 7,
+    "deep_read": 2
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2611.25610",
+      "title": "Hierarchical Spatiotemporal World Modeling with Content-Adaptive Spatial Addressing",
+      "title_zh": "具有内容自适应空间寻址的分层时空世界建模",
+      "score": 9,
+      "bucket": "direct",
+      "domain_fit": 9,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [
+        "Tiantian Li",
+        "Junfeng Lu",
+        "Yifei Wang",
+        "Zhaoyang Zhang",
+        "Lei Wang",
+        "Tianyi Qian"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2611.25610",
+      "url": "http://arxiv.org/abs/2611.25610v1",
+      "published": "2026-11-19",
+      "tldr": "提出 HiSTFormer，用分层局部时间 RoPE 与多周期空间 RoPE 加内容条件地址偏移构建固定容量记忆的时空世界模型，在 MemoryMaze 和 HM3D 上显著提升超长预测视野的泛化。",
+      "why": "把网格细胞多周期编码直接做成空间 RoPE 加内容自适应寻址的 KV 记忆，为长时程世界模型提供了一种可复用的位置编码与记忆压缩机制，与 V3/LWv2 的 latent 预测中如何编码空间结构与控制注意力开销直接相关。",
+      "hits": [
+        "H:world model",
+        "M:long-horizon",
+        "M:hippocampal",
+        "M:grid cells",
+        "C:memory"
+      ],
+      "deep": {
+        "problem": "部分可观测环境下的长时程世界模型需要紧凑的记忆，并且在定位漂移不断累积时仍保持场景的空间结构；论文追问两个具体问题：局部时间整合与长程空间检索如何在 Transformer 的层之间协调，以及固定以相机为中心的 spatial address 是否限制了历史记忆的检索精度。",
+        "method": "提出 HiSTFormer：分层 Transformer，temporal 层用标准 temporal RoPE 加 32-token 滑窗建模最近观测与动作的局部动态；spatial 层用 grid-cell 启发的 multi-periodic spatial RoPE，把动作位移经 motion encoder 与世界坐标变换做 path integration，更新多周期 Fourier 相位 ct(k)=ct-1(k)exp(ik^TΔr)，再用旋转 Q/K 通道对引入相对空间位移。记忆为固定容量 KV（32 个最近步 + 96 个按 temporal-coverage 采样、按 temporal-redundancy 分数驱逐的早期条目），使 KV 与每步 attention 开销有界。一个轻量 MLP（384→128→8，约 0.05M）从 temporal 层输出为每个 spatial attention head 预测 2D 地址偏移 Δp_h，用 exp(ik^TΔp_h) 对基相位再做一次旋转，实现内容自适应的 per-head 空间寻址。训练目标 L = L_recon + L_pred + L_student + 0.03·L_pair，其中 L_pair 用视觉余弦相似度 ≥0.98 构造正对、<0.1 构造负对来约束 path-integrated 空间表示，L_student 用 stop-gradient 让 action-only motion encoder 对齐 visual-action teacher。",
+        "key_contributions": [
+          "分层时空位置编码：temporal 层（局部 RoPE）在前、spatial 层（多周期空间 RoPE）在后的 TS 结构显著优于纯时间 TT、纯空间 SS、无位置编码 NN 和同层联合编码 JJ，且 2→4→6 层加深收益持续（Figure 3A/3B）。",
+          "content-conditioned per-head 空间地址偏移：仅 0.05M 参数，相对 no-offset 把 LPIPS 降低约 9.0%（256→64）和 5.5%（500→500）；无墙面监督下 92.4% 样本的调节后地址向视线方向所穿墙面靠近。",
+          "固定容量结构化空间记忆：峰值 spatial KV 从 7.805 MiB 降到 1.000 MiB，各图像指标变化可忽略（500→500 下 MSE 0.014121→0.014261），且只在测试时替换驱逐策略指标波动 ≤4.3%。",
+          "320 帧训练序列可外推到 1,000 帧 rollout，并在 MemoryMaze/HM3D 上稳定超过专用空间记忆世界模型与通用序列模型。"
+        ],
+        "sim_benchmarks": [
+          "MemoryMaze (9×9 / 11×11 / 13×13)",
+          "HM3D (Habitat-Sim)"
+        ],
+        "real_robot": "未做真机实验：全部为仿真第一人称导航数据上的开环视觉预测，MemoryMaze 9×9 自采 2,368 条训练 / 112 条测试 episode（每条 1,000 帧），HM3D 用 Habitat-Sim 采集（前进 0.25 m、左右转 30°）。",
+        "datasets": "自采 MemoryMaze 轨迹（2,368 train / 112 test，每段 1,000 帧，4.4% 动作撞墙导致明显 path-integration 漂移，70.98% 帧存在 ≥32 帧的空间重访）与 HM3D v0.2（8,080 条轨迹、8,273,920 帧、888 场景，788/90/10 场景划分）；未用 OXE / DROID。HM3D 大规模实验改用冻结的 Stable Diffusion sd-vae-ft-mse latent 表示。",
+        "results_headline": "MemoryMaze 256→64：MSE 0.0059 / SSIM 0.7639 / LPIPS 0.2124 / PSNR 24.72，全面优于最强 baseline HPC-MEC（0.0082 / 0.7392 / 0.2447 / 23.42）；超出训练范围的 500→500 外推 MSE 0.0133 / LPIPS 0.2920，对 HPC-MEC 的 0.0159 / 0.3573；HM3D 两个协议下 MSE 与 LPIPS 均最低（500→500 为 0.0078 / 0.401，Transformer 为 0.0141 / 0.538）。",
+        "baselines": [
+          "Transformer latent world model",
+          "Mamba",
+          "RSSM (Dreamer 系)",
+          "HPC-MEC",
+          "CoME"
+        ],
+        "limitations": "作者承认模型假设有可靠的 ground-truth head direction，对噪声朝向估计的鲁棒性与下游任务（决策/控制）的泛化尚未验证；附录 B.1 也显示 path-integration 误差随上下文长度持续累积，只能被多周期编码与内容偏移部分缓解而非消除。",
+        "code_release": "论文未提（无 GitHub 链接，仅有 reproducibility statement 与附录实现细节）。",
+        "relevance_detail": "直接命中世界模型主线，且三个模块都能搬进 V3/LWv2：Section 4.2 / Figure 3A 给出一个可复用的架构结论——把位置信息拆到不同层（TS，先时间后空间）明显优于在同一层内拼接（JJ），并随深度 2→4→6 层稳定受益（Figure 3B），这直接回答 latent world prediction 里位置编码与动作条件应该挂在哪一层；Figure 3C 进一步说明 temporal 层要连续 FIFO 上下文、spatial 层要长程覆盖采样，这种非对称缓存设计对长时程 rollout 有参考价值。Section 2.3 + 4.3 的 per-head content-conditioned 地址偏移只用 0.05M 参数就换来 9% LPIPS 改善，本质是给每个 attention head 一个内容相关的 latent query 微调，可以低成本加到 VLA 内部的 future-latent predictor 上。Section 2.4 的 L_pair（视觉相似度 0.98/0.1 阈值构造正负对，无 GT 位置监督）加 stop-gradient teacher–student motion loss，是与 JEPA 式 predictor/target 设计同构的坍塌规避手段；Appendix A.4 表 2–3 则给出固定容量 KV 的工程边界（峰值 7.805→1.000 MiB，指标几乎不变）。",
+        "followup": "深读 Section 4.2（Figure 3A–E 的分层/缓存/编码消融）、Section 4.3（Figure 4 的 offset 干预与墙面距离分析）以及 Appendix A.4 的表 2–3 内存管理实验。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2611.25417",
+      "title": "MIR-Depth: Multi-Range Refinement for Single-View RGB-D Depth Completion of Transparent Objects",
+      "title_zh": "MIR-Depth：面向透明物体单视图 RGB-D 深度补全的多区间细化",
+      "score": 7,
+      "bucket": "direct",
+      "domain_fit": 8,
+      "transfer_value": 6,
+      "novelty": 6,
+      "authors": [
+        "Xinzhe Fu",
+        "Qi Shao",
+        "Yuanfei Xie",
+        "Taoyu Wu",
+        "Zhihao Cao",
+        "Long Hu",
+        "Hong Liang",
+        "Xianzhi Li",
+        "Anh Nguyen",
+        "Baoru Huang",
+        "Rongsheng Li"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2611.25417",
+      "url": "http://arxiv.org/abs/2611.25417v1",
+      "published": "2026-11-19",
+      "tldr": "针对透明物体镜面反射缺失与折射污染，构造全局逆深度体与像素级局部体，用多尺度 ConvGRU 选择性循环细化并加空间门控残差，在多个数据集和真机 6-DoF 抓取上降低深度误差。",
+      "why": "透明物体深度补全是机器人抓取的真实痛点，其多区间假设加有效性掩码融合的机制可迁移到其他传感器噪声下的几何感知前端，为 VLA 提供更可靠的深度输入。",
+      "hits": [
+        "M:grasping"
+      ],
+      "deep": {
+        "problem": "单张 RGB-D 图像加物体 mask 的透明物体可见表面深度补全：镜面反射造成深度缺失，折射让非零读数其实是背景深度，因此原始深度既不能当孔洞填充的锚点，也不能当几何硬约束。在固定采样预算下，只在单一搜索区间内精修要么漏掉几十厘米级的折射偏移，要么牺牲毫米级细节。",
+        "method": "先用冻结的 Depth Anything V2 Small 相对深度先验 + RGB + raw depth + mask，经两个 Transformer 编码器和一个 CNN 编码器（多尺度特征相加）与 pyramid decoder 预测初始深度 D0。核心是 Coordinate-Aware Multi-Range Hypotheses：在 1/d 空间构建一个全图共享的 global inverse-depth volume（用 3D hourglass 做空间+深度联合聚合）和两个以 D0 为参考、逐像素取相对范围的 medium/fine local volume（ρm=0.4, ρf=0.1，只沿 depth 轴做卷积，避免跨像素深度混合）。Selective Recurrent Refinement 用 out-of-bounds lookup masking 加 validity-masked softmax fusion，在多尺度 ConvGRU 上迭代 T=8 次做乘性更新 q_t = clip(q_{t-1}·exp(η·tanh(u_t)))。最后 Spatially Gated Correction 用学到的逐像素 gate G 把全分辨率残差 D_T−D_0 融合回来，即 D̂ = D_0 + G⊙(D_T−D_0)，不把 raw depth 作为硬约束。损失为 L_rec + λ_seq L_seq + λ_corr L_corr。",
+        "key_contributions": [
+          "Coordinate-Aware Multi-Range Hypotheses：把 stereo 的 multi-range disparity volume 思想改造到单视图 RGB-D，用共享 global volume 覆盖大折射偏移、逐像素 local volume 保细节，且首次处理 global/local 两种坐标下不同的聚合算子（3D hourglass vs. depth-axis conv）。",
+          "Selective Recurrent Refinement：out-of-bounds lookup masking + validity-masked softmax fusion，使固定候选网格上不同 range 能被熵/峰值概率驱动的 logits 动态加权，避免 clamp 到边缘 bin。",
+          "Spatially Gated Correction：逐像素 gate 在 D0 与 D_T 间插值，替代 raw depth 硬约束，真机上显著减少边界深度跳变与表面碎片化。",
+          "在 TransCG 训练、4 个零样本数据集 + 真机 6-DoF 抓取上系统验证，并单独拆分「补洞」与「折射纠正」两组指标。"
+        ],
+        "sim_benchmarks": [
+          "TransCG (test: 23,524 frames)",
+          "TODD (4,339 frames)",
+          "TRansPose (32,734 frames)",
+          "ClearPose (132,598 frames)",
+          "HouseCat6D (2,929 frames)"
+        ],
+        "real_robot": "AgileX PIPER 6-DoF 机械臂 + 腕部 Intel RealSense D435i；桌面场景 8 个家用透明物体（瓶子、中空容器、多物体堆叠）；mask 来自 SAM，用共享的 GraspNet-based 6-DoF 抓取检测器对比各方法深度图产生的抓取位姿，属定性评估（无比率统计、无抓取成功次数）。",
+        "datasets": "训练用 TransCG 官方 split（78 个场景、34,191 帧 640×480）；先验用冻结 Depth Anything V2 Small；零样本评测 TODD / TRansPose / ClearPose / HouseCat6D。",
+        "results_headline": "TransCG 上 MAE/RMSE 6.833/10.504 mm，优于 ReMake 8.040/11.363、DFNet 12.567/17.543，远优于 BP-Net 37.855、PSD 37.693；REL 0.01397 vs ReMake 0.01660，δ1.05 94.41% vs 93.63%；零样本 ClearPose 从 ReMake 的 309.147/378.079 mm 降到 122.294/238.050 mm，TODD 32.915 vs 37.177 mm；非零读数 >20 mm 离群点修复率 89.74% vs ReMake 88.52%，离群 MAE 5.584 vs 7.137 mm。",
+        "baselines": [
+          "DFNet",
+          "BP-Net",
+          "PSD",
+          "ReMake"
+        ],
+        "limitations": "单帧只能恢复可见表面，无法揭示未观测几何；全透明物体置于均匀背景时几乎没有可见边界，连人眼也无法确定形状。作者把时序 RGB-D 流/机械臂运动中的多视角作为未来工作，因此本文仍是开环感知模块，未做闭环抓取成功率验证。另外 Table IV 显示去掉 gating 在 TransCG 上反而更优（6.810/10.245），gate 的收益只在真机预测 mask 下成立。",
+        "code_release": "论文称 code 与 pretrained models 将公开，但未给出 GitHub URL（截至论文版本未见仓库）。",
+        "relevance_detail": "属 direct 桶：透明物体感知是机器人抓取的真实痛点，且它的核心机制对 VLA / world model 有可命名迁移路径。最值得看的是「锚点 + 多尺度候选 + 门控残差」这一套：(1) 不只一次前向回归深度，而是围绕先验初始值构造 coarse-global / fine-local 两级 inverse-depth 候选体，并用 validity-masked softmax 在 range 之间做选择，这正对应 V3/LWv2 里 predictor 的分辨率-覆盖权衡——JEPA 式未来 latent 预测同样存在「大位移要粗、局部要细」的 trade-off，可用类似多范围候选 + softmax 加权替代单一 predictor 输出；(2) Eq. 7 的 per-pixel gate D̂ = D_0 + G⊙(D_T−D_0) 是干净地「以先验为锚、学习残差门控」，可直接映射为 latent 残差预测的 gate 设计，用来抑制对已对齐区域的过度修正；(3) out-of-bounds lookup masking（Sec. III-B）处理的是「查询落到候选网格外时不 clamp 而是置零并重归一化权重」，对 action chunk / 候选离散化后越界处理有借鉴意义。此外 Table III 把「补洞」与「纠正错误非零读数」分开报告的做法，也提示在评测 corrupted observation 时应该分项。",
+        "followup": "重点读 Sec. III-A/III-B（候选范围定义、有效性与 mask softmax 融合）与 Table IV / Fig. 6 的 gating 消融——它是本文唯一「真机有效但离线指标变差」的组件，最能说明设计动机；Table III 的分项指标定义也值得照抄。"
+      }
+    },
+    {
+      "rank": 3,
+      "key": "arxiv:2611.26504",
+      "title": "Grid Cells as Spectral Successor Features: A Reusable Basis for Continual Reinforcement Learning",
+      "title_zh": "网格细胞作为谱后继特征：持续强化学习的可复用基",
+      "score": 7,
+      "bucket": "adjacent",
+      "domain_fit": 6,
+      "transfer_value": 8,
+      "novelty": 8,
+      "authors": [
+        "Élodie Côté-Gauthier",
+        "Doina Precup",
+        "Isabeau Prémont-Schwarz"
+      ],
+      "source": "arxiv",
+      "arxiv_id": "2611.26504",
+      "url": "http://arxiv.org/abs/2611.26504v1",
+      "published": "2026-11-19",
+      "tldr": "以网格细胞对应后继表示特征向量为设计原则，用参考策略转移矩阵的特征向量构造基，使后继特征闭式等于基特征乘 1/(1-γλ_i)，无需后继网络或回放即可线性回归适应新任务。",
+      "why": "给出后继特征与基特征闭式对齐的数学结构，可迁移到具身智能体的任务切换与多目标导航中的价值/预测头设计，也提示世界模型 latent 基的选择应满足可线性分解的谱性质。",
+      "hits": [
+        "M:grid cells",
+        "M:successor representation",
+        "C:reinforcement learning"
+      ]
+    }
+  ]
+}
