@@ -1,0 +1,122 @@
+{
+  "date": "2026-11-28",
+  "kept": 2,
+  "reviewed": 10,
+  "min_score": 5,
+  "funnel": {
+    "fetched": 627,
+    "unseen": 10,
+    "llm_candidates": 10,
+    "annotated": 10,
+    "deep_read": 2
+  },
+  "papers": [
+    {
+      "rank": 1,
+      "key": "arxiv:2611.31516",
+      "title": "InitFree-SfM: When Initialization-Free Bundle Adjustment meets Learned Structure-from-Motion",
+      "title_zh": "InitFree-SfM:当无初始化 Bundle Adjustment 遇上学习式 Structure-from-Motion",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 5,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2611.31516",
+      "url": "https://arxiv.org/abs/2611.31516",
+      "published": "2026-11-28",
+      "tldr": "将无初始化 bundle adjustment 与学习式 SfM 结合,提升位姿与结构估计。",
+      "why": "无初始化 SfM 与学习式几何结合可增强机器人建图与空间感知的鲁棒性,对具身 3D 智能有间接价值。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "初始免 BA（InitFree BA）理论上可以只从随机初始化联合恢复相机位姿与三维结构，但现有方法在最小化代理 OSE 目标后，经 reprojection 精化和 metric upgrade 得到的重建往往严重不准；论文要回答的核心问题是：能否用学到的几何先验（单目 metric depth）来弥合“优化目标低”与“重建准确”之间的鸿沟。",
+        "method": "提出 InitFree-SfM 全流程：(1) 用 MoGe-2 逐图预测 metric depth 与内参，用 LoMa/RoMa v2 提对应；(2) depth-consistent correspondence filtering：把对应点按预测深度反投影成 3D 点集，用 RANSAC 拟合相似变换 (s,R,t)，再与标定 epipolar 估出的 essential matrix 交叉验证，旋转差超过 τR=15° 的图对直接剔除，剩下并成 multi-view tracks；(3) 提出 depth-augmented OSE（dOSE），在经典 OSE 的方向约束外增加相对深度残差 ρ(qᵀy/d − 1)（Huber、λd=30、continuation 逐步升权），并直接在 SE(3) 上优化 metric pose，用 VarPro + Ruhe–Wedin 消去 landmark，从而彻底规避不稳定的 metric upgrade；(4) joint metric refinement：在 LM 中联合优化 reprojection 残差、深度残差、相对旋转/平移/对数尺度残差、cheirality 与 per-image 深度尺度 αi 正则，平移约束先用 metric 向量再切到方向约束。",
+        "key_contributions": [
+          "系统性证明：现有 InitFree BA 管线（pOSE / expOSE / pOSE+rot）在 ETH3D 上即使 OSE loss 大幅下降，重建仍错，问题不在优化器而在缺几何约束与 metric upgrade 不稳。",
+          "提出 dOSE——保留 OSE 可分离结构（VarPro 可用）但加入沿视线的深度约束，并直接在 SE(3) 上优化，去掉 metric upgrade 这一步。",
+          "给出完整 InitFree-SfM 管线，在 ETH3D / LaMAR 上 AUC@20° 超过 GLOMAP、VGGT、π3、DA3，并大幅超过 pOSE。",
+          "反直觉结论：仅用 joint metric refinement 从随机初始化出发、完全不做 OSE 阶段，也能得到像样重建；几何约束才是主要驱动，OSE 只是进一步提升。",
+          "低重叠场景（ETH3D 434 子集 / SMERF 100 子集）下以远低于 MP-SfM 的耗时取得次优精度。"
+        ],
+        "sim_benchmarks": [
+          "ETH3D",
+          "LaMAR",
+          "SMERF（低重叠子集，沿用 MP-SfM 协议）"
+        ],
+        "real_robot": "未做真机实验（纯离线 SfM 重建评测，使用真实采集图像数据集，无机器人平台）",
+        "datasets": "无训练；评测用 ETH3D（25 场景、每场景 ≤20 图）、LaMAR（45 个 20 图子集，CAB/HGE/LIN）、SMERF 低重叠子集；骨干为预训练 MoGe-2/MoGe-3/DA3 深度与 LoMa / RoMa v2 / MASt3R / SP+LG 匹配器",
+        "results_headline": "ETH3D 上 joint pose AUC@20° 达 85.81%（GLOMAP 77.18、COLMAP 72.66、pOSE 13.91），LaMAR 80.99%（π3 79.48、VGGT 70.44、COLMAP 65.68）；去掉 joint metric refinement 后 ETH3D 从 85.81 暴跌到 31.99、LaMAR 从 80.99 跌到 46.48。",
+        "baselines": [
+          "COLMAP (SP+LG)",
+          "GLOMAP (SP+LG / LoMa)",
+          "VGGSfM",
+          "VGGT",
+          "VGGT + BA",
+          "π3",
+          "DA3",
+          "MASt3R-SfM",
+          "MP-SfM",
+          "pOSE",
+          "expOSE",
+          "pOSE+rot"
+        ],
+        "limitations": "强依赖已知相机内参，用 MoGe-2 估内参时 LaMAR AUC@20° 从 80.99 掉到 63.44；SMERF 低重叠 + 稀疏匹配下与 MP-SfM 差距明显（相对位姿图仅 54% 连通）；大规模图像集与更强几何先验未验证。",
+        "code_release": "项目页 https://github.com/simonwebertum/initfree-sfm.git（论文称 project page，代码放出情况需以仓库实际为准）",
+        "relevance_detail": "不属于具身/VLA 主线，但有两个可迁移点：(1) 方法论上它给了一个对 V3/LWv2 很直接的警告——代理目标下降 ≠ 下游量准确，App. A 的 Fig.6 显示 pOSE 的 OSE loss 单调下降而相机轨迹仍完全错位，这正对应 latent world prediction 里“预测 loss 降了但表征塌缩/不可用”，提示要像 Tab.5 那样做逐组件拆除（w/o refinement / w/o depth priors / w/o OSE）而不是只报训练 loss；(2) Sec. 4.2 的 depth-consistent filtering 是一种“几何先验交叉验证伪标签”的机制——用单目深度反投影得到的相似变换去复核 epipolar 验证过的对应，可类比为用几何/物理一致性过滤视频伪监督信号。此外 dOSE 把“方向约束 + 沿视线的度量约束”组合成可变量投影的可分离目标（消去 landmark，只优化 pose），这种“部分变量闭式消去 + 只对少数自由度做非线性优化”的结构，对 world model 里把场景 latent 隐式解出、只优化动作/位姿头的设计有借鉴意义。",
+        "followup": "重点看 Fig.3 的五种配置拆解与 Tab.5 消融（joint metric refinement 是命门）、Tab.7 平移约束调度，以及 App. A 的收敛—重建鸿沟图；App. G 的 VarPro/inverse-expansion 只在想做可分离优化时再细读。"
+      }
+    },
+    {
+      "rank": 2,
+      "key": "arxiv:2611.30494",
+      "title": "Revisiting LLMs as Context Engineers",
+      "title_zh": "重新审视 LLM 作为上下文工程师",
+      "score": 5,
+      "bucket": "adjacent",
+      "domain_fit": 4,
+      "transfer_value": 6,
+      "novelty": 5,
+      "authors": [],
+      "source": "hf_papers",
+      "arxiv_id": "2611.30494",
+      "url": "https://arxiv.org/abs/2611.30494",
+      "published": "2026-11-28",
+      "tldr": "重新评估 LLM 在自动构造与组织上下文（上下文工程）方面的能力与局限。",
+      "why": "上下文工程直接决定 VLA 中语言指令、历史观测与记忆如何组织进策略输入，这篇提供了可借鉴的上下文构造与评估视角。",
+      "hits": [
+        "S:hf_curated"
+      ],
+      "deep": {
+        "problem": "LLM context engineering（LCE）方法声称能免训练地从离线试验中自动蒸馏 prompt/经验，但各方法评测协议割裂，尚不清楚它们何时有效、为何有效。",
+        "method": "论文建立统一的 LCEBench，把 LCE 形式化为 rollout→extraction→consolidation（R/E/ϕ）三步，并在 Qwen3-8B、Gemma-4-E4B-it、Ministral-3-8B 上对比 TextGrad、GEPA、TF-GRPO、ACE 与 CoT/ICL。任务覆盖 MATH500、HotpotQA、IFBench、MiddleMatch、AppWorld，并做 reflector/generator 从 0.6B 到 235B-A22B、Qwen1.5→Qwen3.5 的 scaling 实验。机制分析用 LLM 诊断失败原因、all-mpnet-base-v2 嵌入和 Vendi Score 量化失败模式多样性，再做方差分解与 mixed-effects 分析。",
+        "key_contributions": [
+          "建立跨 LLM 家族、跨 5 类任务的统一 LCE 基准，发现没有一种 LCE 在所有数据集上稳定优于 CoT/ICL。",
+          "证明增大模型参数量或换更新世代不能逆转 LCE 的失败，收益随任务和模型剧烈波动。",
+          "发现 LCE 增益与失败模式多样性显著负相关（r=-0.5, p≤0.05），且迭代优化几乎不降低 experience 的 Vendi 多样性。",
+          "通过案例与消融指出：部分收益来自格式/指令遵从提升而非推理提升，experience extraction（E）是主要瓶颈。"
+        ],
+        "sim_benchmarks": [
+          "不适用"
+        ],
+        "real_robot": "不适用",
+        "datasets": "MATH500、HotpotQA、IFBench、MiddleMatch、AppWorld（均为 LLM 评测数据集，非机器人数据）",
+        "results_headline": "15 个 model-dataset 设置中仅 7 个最佳 LCE 比最佳 baseline 高 1 分以上、5 个显著（p<0.05）；如 Gemma4/MiddleMatch 最佳增益 +12.86，而 Qwen3/MATH500 上 ACE 反比初始低 7.30，失败模式多样性与增益显著负相关 r=-0.5（p≤0.05）。",
+        "baselines": [
+          "CoT",
+          "ICL",
+          "TextGrad",
+          "TF-GRPO",
+          "GEPA",
+          "ACE"
+        ],
+        "limitations": "主实验集中在 8B 级模型和 5 个任务，LCE 方法只覆盖 4 种代表实现；失败模式多样性由 LLM 诊断加 Vendi Score 近似，相关性不等于因果，且作者承认如何改进 LCE 仍开放。",
+        "code_release": "https://github.com/costa-nus/LCEBench",
+        "relevance_detail": "作为 adjacent：它给出的可迁移机制是把离线 rollout 的失败反思蒸馏成可复用 context/experience 而不是更新参数；但核心结论是失败模式越异质收益越差，且迭代并不能把 experience 抽象成共享原则。对应到具身 agent 的经验库/技能记忆，不同物体、接触与 embodiment 造成的失败模式远比 QA/数学异质，直接照搬 reflection+playbook 很可能只学到格式/指令遵从；Table 3 的 E（experience extraction）消融也提示，没有有效抽象时经验注入不如直接用 ICL。",
+        "followup": "深读第 5 节与 Fig.5 的失败模式多样性分析、Table 3 的 experience extraction 消融，以及 Appendix B.2/B.4 的 Vendi Score 与 false failure/format compliance 计算。"
+      }
+    }
+  ]
+}
